@@ -1,0 +1,10 @@
+version: "3"
+services:
+  madie-terminology-service:
+    build:
+      context: .
+    volumes:
+      - ./:/app:cached
+      - ~/.m2:/root/.m2:consistent
+    ports:
+      - "8083:8083"
