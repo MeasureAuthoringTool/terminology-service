@@ -6,7 +6,9 @@ To build
 ```
 mvn clean verify ```
 
-To run
+To run, first add 
+```
+port: 8083 ``` in application.yml file, for server port configuration, and then run
 ```
 mvn install spring-boot:run ```
 
