@@ -8,7 +8,7 @@
     <relativePath></relativePath>
     <!-- lookup parent from repository -->
   </parent>
-  <groupId>com.semanticbits.terminologyservice</groupId>
+  <groupId>gov.cms.madie.terminologyservice</groupId>
   <artifactId>terminologyeservice</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>Terminology Service</name>
