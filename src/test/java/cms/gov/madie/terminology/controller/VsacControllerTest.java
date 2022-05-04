@@ -31,24 +31,10 @@ public class VsacControllerTest {
   private static final String TEST = "test";
 
   @Test
-  void testGetServiceTicket() throws Exception {
-    when(vsacService.getServiceTicket(anyString())).thenReturn(anyString());
-    ResponseEntity<String> response = vsacController.getServiceTicket(TEST);
-    assertEquals(response.getStatusCode(), HttpStatus.OK);
-  }
-
-  @Test
-  void testGetServiceTicketFail() throws Exception {
-    doThrow(new WebClientResponseException(401, "Error", null, null, null))
-        .when(vsacService)
-        .getServiceTicket(anyString());
-    assertThrows(WebClientResponseException.class, () -> vsacController.getServiceTicket(TEST));
-  }
-
-  @Test
   void testGetValueSet() throws Exception {
     when(mockValueset.getDescribedValueSet()).thenReturn(mockDescribedValueset);
     when(mockDescribedValueset.getDisplayName()).thenReturn(TEST);
+    when(vsacService.getServiceTicket(anyString())).thenReturn(TEST);
     when(vsacService.getValueSet(
             anyString(), anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(mockValueset);
@@ -59,7 +45,18 @@ public class VsacControllerTest {
   }
 
   @Test
-  void testGetValueSetFail() throws Exception {
+  void testGetValueSetFailWhenGettingServiceTicketFailed() throws Exception {
+    doThrow(new WebClientResponseException(401, "Error", null, null, null))
+        .when(vsacService)
+        .getServiceTicket(anyString());
+    assertThrows(
+        WebClientResponseException.class,
+        () -> vsacController.getValueSet(TEST, TEST, TEST, TEST, TEST, TEST));
+  }
+
+  @Test
+  void testGetValueSetFailWhenGettingValueSetFailed() throws Exception {
+    when(vsacService.getServiceTicket(anyString())).thenReturn(TEST);
     doThrow(new WebClientResponseException(401, "Error", null, null, null))
         .when(vsacService)
         .getValueSet(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());

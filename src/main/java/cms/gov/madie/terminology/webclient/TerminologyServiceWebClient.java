@@ -54,9 +54,8 @@ public class TerminologyServiceWebClient {
                   return response.createException();
                 })
             .bodyToMono(String.class);
-    responseMono.subscribe(
-        serviceTicket -> log.info("TerminologyServiceWebClient: serviceTicket = " + serviceTicket));
-    log.info("Exiting getServiceTicket()");
+    responseMono.subscribe();
+    log.debug("Exiting getServiceTicket()");
     return responseMono.toFuture().get();
   }
 
@@ -68,7 +67,7 @@ public class TerminologyServiceWebClient {
       String release,
       String version) {
     URI valuesetURI = getValueSetURI(oid, serviceTicket, profile, includeDraft, release, version);
-    log.info("valuesetURI = " + valuesetURI.getQuery());
+    log.debug("valuesetURI = " + valuesetURI.getQuery());
     Mono<RetrieveMultipleValueSetsResponse> responseMono =
         terminologyClient
             .get()

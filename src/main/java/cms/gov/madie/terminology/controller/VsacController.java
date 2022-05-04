@@ -1,7 +1,5 @@
 package cms.gov.madie.terminology.controller;
 
-import org.springframework.web.bind.annotation.PostMapping;
-
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.http.MediaType;
@@ -27,29 +25,25 @@ public class VsacController {
     this.vsacService = vsacService;
   }
 
-  @PostMapping(path = "/serviceTicket", produces = "text/plain")
-  public ResponseEntity<String> getServiceTicket(
-      @RequestParam(required = true, name = "tgt") String tgt)
-      throws InterruptedException, ExecutionException {
-    log.info("Entering: getServiceTicket(): tgt = " + tgt);
-    String st = vsacService.getServiceTicket(tgt);
-    return ResponseEntity.ok().body(st);
-  }
-
   @GetMapping(
       path = "/valueSet",
       consumes = "text/plain",
       produces = MediaType.APPLICATION_XML_VALUE)
   public ResponseEntity<RetrieveMultipleValueSetsResponse> getValueSet(
+      @RequestParam(required = true, name = "tgt") String tgt,
       @RequestParam(required = true, name = "oid") String oid,
-      @RequestParam(required = true, name = "stNumber") String stNumber,
       @RequestParam(required = false, name = "profile") String profile,
       @RequestParam(required = false, name = "includeDraft") String includeDraft,
       @RequestParam(required = false, name = "release") String release,
-      @RequestParam(required = false, name = "version") String version) {
-    log.info("Entering: getValueSet()");
+      @RequestParam(required = false, name = "version") String version)
+      throws InterruptedException, ExecutionException {
+
+    log.debug("Entering: getValueSet()");
+
+    String serviceTicket = vsacService.getServiceTicket(tgt);
+
     RetrieveMultipleValueSetsResponse valuesetResponse =
-        vsacService.getValueSet(oid, stNumber, profile, includeDraft, release, version);
+        vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
     return ResponseEntity.ok().body(valuesetResponse);
   }
 }
