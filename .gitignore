@@ -4,6 +4,9 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+META-INF/
+src/main/java/generated/
+madie-checkstyle.out.xml
 
 ### STS ###
 .apt_generated
