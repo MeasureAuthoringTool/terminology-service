@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import cms.gov.madie.terminology.dto.MadieValueSet;
 import cms.gov.madie.terminology.service.VsacService;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
@@ -28,20 +29,21 @@ public class VsacControllerTest {
 
   @Mock RetrieveMultipleValueSetsResponse mockValueset;
   @Mock DescribedValueSet mockDescribedValueset;
+  @Mock MadieValueSet mockMadieValueSet;
   private static final String TEST = "test";
 
   @Test
   void testGetValueSet() throws Exception {
-    when(mockValueset.getDescribedValueSet()).thenReturn(mockDescribedValueset);
-    when(mockDescribedValueset.getDisplayName()).thenReturn(TEST);
     when(vsacService.getServiceTicket(anyString())).thenReturn(TEST);
     when(vsacService.getValueSet(
             anyString(), anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(mockValueset);
-    ResponseEntity<RetrieveMultipleValueSetsResponse> response =
+    when(mockMadieValueSet.getID()).thenReturn(TEST);
+    when(vsacService.convertToMadieValueSet(mockValueset, TEST)).thenReturn(mockMadieValueSet);
+    ResponseEntity<MadieValueSet> response =
         vsacController.getValueSet(TEST, TEST, TEST, TEST, TEST, TEST);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
-    assertEquals(response.getBody().getDescribedValueSet().getDisplayName(), TEST);
+    assertEquals(response.getBody().getID(), TEST);
   }
 
   @Test
