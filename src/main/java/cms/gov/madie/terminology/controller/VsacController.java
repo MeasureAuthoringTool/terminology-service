@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.hl7.fhir.r4.model.ValueSet;
+
 import cms.gov.madie.terminology.service.VsacService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,11 +27,8 @@ public class VsacController {
     this.vsacService = vsacService;
   }
 
-  @GetMapping(
-      path = "/valueSet",
-      consumes = "text/plain",
-      produces = MediaType.APPLICATION_XML_VALUE)
-  public ResponseEntity<RetrieveMultipleValueSetsResponse> getValueSet(
+  @GetMapping(path = "/valueSet", produces = MediaType.APPLICATION_ATOM_XML_VALUE)
+  public ResponseEntity<ValueSet> getValueSet(
       @RequestParam(required = true, name = "tgt") String tgt,
       @RequestParam(required = true, name = "oid") String oid,
       @RequestParam(required = false, name = "profile") String profile,
@@ -44,6 +43,14 @@ public class VsacController {
 
     RetrieveMultipleValueSetsResponse valuesetResponse =
         vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
-    return ResponseEntity.ok().body(valuesetResponse);
+
+    ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
+
+    // This works
+    // return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(valuesetResponse);
+
+    // This will produce error:
+    // com.fasterxml.jackson.databind.ser.BeanPropertyWriter.serializeAsField
+    return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(fhirValueSet);
   }
 }
