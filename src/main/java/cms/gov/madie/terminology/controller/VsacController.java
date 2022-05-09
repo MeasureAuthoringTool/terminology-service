@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import cms.gov.madie.terminology.dto.MadieValueSet;
 import cms.gov.madie.terminology.service.VsacService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,11 +26,8 @@ public class VsacController {
     this.vsacService = vsacService;
   }
 
-  @GetMapping(
-      path = "/valueSet",
-      consumes = "text/plain",
-      produces = MediaType.APPLICATION_XML_VALUE)
-  public ResponseEntity<RetrieveMultipleValueSetsResponse> getValueSet(
+  @GetMapping(path = "/valueSet", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<MadieValueSet> getValueSet(
       @RequestParam(required = true, name = "tgt") String tgt,
       @RequestParam(required = true, name = "oid") String oid,
       @RequestParam(required = false, name = "profile") String profile,
@@ -44,6 +42,14 @@ public class VsacController {
 
     RetrieveMultipleValueSetsResponse valuesetResponse =
         vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
-    return ResponseEntity.ok().body(valuesetResponse);
+
+    MadieValueSet madieValueSet = vsacService.convertToMadieValueSet(valuesetResponse, oid);
+
+    return ResponseEntity.ok().body(madieValueSet);
+
+    // TODO: This will produce error:
+    // com.fasterxml.jackson.databind.ser.BeanPropertyWriter.serializeAsField
+    // ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
+    // return ResponseEntity.ok().body(fhirValueSet);
   }
 }
