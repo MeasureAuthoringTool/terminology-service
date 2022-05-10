@@ -6,9 +6,7 @@ import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import cms.gov.madie.terminology.dto.MadieValueSet;
 import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
-import cms.gov.madie.terminology.mapper.VsacToMadieValueSetMapper;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
@@ -19,16 +17,13 @@ public class VsacService {
 
   private final TerminologyServiceWebClient terminologyWebClient;
   private final VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
-  private final VsacToMadieValueSetMapper vsacToMadieValueSetMapper;
 
   @Autowired
   public VsacService(
       TerminologyServiceWebClient terminologyWebClient,
-      VsacToFhirValueSetMapper vsacToFhirValueSetMapper,
-      VsacToMadieValueSetMapper vsacToMadieValueSetMapper) {
+      VsacToFhirValueSetMapper vsacToFhirValueSetMapper) {
     this.terminologyWebClient = terminologyWebClient;
     this.vsacToFhirValueSetMapper = vsacToFhirValueSetMapper;
-    this.vsacToMadieValueSetMapper = vsacToMadieValueSetMapper;
   }
 
   public String getServiceTicket(String tgt) throws InterruptedException, ExecutionException {
@@ -49,10 +44,5 @@ public class VsacService {
   public ValueSet convertToFHIRValueSet(
       RetrieveMultipleValueSetsResponse vsacValuesetResponse, String oid) {
     return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValuesetResponse, oid);
-  }
-
-  public MadieValueSet convertToMadieValueSet(
-      RetrieveMultipleValueSetsResponse vsacValuesetResponse, String oid) {
-    return vsacToMadieValueSetMapper.convertToMadieValueSet(vsacValuesetResponse, oid);
   }
 }

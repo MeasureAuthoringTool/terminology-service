@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import cms.gov.madie.terminology.dto.MadieValueSet;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
+import org.hl7.fhir.r4.model.ValueSet;
+
 import cms.gov.madie.terminology.service.VsacService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +30,7 @@ public class VsacController {
   }
 
   @GetMapping(path = "/valueSet", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<MadieValueSet> getValueSet(
+  public ResponseEntity<String> getValueSet(
       @RequestParam(required = true, name = "tgt") String tgt,
       @RequestParam(required = true, name = "oid") String oid,
       @RequestParam(required = false, name = "profile") String profile,
@@ -43,13 +46,19 @@ public class VsacController {
     RetrieveMultipleValueSetsResponse valuesetResponse =
         vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
 
-    MadieValueSet madieValueSet = vsacService.convertToMadieValueSet(valuesetResponse, oid);
+    ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
+    log.debug("valueset id = " + fhirValueSet.getId());
 
-    return ResponseEntity.ok().body(madieValueSet);
+    String serialized = serializeFhirValueset(fhirValueSet);
 
-    // TODO: This will produce error:
-    // com.fasterxml.jackson.databind.ser.BeanPropertyWriter.serializeAsField
-    // ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
-    // return ResponseEntity.ok().body(fhirValueSet);
+    return ResponseEntity.ok().body(serialized);
+  }
+
+  protected String serializeFhirValueset(ValueSet fhirValueSet) {
+    FhirContext ctx = FhirContext.forR4();
+    IParser parser = ctx.newJsonParser();
+    String serialized = parser.encodeResourceToString(fhirValueSet);
+
+    return serialized;
   }
 }
