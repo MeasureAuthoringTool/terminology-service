@@ -2,6 +2,7 @@ package cms.gov.madie.terminology.controller;
 
 import java.util.concurrent.ExecutionException;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import org.hl7.fhir.r4.model.ValueSet;
 
@@ -24,6 +24,8 @@ import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 public class VsacController {
 
   private final VsacService vsacService;
+
+  @Autowired IParser parser;
 
   public VsacController(VsacService vsacService) {
     this.vsacService = vsacService;
@@ -55,8 +57,7 @@ public class VsacController {
   }
 
   protected String serializeFhirValueset(ValueSet fhirValueSet) {
-    FhirContext ctx = FhirContext.forR4();
-    IParser parser = ctx.newJsonParser();
+
     String serialized = parser.encodeResourceToString(fhirValueSet);
 
     return serialized;
