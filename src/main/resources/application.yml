@@ -18,6 +18,7 @@ okta:
     issuer: ${OKTA_ISSUER:https://dev-53861726.okta.com/oauth2/default}
     audience: ${OKTA_AUDIENCE:api://default}
     
-client.vsac_base_url: https://vsac.nlm.nih.gov/vsac
-client.service_ticket_endpoint: /ws/Ticket/%s?service=http://umlsks.nlm.nih.gov
-client.valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}
+client:
+  vsac_base_url: https://vsac.nlm.nih.gov/vsac
+  service_ticket_endpoint: /ws/Ticket/%s?service=http://umlsks.nlm.nih.gov
+  valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}
