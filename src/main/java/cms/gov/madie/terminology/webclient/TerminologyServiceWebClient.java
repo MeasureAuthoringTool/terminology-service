@@ -1,15 +1,19 @@
 package cms.gov.madie.terminology.webclient;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
@@ -98,5 +102,26 @@ public class TerminologyServiceWebClient {
 
     return TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
         baseUrl, valuesetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
+  }
+
+  public String getCode(String path, String tgt) throws ExecutionException, InterruptedException {
+    String serviceTicket = getServiceTicket(tgt);
+
+    Map<String, String> params = new HashMap<>();
+    params.put("st", serviceTicket);
+    params.put("resultFormat", "json");
+    params.put("resultSet", "standard");
+    URI uri = UriComponentsBuilder.fromUriString(baseUrl + path +
+            "?ticket={st}&resultFormat={resultFormat}&resultSet={resultSet}")
+        .buildAndExpand(params)
+        .encode()
+        .toUri();
+    var response =
+        terminologyClient
+            .get()
+            .uri(uri)
+            .retrieve()
+            .bodyToMono(String.class);
+    return response.toString();
   }
 }
