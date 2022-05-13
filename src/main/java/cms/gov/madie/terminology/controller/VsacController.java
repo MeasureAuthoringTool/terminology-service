@@ -2,13 +2,11 @@ package cms.gov.madie.terminology.controller;
 
 import java.util.concurrent.ExecutionException;
 
-import cms.gov.madie.terminology.dto.CqlCode;
+import cms.gov.madie.terminology.dto.CodeResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,7 +18,6 @@ import cms.gov.madie.terminology.service.VsacService;
 
 import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping(path = "/vsac")
@@ -67,10 +64,11 @@ public class VsacController {
     return serialized;
   }
 
-  @PutMapping(path = "/code")
-  public ResponseEntity<String> getCode(
-      @RequestBody CqlCode cqlCode, @RequestParam(name = "tgt") String tgt)
+  @GetMapping(path = "/code")
+  public ResponseEntity<CodeResponse> getCode(
+      @RequestParam String codePath, @RequestParam String tgt)
       throws InterruptedException, ExecutionException {
-    return ResponseEntity.ok().body(vsacService.getCode(cqlCode, tgt));
+    return ResponseEntity.ok().body(vsacService.getCode(codePath, tgt));
   }
 }
+

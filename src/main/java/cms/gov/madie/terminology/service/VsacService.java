@@ -2,7 +2,7 @@ package cms.gov.madie.terminology.service;
 
 import java.util.concurrent.ExecutionException;
 
-import cms.gov.madie.terminology.dto.CqlCode;
+import cms.gov.madie.terminology.dto.CodeResponse;
 import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.stereotype.Service;
@@ -11,7 +11,6 @@ import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import reactor.core.publisher.Mono;
 
 @Service
 @Slf4j
@@ -41,24 +40,9 @@ public class VsacService {
     return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValuesetResponse, oid);
   }
 
-  public String getCode(CqlCode cqlCode, String tgt)
+  public CodeResponse getCode(String codePath, String tgt)
       throws ExecutionException, InterruptedException {
-    // split code system and its version
-    // "/CodeSystem/LOINC22/Version/2.67/Code/21112-8/Info";
-    String[] parts = cqlCode.getCodeSystem().split(":");
-    String codeSystemName = parts[0]; // 004
-    codeSystemName = codeSystemName.replaceAll("^\"|\"$", "");
-    String codeSystemVersion = parts[1]; // 034556
-    codeSystemVersion = codeSystemVersion.replaceAll("^\"|\"$", "");
-    String codeId = cqlCode.getCodeId().replaceAll("\'","");
-    String path =
-        "/CodeSystem/"
-            + codeSystemName
-            + "/Version/"
-            + codeSystemVersion
-            + "/Code/"
-            + codeId
-            + "/Info";
-    return terminologyWebClient.getCode(path, tgt);
+    var response = terminologyWebClient.getCode(codePath, tgt);
+    return response;
   }
 }

@@ -1,7 +1,8 @@
 package cms.gov.madie.terminology.webclient;
 
-import org.springframework.http.ResponseEntity;
+import cms.gov.madie.terminology.dto.CodeResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
@@ -104,24 +105,31 @@ public class TerminologyServiceWebClient {
         baseUrl, valuesetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
   }
 
-  public String getCode(String path, String tgt) throws ExecutionException, InterruptedException {
+  public CodeResponse getCode(String codePath, String tgt)
+      throws ExecutionException, InterruptedException {
+    // https://vsac.nlm.nih.gov/vsac/CodeSystem/LOINC/Version/2.66/Code/21112-8/Info?ticket=ST-281185-McNb53ZGHYtaGjHamgKg-cas&resultFormat=json&resultSet=standard
     String serviceTicket = getServiceTicket(tgt);
-
     Map<String, String> params = new HashMap<>();
     params.put("st", serviceTicket);
     params.put("resultFormat", "json");
     params.put("resultSet", "standard");
-    URI uri = UriComponentsBuilder.fromUriString(baseUrl + path +
-            "?ticket={st}&resultFormat={resultFormat}&resultSet={resultSet}")
-        .buildAndExpand(params)
-        .encode()
-        .toUri();
-    var response =
-        terminologyClient
-            .get()
+    URI uri =
+        UriComponentsBuilder.fromUriString(
+                baseUrl + codePath + "?ticket={st}&resultFormat={resultFormat}&resultSet={resultSet}")
+            .buildAndExpand(params)
+            .encode()
+            .toUri();
+    Mono<CodeResponse> response =
+        terminologyClient.get()
             .uri(uri)
             .retrieve()
-            .bodyToMono(String.class);
-    return response.toString();
+            .onStatus(
+                HttpStatus::is5xxServerError,
+                ClientResponse::createException)
+            .onStatus(
+                HttpStatus::is4xxClientError,
+                ClientResponse::createException)
+            .bodyToMono(CodeResponse.class);
+    return response.block();
   }
 }

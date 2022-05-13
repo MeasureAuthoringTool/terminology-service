@@ -56,25 +56,26 @@ public class TerminologyServiceWebClientTest {
     mockDescribedValueSet = mock(DescribedValueSet.class);
   }
 
-//  @Test
-//  void testGetServiceTicket() throws InterruptedException, ExecutionException {
-//
-//    when(mockWebClientBuilder.baseUrl(anyString())).thenReturn(mockWebClientBuilder);
-//    when(mockWebClientBuilder.build()).thenReturn(mockWebClient);
-//
-//    when(mockWebClient.post()).thenReturn(mockRequestBodyUriSpec);
-//    when(mockRequestBodyUriSpec.uri(anyString())).thenReturn(mockRequestBodySpec);
-//    when(mockRequestBodySpec.bodyValue(anyString())).thenReturn(mockRequestHeadersSpec);
-//    when(mockRequestHeadersSpec.retrieve()).thenReturn(mockResponseSpec);
-//
-//    when(mockResponseSpec.onStatus(any(), any())).thenReturn(mockResponseSpec);
-//    when(mockResponseSpec.bodyToMono(String.class)).thenReturn(Mono.just(TEST));
-//
-//    TerminologyServiceWebClient terminologyServiceWebClient =
-//        new TerminologyServiceWebClient(
-//            mockWebClientBuilder, BASE_URL, SERVICE_TICKET_ENDPOINT, VALUE_SET_ENDPOINT, restTemplate);
-//    String result = terminologyServiceWebClient.getServiceTicket(TEST);
-//
-//    assertEquals(TEST, result);
-//  }
+  //  @Test
+  //  void testGetServiceTicket() throws InterruptedException, ExecutionException {
+  //
+  //    when(mockWebClientBuilder.baseUrl(anyString())).thenReturn(mockWebClientBuilder);
+  //    when(mockWebClientBuilder.build()).thenReturn(mockWebClient);
+  //
+  //    when(mockWebClient.post()).thenReturn(mockRequestBodyUriSpec);
+  //    when(mockRequestBodyUriSpec.uri(anyString())).thenReturn(mockRequestBodySpec);
+  //    when(mockRequestBodySpec.bodyValue(anyString())).thenReturn(mockRequestHeadersSpec);
+  //    when(mockRequestHeadersSpec.retrieve()).thenReturn(mockResponseSpec);
+  //
+  //    when(mockResponseSpec.onStatus(any(), any())).thenReturn(mockResponseSpec);
+  //    when(mockResponseSpec.bodyToMono(String.class)).thenReturn(Mono.just(TEST));
+  //
+  //    TerminologyServiceWebClient terminologyServiceWebClient =
+  //        new TerminologyServiceWebClient(
+  //            mockWebClientBuilder, BASE_URL, SERVICE_TICKET_ENDPOINT, VALUE_SET_ENDPOINT,
+  // restTemplate);
+  //    String result = terminologyServiceWebClient.getServiceTicket(TEST);
+  //
+  //    assertEquals(TEST, result);
+  //  }
 }
