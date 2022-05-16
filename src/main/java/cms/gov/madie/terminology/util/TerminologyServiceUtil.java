@@ -46,4 +46,16 @@ public class TerminologyServiceUtil {
     log.debug("RetrieveMultipleValueSetsUri = " + url);
     return UriComponentsBuilder.fromUriString(url).buildAndExpand(params).encode().toUri();
   }
+
+  public static URI buildRetrieveCodeUri(String baseUrl, String codePath, String serviceTicket) {
+    Map<String, String> params = new HashMap<>();
+    params.put("st", serviceTicket);
+    params.put("resultFormat", "json");
+    params.put("resultSet", "standard");
+    return UriComponentsBuilder.fromUriString(
+            baseUrl + codePath + "?ticket={st}&resultFormat={resultFormat}&resultSet={resultSet}")
+        .buildAndExpand(params)
+        .encode()
+        .toUri();
+  }
 }

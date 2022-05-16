@@ -1,8 +1,6 @@
 package cms.gov.madie.terminology.service;
 
-import java.util.concurrent.ExecutionException;
-
-import cms.gov.madie.terminology.dto.CodeResponse;
+import cms.gov.madie.terminology.dto.VsacCode;
 import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.stereotype.Service;
@@ -20,7 +18,7 @@ public class VsacService {
   private final TerminologyServiceWebClient terminologyWebClient;
   private final VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
 
-  public String getServiceTicket(String tgt) throws InterruptedException, ExecutionException {
+  public String getServiceTicket(String tgt) {
     return terminologyWebClient.getServiceTicket(tgt);
   }
 
@@ -40,9 +38,7 @@ public class VsacService {
     return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValuesetResponse, oid);
   }
 
-  public CodeResponse getCode(String codePath, String tgt)
-      throws ExecutionException, InterruptedException {
-    var response = terminologyWebClient.getCode(codePath, tgt);
-    return response;
+  public VsacCode getCode(String codePath, String tgt) {
+    return terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
   }
 }
