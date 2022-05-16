@@ -39,14 +39,14 @@ public class TerminologyServiceWebClient {
 
   public String getServiceTicket(String tgt) {
     return terminologyClient
-            .post()
-            .uri(String.format(baseUrl + serviceTicketEndpoint, tgt))
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .retrieve()
-            .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-            .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
-            .bodyToMono(String.class)
-            .block();
+        .post()
+        .uri(String.format(baseUrl + serviceTicketEndpoint, tgt))
+        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+        .retrieve()
+        .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
+        .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
+        .bodyToMono(String.class)
+        .block();
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
@@ -90,8 +90,18 @@ public class TerminologyServiceWebClient {
         .uri(codeUri)
         .retrieve()
         .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
+        .onStatus(
+            status -> status.value() == HttpStatus.NOT_FOUND.value(),
+            clientResponse -> Mono.create(new VsacCode().builder().status("404").build()))
         .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
         .bodyToMono(VsacCode.class)
         .block();
+  }
+
+  private VsacCode createErrorResponse(String message) {
+    VsacCode vsacResponse = new VsacCode();
+    vsacResponse.setStatus("");
+    vsacResponse.setMessage(message);
+    return vsacResponse;
   }
 }

@@ -1,10 +1,13 @@
 package cms.gov.madie.terminology.controller;
 
+import cms.gov.madie.terminology.dto.CqlCode;
 import cms.gov.madie.terminology.dto.VsacCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +19,8 @@ import cms.gov.madie.terminology.service.VsacService;
 
 import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+
+import java.util.List;
 
 @RestController
 @RequestMapping(path = "/vsac")
@@ -54,14 +59,12 @@ public class VsacController {
   }
 
   protected String serializeFhirValueset(ValueSet fhirValueSet) {
-
-    String serialized = parser.encodeResourceToString(fhirValueSet);
-
-    return serialized;
+    return parser.encodeResourceToString(fhirValueSet);
   }
 
-  @GetMapping(path = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<VsacCode> getCode(@RequestParam String codePath, @RequestParam String tgt) {
-    return ResponseEntity.ok().body(vsacService.getCode(codePath, tgt));
+  @PutMapping(path = "/validateCodes", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<VsacCode> validateCodes(
+      @RequestBody List<CqlCode> cqlCodes, @RequestParam String tgt) {
+    return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, tgt));
   }
 }

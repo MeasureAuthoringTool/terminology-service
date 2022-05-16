@@ -1,6 +1,8 @@
 package cms.gov.madie.terminology.service;
 
+import cms.gov.madie.terminology.dto.CqlCode;
 import cms.gov.madie.terminology.dto.VsacCode;
+import cms.gov.madie.terminology.util.TerminologyServiceUtil;
 import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.stereotype.Service;
@@ -9,6 +11,9 @@ import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -38,7 +43,15 @@ public class VsacService {
     return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValuesetResponse, oid);
   }
 
-  public VsacCode getCode(String codePath, String tgt) {
-    return terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
+  public VsacCode validateCodes(List<CqlCode> cqlCodes, String tgt) {
+
+    cqlCodes.stream()
+        .map(
+            cqlCode -> {
+              String codePath = TerminologyServiceUtil.buildCodePath(cqlCode);
+              var vsacCode = terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
+              return null;
+            })
+        .collect(Collectors.toList());
   }
 }

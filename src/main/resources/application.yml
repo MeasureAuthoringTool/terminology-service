@@ -22,3 +22,8 @@ client:
   vsac_base_url: https://vsac.nlm.nih.gov/vsac
   service_ticket_endpoint: /ws/Ticket/%s?service=http://umlsks.nlm.nih.gov
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}
+
+json:
+  data:
+#    code-system-entry-url: https://spreadsheets.google.com/feeds/list/1_heoWR09X3UnyEvyyHLzVXT_D1Hhdt3OPztpgr1hW_k/od6/public/values?alt=json
+    code-system-entry-url: file:/Users/rohit.kandimalla/Documents/Git/support-data/dev/mappings/code-system-entry.json

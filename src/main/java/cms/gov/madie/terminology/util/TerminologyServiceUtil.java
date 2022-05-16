@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+import cms.gov.madie.terminology.dto.CqlCode;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -57,5 +58,19 @@ public class TerminologyServiceUtil {
         .buildAndExpand(params)
         .encode()
         .toUri();
+  }
+
+  public static String buildCodePath(CqlCode cqlCode) {
+    // "/CodeSystem/LOINC22/Version/2.67/Code/21112-8/Info";
+    var codePath = new StringBuilder("/CodeSystem/");
+    String codeSystemName = cqlCode.getCodeSystem().getName().split(":")[0];
+    codeSystemName = codeSystemName.replaceAll("\"", "");
+    codePath.append(codeSystemName);
+    codePath.append("/Version/");
+    codePath.append(cqlCode.getCodeSystem().getVersion().replaceAll("'", ""));
+    codePath.append("/Code/");
+    codePath.append(cqlCode.getCodeId().replaceAll("'", ""));
+    codePath.append("/Info");
+    return codePath.toString();
   }
 }
