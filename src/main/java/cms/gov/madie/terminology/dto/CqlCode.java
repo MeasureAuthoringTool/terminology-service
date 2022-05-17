@@ -1,10 +1,12 @@
 package cms.gov.madie.terminology.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Builder;
 import lombok.Data;
 import lombok.ToString;
 
 @Data
+@Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
 @ToString
 public class CqlCode {

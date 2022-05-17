@@ -90,18 +90,8 @@ public class TerminologyServiceWebClient {
         .uri(codeUri)
         .retrieve()
         .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-        .onStatus(
-            status -> status.value() == HttpStatus.NOT_FOUND.value(),
-            clientResponse -> Mono.create(new VsacCode().builder().status("404").build()))
         .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
         .bodyToMono(VsacCode.class)
         .block();
-  }
-
-  private VsacCode createErrorResponse(String message) {
-    VsacCode vsacResponse = new VsacCode();
-    vsacResponse.setStatus("");
-    vsacResponse.setMessage(message);
-    return vsacResponse;
   }
 }

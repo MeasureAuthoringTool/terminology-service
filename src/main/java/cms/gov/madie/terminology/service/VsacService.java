@@ -1,5 +1,6 @@
 package cms.gov.madie.terminology.service;
 
+import cms.gov.madie.terminology.dto.CodeSystemEntry;
 import cms.gov.madie.terminology.dto.CqlCode;
 import cms.gov.madie.terminology.dto.VsacCode;
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
@@ -13,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -22,6 +23,7 @@ public class VsacService {
 
   private final TerminologyServiceWebClient terminologyWebClient;
   private final VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
+  private final MappingService mappingService;
 
   public String getServiceTicket(String tgt) {
     return terminologyWebClient.getServiceTicket(tgt);
@@ -43,15 +45,60 @@ public class VsacService {
     return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValuesetResponse, oid);
   }
 
-  public VsacCode validateCodes(List<CqlCode> cqlCodes, String tgt) {
-
-    cqlCodes.stream()
-        .map(
-            cqlCode -> {
-              String codePath = TerminologyServiceUtil.buildCodePath(cqlCode);
-              var vsacCode = terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
-              return null;
-            })
-        .collect(Collectors.toList());
+  public List<CqlCode> validateCodes(List<CqlCode> cqlCodes, String tgt) {
+    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+    for (CqlCode cqlCode : cqlCodes) {
+      if (cqlCode.getCodeSystem().getOid() != null && !cqlCode.getCodeSystem().getOid().isBlank()) {
+        Optional<CodeSystemEntry> codeSystemEntry1 =
+            codeSystemEntry.stream()
+                .filter(
+                    c ->
+                        c.getUrl()
+                            .equalsIgnoreCase(cqlCode.getCodeSystem().getOid().replace("'", "")))
+                .findFirst();
+        if (codeSystemEntry1.isPresent()) {
+          if (codeSystemEntry1.get().getOid().contains("NOT.IN.VSAC")) {
+            cqlCode.setValid(true);
+          } else {
+            if (cqlCode.getCodeSystem().getVersion() == null) {
+              String mostRecentCodeSystemVersion =
+                  codeSystemEntry1.get().getVersion().get(0).getVsac();
+              String codePath =
+                  TerminologyServiceUtil.buildCodePath(
+                      codeSystemEntry1.get().getName(),
+                      mostRecentCodeSystemVersion,
+                      cqlCode.getCodeId());
+              VsacCode vsacCode = terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
+              if (vsacCode != null) {
+                cqlCode.setValid(true);
+              }
+            } else {
+              Optional<CodeSystemEntry.Version> codeSystemVersion =
+                  codeSystemEntry1.get().getVersion().stream()
+                      .filter(
+                          v -> v.getFhir().equalsIgnoreCase(cqlCode.getCodeSystem().getVersion()))
+                      .findFirst();
+              if (codeSystemVersion.isPresent()) {
+                String codePath =
+                    TerminologyServiceUtil.buildCodePath(
+                        codeSystemEntry1.get().getName(),
+                        codeSystemVersion.get().getVsac(),
+                        cqlCode.getCodeId());
+                VsacCode vsacCode = terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
+                if (vsacCode != null) {
+                  cqlCode.setValid(true);
+                }
+              } else {
+                throw new RuntimeException("Error while fetching vsac version");
+              }
+            }
+          }
+        } else {
+          throw new RuntimeException("Error while fetching codeSystem entry from json");
+        }
+      }
+      cqlCode.setValid(false);
+    }
+    return cqlCodes;
   }
 }

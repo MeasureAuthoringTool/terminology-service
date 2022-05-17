@@ -1,7 +1,6 @@
 package cms.gov.madie.terminology.controller;
 
 import cms.gov.madie.terminology.dto.CqlCode;
-import cms.gov.madie.terminology.dto.VsacCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -63,7 +62,7 @@ public class VsacController {
   }
 
   @PutMapping(path = "/validateCodes", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<VsacCode> validateCodes(
+  public ResponseEntity<List<CqlCode>> validateCodes(
       @RequestBody List<CqlCode> cqlCodes, @RequestParam String tgt) {
     return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, tgt));
   }
