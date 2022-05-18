@@ -18,6 +18,7 @@ public class CqlCode {
   LineInfo start;
   LineInfo stop;
   boolean isValid;
+  String errorMessage;
 
   @Data
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -29,6 +30,8 @@ public class CqlCode {
     String name;
     LineInfo start;
     LineInfo stop;
+    boolean isValid;
+    String errorMessage;
   }
 
   @Data

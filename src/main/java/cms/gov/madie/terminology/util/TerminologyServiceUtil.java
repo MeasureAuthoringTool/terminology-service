@@ -3,7 +3,6 @@ package cms.gov.madie.terminology.util;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -62,17 +61,11 @@ public class TerminologyServiceUtil {
   public static String buildCodePath(
       String codeSystemName, String codeSystemVersion, String codeId) {
     // "/CodeSystem/LOINC22/Version/2.67/Code/21112-8/Info";
-    var codePath = new StringBuilder("/CodeSystem/");
-    //    String codeSystemName = codeSystemName.split(":")[0];
-    //    codeSystemName = codeSystemName.replaceAll("\"", "");
-    codePath.append(codeSystemName);
-    codePath.append("/Version/");
-    //    codePath.append(cqlCode.getCodeSystem().getVersion().replaceAll("'", ""));
-    codePath.append(codeSystemVersion);
-    codePath.append("/Code/");
-    //    codePath.append(cqlCode.getCodeId().replaceAll("'", ""));
-    codePath.append(codeId);
-    codePath.append("/Info");
-    return codePath.toString();
+    return "/CodeSystem/" + codeSystemName +
+        "/Version/" +
+        codeSystemVersion +
+        "/Code/" +
+        codeId +
+        "/Info";
   }
 }
