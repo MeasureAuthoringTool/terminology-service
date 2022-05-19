@@ -21,6 +21,7 @@ public class CqlCode {
   String errorMessage;
 
   @Data
+  @Builder
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class CqlCodeSystem {
     String oid;

@@ -1,6 +1,7 @@
 package cms.gov.madie.terminology.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Builder;
 import lombok.Data;
 import lombok.ToString;
 
@@ -8,6 +9,7 @@ import java.util.List;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Builder
 @ToString
 public class CodeSystemEntry {
   private String oid;

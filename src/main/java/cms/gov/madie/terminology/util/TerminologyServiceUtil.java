@@ -61,11 +61,12 @@ public class TerminologyServiceUtil {
   public static String buildCodePath(
       String codeSystemName, String codeSystemVersion, String codeId) {
     // "/CodeSystem/LOINC22/Version/2.67/Code/21112-8/Info";
-    return "/CodeSystem/" + codeSystemName +
-        "/Version/" +
-        codeSystemVersion +
-        "/Code/" +
-        codeId +
-        "/Info";
+    return "/CodeSystem/"
+        + codeSystemName
+        + "/Version/"
+        + codeSystemVersion
+        + "/Code/"
+        + codeId
+        + "/Info";
   }
 }
