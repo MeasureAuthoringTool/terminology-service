@@ -72,7 +72,7 @@ class VsacServiceTest {
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertTrue(result.get(0).isValid());
+    assertTrue(result.get(0).getIsValid());
   }
 
   @Test
@@ -82,7 +82,7 @@ class VsacServiceTest {
     vsacCode = null;
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).isValid());
+    assertFalse(result.get(0).getIsValid());
   }
 
   @Test
@@ -97,9 +97,8 @@ class VsacServiceTest {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     cqlCodes.get(0).getCodeSystem().setOid(null);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).isValid());
-    assertEquals("Code system URL is required",
-        result.get(0).getCodeSystem().getErrorMessage());
+    assertFalse(result.get(0).getIsValid());
+    assertEquals("Code system URL is required", result.get(0).getCodeSystem().getErrorMessage());
   }
 
   @Test
@@ -107,9 +106,8 @@ class VsacServiceTest {
     codeSystemEntries.get(0).setUrl("test-Url");
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).isValid());
-    assertEquals("Invalid Code system",
-        result.get(0).getCodeSystem().getErrorMessage());
+    assertFalse(result.get(0).getIsValid());
+    assertEquals("Invalid Code system", result.get(0).getCodeSystem().getErrorMessage());
   }
 
   @Test
@@ -117,7 +115,7 @@ class VsacServiceTest {
     codeSystemEntries.get(0).setOid("NOT.IN.VSAC");
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertTrue(result.get(0).isValid());
+    assertTrue(result.get(0).getIsValid());
   }
 
   @Test
@@ -125,9 +123,8 @@ class VsacServiceTest {
     cqlCodes.get(0).setCodeId(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).isValid());
-    assertEquals("Code Id is required",
-        result.get(0).getErrorMessage());
+    assertFalse(result.get(0).getIsValid());
+    assertEquals("Code Id is required", result.get(0).getErrorMessage());
   }
 
   @Test
@@ -135,10 +132,12 @@ class VsacServiceTest {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
     codeSystemEntries.get(0).setVersion(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    Exception exception = assertThrows(RuntimeException.class,
-        () -> vsacService.validateCodes(cqlCodes, "Test-TGT-Token"));
+    Exception exception =
+        assertThrows(
+            RuntimeException.class, () -> vsacService.validateCodes(cqlCodes, "Test-TGT-Token"));
 
-    String expectedMessage = "CodeSystem 'http://terminology.hl7.org/CodeSystem/v3-ActPriority' does not have any known versions";
+    String expectedMessage =
+        "CodeSystem 'http://terminology.hl7.org/CodeSystem/v3-ActPriority' does not have any known versions";
     String actualMessage = exception.getMessage();
 
     assertTrue(actualMessage.contains(expectedMessage));
@@ -151,6 +150,6 @@ class VsacServiceTest {
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertTrue(result.get(0).isValid());
+    assertTrue(result.get(0).getIsValid());
   }
 }

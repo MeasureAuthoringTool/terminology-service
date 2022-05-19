@@ -25,7 +25,7 @@ public class TerminologyServiceWebClientTest {
 
   private WebClient mockWebClient;
   private WebClient.Builder mockWebClientBuilder;
-  private WebClient.RequestHeadersUriSpec mockRequestHeadersUriSpec;
+  //  private WebClient.RequestHeadersUriSpec mockRequestHeadersUriSpec;
   private WebClient.RequestHeadersSpec mockRequestHeadersSpec;
   private WebClient.RequestBodyUriSpec mockRequestBodyUriSpec;
   private WebClient.RequestBodySpec mockRequestBodySpec;
@@ -45,7 +45,7 @@ public class TerminologyServiceWebClientTest {
     mockWebClientBuilder = Mockito.mock(WebClient.Builder.class);
 
     mockWebClient = mock(WebClient.class);
-    mockRequestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
+    //    mockRequestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
     mockRequestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
     mockRequestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
     mockRequestBodySpec = mock(WebClient.RequestBodySpec.class);
@@ -56,26 +56,25 @@ public class TerminologyServiceWebClientTest {
     mockDescribedValueSet = mock(DescribedValueSet.class);
   }
 
-  //  @Test
-  //  void testGetServiceTicket() throws InterruptedException, ExecutionException {
+  //    @Test
+  //    void testGetServiceTicket() {
   //
-  //    when(mockWebClientBuilder.baseUrl(anyString())).thenReturn(mockWebClientBuilder);
-  //    when(mockWebClientBuilder.build()).thenReturn(mockWebClient);
+  //      when(mockWebClientBuilder.baseUrl(anyString())).thenReturn(mockWebClientBuilder);
+  //      when(mockWebClientBuilder.build()).thenReturn(mockWebClient);
   //
-  //    when(mockWebClient.post()).thenReturn(mockRequestBodyUriSpec);
-  //    when(mockRequestBodyUriSpec.uri(anyString())).thenReturn(mockRequestBodySpec);
-  //    when(mockRequestBodySpec.bodyValue(anyString())).thenReturn(mockRequestHeadersSpec);
-  //    when(mockRequestHeadersSpec.retrieve()).thenReturn(mockResponseSpec);
+  //      when(mockWebClient.post()).thenReturn(mockRequestBodyUriSpec);
+  //      when(mockRequestBodyUriSpec.uri(anyString())).thenReturn(mockRequestBodySpec);
+  //      when(mockRequestBodySpec.bodyValue(anyString())).thenReturn(mockRequestHeadersSpec);
+  //      when(mockRequestHeadersSpec.retrieve()).thenReturn(mockResponseSpec);
   //
-  //    when(mockResponseSpec.onStatus(any(), any())).thenReturn(mockResponseSpec);
-  //    when(mockResponseSpec.bodyToMono(String.class)).thenReturn(Mono.just(TEST));
+  //      when(mockResponseSpec.onStatus(any(), any())).thenReturn(mockResponseSpec);
+  //      when(mockResponseSpec.bodyToMono(String.class)).thenReturn(Mono.just(TEST));
   //
-  //    TerminologyServiceWebClient terminologyServiceWebClient =
-  //        new TerminologyServiceWebClient(
-  //            mockWebClientBuilder, BASE_URL, SERVICE_TICKET_ENDPOINT, VALUE_SET_ENDPOINT,
-  // restTemplate);
-  //    String result = terminologyServiceWebClient.getServiceTicket(TEST);
+  //      TerminologyServiceWebClient terminologyServiceWebClient =
+  //          new TerminologyServiceWebClient(
+  //              mockWebClientBuilder, BASE_URL, SERVICE_TICKET_ENDPOINT, VALUE_SET_ENDPOINT);
+  //      String result = terminologyServiceWebClient.getServiceTicket(TEST);
   //
-  //    assertEquals(TEST, result);
-  //  }
+  //      assertEquals(TEST, result);
+  //    }
 }

@@ -17,7 +17,7 @@ public class CqlCode {
   String name;
   LineInfo start;
   LineInfo stop;
-  boolean isValid;
+  Boolean isValid;
   String errorMessage;
 
   @Data
@@ -31,7 +31,7 @@ public class CqlCode {
     String name;
     LineInfo start;
     LineInfo stop;
-    boolean isValid;
+    Boolean isValid;
     String errorMessage;
   }
 

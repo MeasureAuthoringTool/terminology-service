@@ -69,4 +69,8 @@ public class TerminologyServiceUtil {
         + codeId
         + "/Info";
   }
+
+  public static String sanitizeInput(String input) {
+    return input.replaceAll("'", "");
+  }
 }

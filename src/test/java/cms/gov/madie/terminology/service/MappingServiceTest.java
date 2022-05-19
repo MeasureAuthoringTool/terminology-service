@@ -43,11 +43,11 @@ class MappingServiceTest {
     codeSystemEntries[0] = codeSystemEntry;
   }
 
-//  @Test
-//  void getCodeSystemEntries() throws IOException {
-//    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
-//        .thenReturn(codeSystemEntries);
-//    List<CodeSystemEntry> response = mappingService.getCodeSystemEntries();
-//    verify(!response.isEmpty());
-//  }
+  //  @Test
+  //  void getCodeSystemEntries() throws IOException {
+  //    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
+  //        .thenReturn(codeSystemEntries);
+  //    List<CodeSystemEntry> response = mappingService.getCodeSystemEntries();
+  //    verify(!response.isEmpty());
+  //  }
 }
