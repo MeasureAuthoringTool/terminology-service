@@ -50,6 +50,8 @@ public class VsacService {
   public List<CqlCode> validateCodes(List<CqlCode> cqlCodes, String tgt) {
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
     for (CqlCode cqlCode : cqlCodes) {
+      cqlCode.getCodeSystem().setValid(true);
+      cqlCode.setValid(true);
       String cqlCodeSystemOid = cqlCode.getCodeSystem().getOid();
       if (!StringUtils.isBlank(cqlCodeSystemOid)) {
         Optional<CodeSystemEntry> codeSystemEntry =
@@ -61,17 +63,14 @@ public class VsacService {
                                 TerminologyServiceUtil.sanitizeInput(cqlCodeSystemOid)))
                 .findFirst();
         if (codeSystemEntry.isPresent()) {
-          cqlCode.getCodeSystem().setIsValid(true);
-          if (codeSystemEntry.get().getOid().contains("NOT.IN.VSAC")) {
-            // if codeSystemEntry is available in mapping json, but listed as NOT IN VSAC, then it
-            // is a valid FHIR code system.
-            cqlCode.setIsValid(true);
-          } else {
+          // if codeSystemEntry is available in mapping json, but listed as NOT IN VSAC, then it
+          // is a valid FHIR code system.
+          if (!codeSystemEntry.get().getOid().contains("NOT.IN.VSAC")) {
             String codeSystemVersion = buildCodeSystemVersion(cqlCode, codeSystemEntry.get());
             String codeId = cqlCode.getCodeId();
             if (codeId == null || TerminologyServiceUtil.sanitizeInput(codeId).isBlank()) {
               log.debug("Code id is not available for code {}", cqlCode.getName());
-              cqlCode.setIsValid(false);
+              cqlCode.setValid(false);
               cqlCode.setErrorMessage("Code Id is required");
             } else if (!StringUtils.isBlank(codeSystemVersion)) {
               String codePath =
@@ -80,7 +79,7 @@ public class VsacService {
                       codeSystemVersion,
                       TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeId()));
               VsacCode vsacCode = terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
-              cqlCode.setIsValid(vsacCode != null);
+              cqlCode.setValid(vsacCode != null);
             }
           }
         } else {
@@ -88,13 +87,13 @@ public class VsacService {
           log.debug(
               "No associated Code system found in code system entry json for {}",
               cqlCode.getCodeSystem().getOid());
-          cqlCode.getCodeSystem().setIsValid(false);
+          cqlCode.getCodeSystem().setValid(false);
           cqlCode.getCodeSystem().setErrorMessage("Invalid Code system");
         }
       } else {
         // if oid/url is not provided in cql, then the code system is considered invalid.
         log.debug("CodeSystem {} does not contain any URL", cqlCode.getCodeSystem().getName());
-        cqlCode.getCodeSystem().setIsValid(false);
+        cqlCode.getCodeSystem().setValid(false);
         cqlCode.getCodeSystem().setErrorMessage("Code system URL is required");
       }
     }
@@ -113,7 +112,7 @@ public class VsacService {
   private String buildCodeSystemVersion(CqlCode cqlCode, CodeSystemEntry codeSystemEntry) {
     String cqlCodeSystemVersion = cqlCode.getCodeSystem().getVersion();
     List<CodeSystemEntry.Version> codeSystemEntryVersion = codeSystemEntry.getVersion();
-    if (!StringUtils.isBlank(cqlCodeSystemVersion)) {
+    if (!StringUtils.isBlank(cqlCodeSystemVersion)) { // sanitize before checking for null value
       if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
         log.debug(
             "CodeSystem {} does not have any known versions", cqlCode.getCodeSystem().getOid());
@@ -139,13 +138,9 @@ public class VsacService {
       }
     } else {
       if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
-        cqlCode.getCodeSystem().setIsValid(false);
+        cqlCode.getCodeSystem().setValid(false);
         cqlCode.getCodeSystem().setErrorMessage("Unable to find a code system version");
         return "";
-//        throw new RuntimeException(
-//            String.format(
-//                "CodeSystem %s does not have any known versions",
-//                cqlCode.getCodeSystem().getOid()));
       }
       return codeSystemEntryVersion.get(0).getVsac();
     }

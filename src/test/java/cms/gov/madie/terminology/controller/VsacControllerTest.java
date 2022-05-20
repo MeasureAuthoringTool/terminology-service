@@ -59,11 +59,11 @@ public class VsacControllerTest {
   void testValidateCodes() {
     CqlCode cqlCode = CqlCode.builder().name("test-code").codeId("test-codeId").build();
     when(vsacService.validateCodes(any(), anyString())).thenReturn(List.of(cqlCode));
-    cqlCode.setIsValid(true);
+    cqlCode.setValid(true);
     ResponseEntity<List<CqlCode>> response =
         vsacController.validateCodes(List.of(cqlCode), "TGT-Token");
     assertEquals(1, Objects.requireNonNull(response.getBody()).size());
     assertEquals("test-code", response.getBody().get(0).getName());
-    assertTrue(response.getBody().get(0).getIsValid());
+    assertTrue(response.getBody().get(0).isValid());
   }
 }

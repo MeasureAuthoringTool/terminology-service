@@ -72,7 +72,7 @@ class VsacServiceTest {
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertTrue(result.get(0).getIsValid());
+    assertTrue(result.get(0).isValid());
   }
 
   @Test
@@ -82,7 +82,7 @@ class VsacServiceTest {
     vsacCode = null;
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).getIsValid());
+    assertFalse(result.get(0).isValid());
   }
 
   @Test
@@ -97,7 +97,7 @@ class VsacServiceTest {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     cqlCodes.get(0).getCodeSystem().setOid(null);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).getIsValid());
+    assertFalse(result.get(0).isValid());
     assertEquals("Code system URL is required", result.get(0).getCodeSystem().getErrorMessage());
   }
 
@@ -106,7 +106,7 @@ class VsacServiceTest {
     codeSystemEntries.get(0).setUrl("test-Url");
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).getIsValid());
+    assertFalse(result.get(0).isValid());
     assertEquals("Invalid Code system", result.get(0).getCodeSystem().getErrorMessage());
   }
 
@@ -115,7 +115,7 @@ class VsacServiceTest {
     codeSystemEntries.get(0).setOid("NOT.IN.VSAC");
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertTrue(result.get(0).getIsValid());
+    assertTrue(result.get(0).isValid());
   }
 
   @Test
@@ -123,7 +123,7 @@ class VsacServiceTest {
     cqlCodes.get(0).setCodeId(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).getIsValid());
+    assertFalse(result.get(0).isValid());
     assertEquals("Code Id is required", result.get(0).getErrorMessage());
   }
 
@@ -150,6 +150,6 @@ class VsacServiceTest {
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertTrue(result.get(0).getIsValid());
+    assertTrue(result.get(0).isValid());
   }
 }
