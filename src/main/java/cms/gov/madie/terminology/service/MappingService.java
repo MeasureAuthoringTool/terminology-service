@@ -18,7 +18,7 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class MappingService {
-  @Value("${json.data.code-system-entry-url}")
+  @Value("${mapping.data.code-system-entry-url}")
   private String codeSystemEntryUrl;
 
   @Autowired private final ObjectMapper objectMapper;
