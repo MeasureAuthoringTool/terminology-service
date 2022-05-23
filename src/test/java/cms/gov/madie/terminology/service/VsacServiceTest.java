@@ -5,7 +5,6 @@ import cms.gov.madie.terminology.dto.CqlCode;
 import cms.gov.madie.terminology.dto.VsacCode;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import com.okta.commons.lang.Collections;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +42,7 @@ class VsacServiceTest {
             .codeId("'P'")
             .codeSystem(
                 CqlCode.CqlCodeSystem.builder()
-                    .oid("'http://terminology.hl7.org/CodeSystem/v3-ActPriority'")
+                    .oid("'https://terminology.hl7.org/CodeSystem/v3-ActPriority'")
                     .name("ActPriority:HL7V3.0_2021-03")
                     .version("'HL7V3.0_2021-03'")
                     .build())
@@ -61,14 +60,11 @@ class VsacServiceTest {
         CodeSystemEntry.builder()
             .name("ActPriority")
             .oid("1.2.3.4.5.6.7.8.9")
-            .url("http://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
             .version(Collections.toList(version))
             .build();
     codeSystemEntries.add(codeSystemEntry);
   }
-
-  @AfterEach
-  private void end() {}
 
   @Test
   void testAValidCodeFromVsac() {

@@ -4,7 +4,6 @@ import cms.gov.madie.terminology.dto.CodeSystemEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +20,7 @@ public class MappingService {
   @Value("${mapping.data.code-system-entry-url}")
   private String codeSystemEntryUrl;
 
-  @Autowired private final ObjectMapper objectMapper;
+  private final ObjectMapper objectMapper;
 
   public List<CodeSystemEntry> getCodeSystemEntries() {
     try {

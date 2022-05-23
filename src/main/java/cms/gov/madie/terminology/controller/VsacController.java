@@ -1,7 +1,7 @@
 package cms.gov.madie.terminology.controller;
 
 import cms.gov.madie.terminology.dto.CqlCode;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,15 +24,11 @@ import java.util.List;
 @RestController
 @RequestMapping(path = "/vsac")
 @Slf4j
+@RequiredArgsConstructor
 public class VsacController {
 
   private final VsacService vsacService;
-
-  @Autowired IParser parser;
-
-  public VsacController(VsacService vsacService) {
-    this.vsacService = vsacService;
-  }
+  private final IParser parser;
 
   @GetMapping(path = "/valueSet", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getValueSet(

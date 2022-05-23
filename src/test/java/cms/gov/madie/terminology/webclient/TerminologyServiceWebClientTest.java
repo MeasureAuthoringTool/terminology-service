@@ -12,14 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
 
-@SpringBootTest()
 @ExtendWith(MockitoExtension.class)
 public class TerminologyServiceWebClientTest {
 
@@ -43,9 +41,9 @@ public class TerminologyServiceWebClientTest {
 
   private TerminologyServiceWebClient terminologyServiceWebClient;
 
-  private static final String BASE_URL = "http://test.com";
+  private static final String BASE_URL = "https://test.com";
   private static final String SERVICE_TICKET_ENDPOINT =
-      "/service/ticket/%s?service=http://test.ticket.com";
+      "/service/ticket/%s?service=https://test.ticket.com";
   private static final String VALUE_SET_ENDPOINT =
       "/valueset?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}";
   private static final String SERVICE_TICKET = "st-test";
