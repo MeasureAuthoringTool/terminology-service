@@ -5,6 +5,7 @@ import cms.gov.madie.terminology.dto.CqlCode;
 import cms.gov.madie.terminology.dto.VsacCode;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import com.okta.commons.lang.Collections;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,6 +67,9 @@ class VsacServiceTest {
     codeSystemEntries.add(codeSystemEntry);
   }
 
+  @AfterEach
+  private void end() {}
+
   @Test
   void testAValidCodeFromVsac() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
@@ -97,7 +101,7 @@ class VsacServiceTest {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     cqlCodes.get(0).getCodeSystem().setOid(null);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).isValid());
+    assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals("Code system URL is required", result.get(0).getCodeSystem().getErrorMessage());
   }
 
@@ -106,7 +110,7 @@ class VsacServiceTest {
     codeSystemEntries.get(0).setUrl("test-Url");
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
-    assertFalse(result.get(0).isValid());
+    assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals("Invalid Code system", result.get(0).getCodeSystem().getErrorMessage());
   }
 
@@ -132,15 +136,10 @@ class VsacServiceTest {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
     codeSystemEntries.get(0).setVersion(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    Exception exception =
-        assertThrows(
-            RuntimeException.class, () -> vsacService.validateCodes(cqlCodes, "Test-TGT-Token"));
-
-    String expectedMessage =
-        "CodeSystem 'http://terminology.hl7.org/CodeSystem/v3-ActPriority' does not have any known versions";
-    String actualMessage = exception.getMessage();
-
-    assertTrue(actualMessage.contains(expectedMessage));
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
+    assertFalse(result.get(0).getCodeSystem().isValid());
+    assertEquals(
+        "Unable to find a code system version", result.get(0).getCodeSystem().getErrorMessage());
   }
 
   @Test

@@ -44,7 +44,6 @@ class MappingServiceTest {
             .version(Collections.toList(version))
             .build();
     codeSystemEntries[0] = codeSystemEntry;
-
   }
 
   @Test
