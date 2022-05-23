@@ -9,9 +9,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -29,6 +30,8 @@ class MappingServiceTest {
 
   @BeforeEach
   public void setup() {
+    ReflectionTestUtils.setField(mappingService, "codeSystemEntryUrl", "https://Codesystem.com");
+
     codeSystemEntries = new CodeSystemEntry[1];
     CodeSystemEntry.Version version = new CodeSystemEntry.Version();
     version.setVsac("2.3");
@@ -41,13 +44,14 @@ class MappingServiceTest {
             .version(Collections.toList(version))
             .build();
     codeSystemEntries[0] = codeSystemEntry;
+
   }
 
-  //  @Test
-  //  void getCodeSystemEntries() throws IOException {
-  //    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
-  //        .thenReturn(codeSystemEntries);
-  //    List<CodeSystemEntry> response = mappingService.getCodeSystemEntries();
-  //    verify(!response.isEmpty());
-  //  }
+  @Test
+  void getCodeSystemEntries() throws IOException {
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
+        .thenReturn(codeSystemEntries);
+    List<CodeSystemEntry> response = mappingService.getCodeSystemEntries();
+    assertFalse(response.isEmpty());
+  }
 }
