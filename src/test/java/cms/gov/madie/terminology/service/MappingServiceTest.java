@@ -40,7 +40,7 @@ class MappingServiceTest {
         CodeSystemEntry.builder()
             .name("ActPriority")
             .oid("1.2.3.4.5.6.7.8.9")
-            .url("http://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
             .version(Collections.toList(version))
             .build();
     codeSystemEntries[0] = codeSystemEntry;

@@ -4,12 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
-
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
-import org.hl7.fhir.r4.model.ValueSet;
-
 import static org.mockito.Mockito.doThrow;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,11 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-
 import cms.gov.madie.terminology.service.VsacService;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
-
 import java.util.List;
 import java.util.Objects;
 

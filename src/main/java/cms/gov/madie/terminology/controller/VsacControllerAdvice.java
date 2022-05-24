@@ -3,7 +3,6 @@ package cms.gov.madie.terminology.controller;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
@@ -25,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class VsacControllerAdvice {
 
-  @Autowired private final ErrorAttributes errorAttributes;
+  private final ErrorAttributes errorAttributes;
 
   @ExceptionHandler(WebClientResponseException.class)
   public ResponseEntity<Map<String, Object>> handleWebClientResponseException(
