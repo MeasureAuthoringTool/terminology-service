@@ -24,4 +24,4 @@ client:
 
 mapping:
   data:
-    code-system-entry-url: ${CODE_SYSTEM_ENTRY_URL}
+    code-system-entry-url: ${CODE_SYSTEM_ENTRY_URL:https://madie-dev-static.s3.amazonaws.com/mappings/code-system-entry.json}

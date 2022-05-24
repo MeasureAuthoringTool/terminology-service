@@ -20,8 +20,8 @@ jobs:
           java-version: '16'
           distribution: 'adopt'
 
-      #      Github Authentication is required to download artifacts from github packages
-      #      A secret is created for this repo, so that github actions can fetch it, the secret is named after GH_PAT_FOR_ACTIONS_TOKEN
+      # Github Authentication is required to download artifacts from github packages
+      # A secret is created for this repo, so that github actions can fetch it, the secret is named after GH_PAT_FOR_ACTIONS_TOKEN
       - name: maven-settings
         uses: s4u/maven-settings-action@v2
         with:
