@@ -1,9 +1,9 @@
 package cms.gov.madie.terminology.service;
 
-import cms.gov.madie.terminology.dto.CodeSystemEntry;
-import cms.gov.madie.terminology.dto.CqlCode;
-import cms.gov.madie.terminology.dto.VsacCode;
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
+import gov.cms.madiejavamodels.cql.terminology.CqlCode;
+import gov.cms.madiejavamodels.cql.terminology.VsacCode;
+import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.ValueSet;

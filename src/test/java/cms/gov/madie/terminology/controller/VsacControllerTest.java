@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import cms.gov.madie.terminology.dto.CqlCode;
+import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 import org.hl7.fhir.r4.model.ValueSet;
 
 import static org.mockito.Mockito.doThrow;

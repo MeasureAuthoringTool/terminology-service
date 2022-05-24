@@ -1,7 +1,7 @@
 package cms.gov.madie.terminology.service;
 
-import cms.gov.madie.terminology.dto.CodeSystemEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

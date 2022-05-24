@@ -1,8 +1,8 @@
 package cms.gov.madie.terminology.service;
 
-import cms.gov.madie.terminology.dto.CodeSystemEntry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okta.commons.lang.Collections;
+import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

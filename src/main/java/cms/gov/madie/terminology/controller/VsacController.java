@@ -1,6 +1,6 @@
 package cms.gov.madie.terminology.controller;
 
-import cms.gov.madie.terminology.dto.CqlCode;
+import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
