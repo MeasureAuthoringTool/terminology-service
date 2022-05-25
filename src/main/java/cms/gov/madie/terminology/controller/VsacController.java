@@ -56,10 +56,10 @@ public class VsacController {
 
   @PutMapping(path = "/value-sets/searches", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> searchValueSets(
-      @RequestBody ValueSetsSearchCriteria searchParamsDto) {
+      @RequestBody ValueSetsSearchCriteria searchCriteria) {
     log.debug("VsacController::getValueSets");
     List<RetrieveMultipleValueSetsResponse> vsacValueSets =
-        vsacService.getValueSets(searchParamsDto);
+        vsacService.getValueSets(searchCriteria);
     List<ValueSet> fhirValueSets = vsacService.convertToFHIRValueSets(vsacValueSets);
     String serializedValueSets =
         fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));

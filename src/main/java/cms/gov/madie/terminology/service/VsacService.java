@@ -62,17 +62,17 @@ public class VsacService {
   }
 
   public List<RetrieveMultipleValueSetsResponse> getValueSets(
-      ValueSetsSearchCriteria searchParamsDto) {
+      ValueSetsSearchCriteria searchCriteria) {
     List<ValueSetsSearchCriteria.ValueSetParams> valueSetParams =
-        searchParamsDto.getValueSetParams();
+      searchCriteria.getValueSetParams();
     return valueSetParams.stream()
         .map(
             vsParam ->
                 getValueSet(
                     vsParam.getOid(),
-                    searchParamsDto.getTgt(),
-                    searchParamsDto.getProfile(),
-                    searchParamsDto.getIncludeDraft(),
+                  searchCriteria.getTgt(),
+                  searchCriteria.getProfile(),
+                  searchCriteria.getIncludeDraft(),
                     vsParam.getRelease(),
                     vsParam.getVersion()))
         .collect(Collectors.toList());

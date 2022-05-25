@@ -35,7 +35,7 @@ public class VsacServiceTest {
   @InjectMocks private VsacService vsacService;
 
   private RetrieveMultipleValueSetsResponse svsValueSet;
-  private ValueSetsSearchCriteria searchParamsDTO;
+  private ValueSetsSearchCriteria valueSetsSearchCriteria;
 
   @BeforeEach
   public void setup() throws JAXBException {
@@ -46,7 +46,7 @@ public class VsacServiceTest {
     ValueSetsSearchCriteria.ValueSetParams valueSetParams =
         new ValueSetsSearchCriteria.ValueSetParams();
     valueSetParams.setOid("2.16.840.1.113883.3.464.1003.101.12.1001");
-    searchParamsDTO =
+    valueSetsSearchCriteria =
         ValueSetsSearchCriteria.builder()
             .tgt("TGT-Xy4z-pQr-FaK3")
             .profile("eCQM Update 2030-05-05")
@@ -61,13 +61,13 @@ public class VsacServiceTest {
         .thenReturn(svsValueSet);
 
     List<RetrieveMultipleValueSetsResponse> vsacValueSets =
-        vsacService.getValueSets(searchParamsDTO);
+        vsacService.getValueSets(valueSetsSearchCriteria);
 
     RetrieveMultipleValueSetsResponse.DescribedValueSet describedValueSet =
         vsacValueSets.get(0).getDescribedValueSet();
     assertThat(
         describedValueSet.getID(),
-        is(equalTo(searchParamsDTO.getValueSetParams().get(0).getOid())));
+        is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
     assertThat(describedValueSet.getDisplayName(), is(equalTo("Office Visit")));
     assertThat(describedValueSet.getConceptList().getConcepts().size(), is(equalTo(16)));
   }
@@ -78,7 +78,7 @@ public class VsacServiceTest {
     doThrow(new InterruptedException()).when(terminologyWebClient).getServiceTicket(anyString());
 
     VsacGenericException exception =
-        assertThrows(VsacGenericException.class, () -> vsacService.getValueSets(searchParamsDTO));
+        assertThrows(VsacGenericException.class, () -> vsacService.getValueSets(valueSetsSearchCriteria));
 
     assertThat(
         exception.getMessage(),
