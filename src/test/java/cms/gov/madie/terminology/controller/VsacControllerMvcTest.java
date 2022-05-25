@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(VsacController.class)
 public class VsacControllerMvcTest {
-  private static final String TEST_USER = "john_doe";
+  private static final String TEST_USER = "FAKE";
 
   @MockBean private FhirContext fhirContext;
 
