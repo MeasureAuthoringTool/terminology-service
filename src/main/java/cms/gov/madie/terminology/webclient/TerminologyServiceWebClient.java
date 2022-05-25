@@ -1,5 +1,6 @@
 package cms.gov.madie.terminology.webclient;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -98,7 +99,7 @@ public class TerminologyServiceWebClient {
       String includeDraft,
       String release,
       String version) {
-
+    profile = StringUtils.isBlank(profile) ? defaultProfile : profile;
     return TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
         baseUrl, valuesetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
   }

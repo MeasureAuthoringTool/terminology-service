@@ -22,4 +22,4 @@ client:
   vsac_base_url: https://vsac.nlm.nih.gov/vsac
   service_ticket_endpoint: /ws/Ticket/%s?service=http://umlsks.nlm.nih.gov
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}
-  default_profile: eCQM Update 2022-05-05
+  default_profile: ${DEFAULT_VSAC_PROFILE:eCQM Update 2022-05-05}
