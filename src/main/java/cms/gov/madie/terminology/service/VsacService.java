@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import cms.gov.madie.terminology.dto.SearchParamsDTO;
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,8 +61,10 @@ public class VsacService {
         .collect(Collectors.toList());
   }
 
-  public List<RetrieveMultipleValueSetsResponse> getValueSets(SearchParamsDTO searchParamsDto) {
-    List<SearchParamsDTO.ValueSetParams> valueSetParams = searchParamsDto.getValueSetParams();
+  public List<RetrieveMultipleValueSetsResponse> getValueSets(
+      ValueSetsSearchCriteria searchParamsDto) {
+    List<ValueSetsSearchCriteria.ValueSetParams> valueSetParams =
+        searchParamsDto.getValueSetParams();
     return valueSetParams.stream()
         .map(
             vsParam ->

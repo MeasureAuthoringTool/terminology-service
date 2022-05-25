@@ -1,7 +1,7 @@
 package cms.gov.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
-import cms.gov.madie.terminology.dto.SearchParamsDTO;
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.helpers.TestHelpers;
 import cms.gov.madie.terminology.service.VsacService;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
@@ -73,7 +73,8 @@ public class VsacControllerMvcTest {
             + "    ]\n"
             + "}";
 
-    when(vsacService.getValueSets(any(SearchParamsDTO.class))).thenReturn(List.of(svsValueSet));
+    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class)))
+        .thenReturn(List.of(svsValueSet));
     when(vsacService.convertToFHIRValueSets(List.of(svsValueSet)))
         .thenReturn(List.of(fhirValueSet));
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
@@ -89,7 +90,7 @@ public class VsacControllerMvcTest {
             .andExpect(status().isOk())
             .andReturn();
     String content = result.getResponse().getContentAsString();
-    verify(vsacService, times(1)).getValueSets(any(SearchParamsDTO.class));
+    verify(vsacService, times(1)).getValueSets(any(ValueSetsSearchCriteria.class));
     assertThat(content, containsString("\"resourceType\":\"ValueSet\""));
     assertThat(content, containsString("\"name\":\"Office Visit\""));
     assertThat(content, containsString("\"system\":\"2.16.840.1.113883.6.12\""));
@@ -113,7 +114,7 @@ public class VsacControllerMvcTest {
 
     doThrow(new WebClientResponseException(404, "Error", null, null, null))
         .when(vsacService)
-        .getValueSets(any(SearchParamsDTO.class));
+        .getValueSets(any(ValueSetsSearchCriteria.class));
 
     MvcResult result =
         mockMvc

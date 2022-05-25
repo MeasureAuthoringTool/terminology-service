@@ -1,6 +1,6 @@
 package cms.gov.madie.terminology.service;
 
-import cms.gov.madie.terminology.dto.SearchParamsDTO;
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import cms.gov.madie.terminology.helpers.TestHelpers;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
@@ -35,7 +35,7 @@ public class VsacServiceTest {
   @InjectMocks private VsacService vsacService;
 
   private RetrieveMultipleValueSetsResponse svsValueSet;
-  private SearchParamsDTO searchParamsDTO;
+  private ValueSetsSearchCriteria searchParamsDTO;
 
   @BeforeEach
   public void setup() throws JAXBException {
@@ -43,10 +43,11 @@ public class VsacServiceTest {
     JAXBContext jaxbContext = JAXBContext.newInstance(RetrieveMultipleValueSetsResponse.class);
     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
     svsValueSet = (RetrieveMultipleValueSetsResponse) jaxbUnmarshaller.unmarshal(file);
-    SearchParamsDTO.ValueSetParams valueSetParams = new SearchParamsDTO.ValueSetParams();
+    ValueSetsSearchCriteria.ValueSetParams valueSetParams =
+        new ValueSetsSearchCriteria.ValueSetParams();
     valueSetParams.setOid("2.16.840.1.113883.3.464.1003.101.12.1001");
     searchParamsDTO =
-        SearchParamsDTO.builder()
+        ValueSetsSearchCriteria.builder()
             .tgt("TGT-Xy4z-pQr-FaK3")
             .profile("eCQM Update 2030-05-05")
             .valueSetParams(List.of(valueSetParams))

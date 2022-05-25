@@ -1,7 +1,7 @@
 package cms.gov.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
-import cms.gov.madie.terminology.dto.SearchParamsDTO;
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.service.VsacService;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -55,7 +55,8 @@ public class VsacController {
   }
 
   @PutMapping(path = "/value-sets/searches", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<String> searchValueSets(@RequestBody SearchParamsDTO searchParamsDto) {
+  public ResponseEntity<String> searchValueSets(
+      @RequestBody ValueSetsSearchCriteria searchParamsDto) {
     log.debug("VsacController::getValueSets");
     List<RetrieveMultipleValueSetsResponse> vsacValueSets =
         vsacService.getValueSets(searchParamsDto);

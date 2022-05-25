@@ -7,7 +7,7 @@ import java.util.List;
 
 @Data
 @Builder(toBuilder = true)
-public class SearchParamsDTO {
+public class ValueSetsSearchCriteria {
 
   private String profile;
   private String includeDraft;
