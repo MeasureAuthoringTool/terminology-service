@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(VsacController.class)
 public class VsacControllerMvcTest {
-  private static final String TEST_USER = "FAKE";
+  private static final String TEST_USR = "FAKE";
 
   @MockBean private FhirContext fhirContext;
 
@@ -82,7 +82,7 @@ public class VsacControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.put("/vsac/value-sets/searches")
-                    .with(user(TEST_USER))
+                    .with(user(TEST_USR))
                     .with(csrf())
                     .content(searchCriteria)
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -119,7 +119,7 @@ public class VsacControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.put("/vsac/value-sets/searches")
-                    .with(user(TEST_USER))
+                    .with(user(TEST_USR))
                     .with(csrf())
                     .content(searchCriteria)
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
