@@ -57,7 +57,7 @@ public class VsacController {
     return parser.encodeResourceToString(fhirValueSet);
   }
 
-  @PutMapping(path = "/validateCodes", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CqlCode>> validateCodes(
       @RequestBody List<CqlCode> cqlCodes, @RequestParam String tgt) {
     return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, tgt));
