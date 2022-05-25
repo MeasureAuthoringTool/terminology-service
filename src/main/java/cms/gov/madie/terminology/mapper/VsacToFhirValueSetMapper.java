@@ -25,11 +25,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class VsacToFhirValueSetMapper {
 
-  public ValueSet convertToFHIRValueSet(
-      RetrieveMultipleValueSetsResponse vsacValuesetResponse, String oid) {
-    DescribedValueSet vsacDescribedValueSet = vsacValuesetResponse.getDescribedValueSet();
+  public ValueSet convertToFHIRValueSet(RetrieveMultipleValueSetsResponse vsacValueSetResponse) {
+    DescribedValueSet vsacDescribedValueSet = vsacValueSetResponse.getDescribedValueSet();
     ValueSet fhirValueSet = new ValueSet();
-    fhirValueSet = setFhirMainAttributes(fhirValueSet, vsacDescribedValueSet, oid);
+    fhirValueSet =
+        setFhirMainAttributes(fhirValueSet, vsacDescribedValueSet, vsacDescribedValueSet.getID());
     if (vsacDescribedValueSet.getConceptList() != null
         && !CollectionUtils.isEmpty(vsacDescribedValueSet.getConceptList().getConcepts())) {
       addFhirValueSetComposeComponent(

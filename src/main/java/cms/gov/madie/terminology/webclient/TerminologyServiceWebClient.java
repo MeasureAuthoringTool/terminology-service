@@ -22,16 +22,19 @@ public class TerminologyServiceWebClient {
   private final String baseUrl;
   private final String serviceticketEndpoint;
   private final String valuesetEndpoint;
+  private final String defaultProfile;
 
   public TerminologyServiceWebClient(
       WebClient.Builder webClientBuilder,
       @Value("${client.vsac_base_url}") String baseUrl,
       @Value("${client.service_ticket_endpoint}") String serviceticketEndpoint,
-      @Value("${client.valueset_endpoint}") String valuesetEndpoint) {
+      @Value("${client.valueset_endpoint}") String valuesetEndpoint,
+      @Value("${client.default_profile}") String defaultProfile) {
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
     this.serviceticketEndpoint = serviceticketEndpoint;
     this.valuesetEndpoint = valuesetEndpoint;
+    this.defaultProfile = defaultProfile;
     log.debug("baseUrl = " + baseUrl + " serviceticketEndpoint = " + serviceticketEndpoint);
   }
 

@@ -1,0 +1,53 @@
+{
+  "resourceType": "ValueSet",
+  "id": "2.16.840.1.113883.3.464.1003.101.12.1001",
+  "url": "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.101.12.1001",
+  "version": "",
+  "name": "Office Visit",
+  "title": "Office Visit",
+  "status": "active",
+  "date": "2022-05-24T00:00:00-04:00",
+  "publisher": "National Committee for Quality Assurance",
+  "description": "(2.16.840.1.113883.3.464.1003.101.11.1005:Office Visit),(2.16.840.1.113883.3.464.1003.101.11.1264:Office visits, include weekend, after hours)",
+  "purpose": "(Clinical Focus: The purpose of this value set is to represent concepts for encounters for an outpatient visit.),(Data Element Scope: This value set may use a model element related to Encounter.),(Inclusion Criteria: Includes concepts that represent an encounter for the comprehensive history, evaluation, and management of a patient presenting with minor to high severity problems.),(Exclusion Criteria: No exclusions.)",
+  "compose": {
+    "include": [
+      {
+        "system": "2.16.840.1.113883.6.12",
+        "version": "2020",
+        "concept": [
+          {
+            "code": "99201",
+            "display": "Office or other outpatient visit for the evaluation and management of a new patient, which requires these 3 key components: A problem focused history; A problem focused examination; Straightforward medical decision making. Counseling and/or coordination of care with other physicians, other qualified health care professionals, or agencies are provided consistent with the nature of the problem(s) and the patient's and/or family's needs. Usually, the presenting problem(s) are self limited or minor. Typically, 10 minutes are spent face-to-face with the patient and/or family."
+          }
+        ]
+      },
+      {
+        "system": "2.16.840.1.113883.6.96",
+        "version": "2021-09",
+        "concept": [
+          {
+            "code": "185463005",
+            "display": "Visit out of hours (procedure)"
+          },
+          {
+            "code": "185464004",
+            "display": "Out of hours visit - not night visit (procedure)"
+          },
+          {
+            "code": "185465003",
+            "display": "Weekend visit (procedure)"
+          },
+          {
+            "code": "3391000175108",
+            "display": "Office visit for pediatric care and assessment (procedure)"
+          },
+          {
+            "code": "439740005",
+            "display": "Postoperative follow-up visit (procedure)"
+          }
+        ]
+      }
+    ]
+  }
+}

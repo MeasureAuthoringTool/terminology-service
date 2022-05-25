@@ -3,6 +3,7 @@ package cms.gov.madie.terminology.controller;
 import java.util.HashMap;
 import java.util.Map;
 
+import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
@@ -52,6 +53,17 @@ public class VsacControllerAdvice {
   @ResponseBody
   Map<String, Object> onMissingServletRequestParameterException(
       MissingServletRequestParameterException ex, WebRequest request) {
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(VsacGenericException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onVsacGenericException(VsacGenericException ex, WebRequest request) {
     Map<String, String> validationErrors = new HashMap<>();
     validationErrors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);

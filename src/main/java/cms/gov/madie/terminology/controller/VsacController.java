@@ -1,22 +1,25 @@
 package cms.gov.madie.terminology.controller;
 
-import java.util.concurrent.ExecutionException;
-
+import ca.uhn.fhir.context.FhirContext;
+import cms.gov.madie.terminology.dto.SearchParamsDTO;
+import cms.gov.madie.terminology.service.VsacService;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import ca.uhn.fhir.parser.IParser;
-import org.hl7.fhir.r4.model.ValueSet;
-
-import cms.gov.madie.terminology.service.VsacService;
-
-import lombok.extern.slf4j.Slf4j;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import javax.xml.bind.JAXBException;
+import java.io.FileNotFoundException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = "/vsac")
@@ -25,7 +28,7 @@ public class VsacController {
 
   private final VsacService vsacService;
 
-  @Autowired IParser parser;
+  @Autowired private FhirContext fhirContext;
 
   public VsacController(VsacService vsacService) {
     this.vsacService = vsacService;
@@ -38,17 +41,14 @@ public class VsacController {
       @RequestParam(required = false, name = "profile") String profile,
       @RequestParam(required = false, name = "includeDraft") String includeDraft,
       @RequestParam(required = false, name = "release") String release,
-      @RequestParam(required = false, name = "version") String version)
-      throws InterruptedException, ExecutionException {
+      @RequestParam(required = false, name = "version") String version) {
 
     log.debug("Entering: getValueSet()");
 
-    String serviceTicket = vsacService.getServiceTicket(tgt);
-
     RetrieveMultipleValueSetsResponse valuesetResponse =
-        vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
+        vsacService.getValueSet(oid, tgt, profile, includeDraft, release, version);
 
-    ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
+    ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse);
     log.debug("valueset id = " + fhirValueSet.getId());
 
     String serialized = serializeFhirValueset(fhirValueSet);
@@ -56,10 +56,19 @@ public class VsacController {
     return ResponseEntity.ok().body(serialized);
   }
 
+  @PutMapping(path = "/value-sets/searches", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> searchValueSets(@RequestBody SearchParamsDTO searchParamsDto) {
+    log.debug("VsacController::getValueSets");
+    List<RetrieveMultipleValueSetsResponse> vsacValueSets =
+        vsacService.getValueSets(searchParamsDto);
+    List<ValueSet> fhirValueSets = vsacService.convertToFHIRValueSets(vsacValueSets);
+    String serializedValueSets =
+        fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));
+
+    return ResponseEntity.ok().body("[" + serializedValueSets + "]");
+  }
+
   protected String serializeFhirValueset(ValueSet fhirValueSet) {
-
-    String serialized = parser.encodeResourceToString(fhirValueSet);
-
-    return serialized;
+    return fhirContext.newJsonParser().encodeResourceToString(fhirValueSet);
   }
 }
