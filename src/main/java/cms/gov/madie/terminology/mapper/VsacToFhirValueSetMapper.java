@@ -42,7 +42,7 @@ public class VsacToFhirValueSetMapper {
       ValueSet fhirValueSet, DescribedValueSet vsacDescribedValueSet, String oid) {
     fhirValueSet.setId(vsacDescribedValueSet.getID());
     fhirValueSet.setUrl("http://cts.nlm.nih.gov/fhir/ValueSet/" + vsacDescribedValueSet.getID());
-    List<Identifier> ids = new ArrayList<Identifier>();
+    List<Identifier> ids = new ArrayList<>();
     Identifier id = new Identifier();
     id.setId(oid);
     fhirValueSet.setIdentifier(ids);
@@ -72,8 +72,8 @@ public class VsacToFhirValueSetMapper {
   protected Map<String, List<Concept>> getConceptMapByCodeAndVersion(
       List<Concept> vsacConceptList) {
     Map<String, String> codeMap = getVsacCodeMap(vsacConceptList);
-    Map<String, List<Concept>> conceptsByCodeMap = new HashMap<String, List<Concept>>();
-    Map<String, List<Concept>> conceptsByCodeAndVersionMap = new HashMap<String, List<Concept>>();
+    Map<String, List<Concept>> conceptsByCodeMap = new HashMap<>();
+    Map<String, List<Concept>> conceptsByCodeAndVersionMap = new HashMap<>();
     codeMap
         .entrySet()
         .forEach(
@@ -99,11 +99,9 @@ public class VsacToFhirValueSetMapper {
   }
 
   protected Map<String, String> getVsacCodeMap(List<Concept> vsacConcepts) {
-    Map<String, String> vsacCodeMap = new HashMap<String, String>();
+    Map<String, String> vsacCodeMap = new HashMap<>();
     vsacConcepts.forEach(
-        vsacConcept -> {
-          vsacCodeMap.put(vsacConcept.getCodeSystem(), vsacConcept.getCodeSystem());
-        });
+        vsacConcept -> vsacCodeMap.put(vsacConcept.getCodeSystem(), vsacConcept.getCodeSystem()));
     return vsacCodeMap;
   }
 
@@ -124,13 +122,12 @@ public class VsacToFhirValueSetMapper {
   }
 
   protected Map<String, String> getVsacVersionMap(List<Concept> vsacConcepts) {
-    Map<String, String> vsacVersionMap = new HashMap<String, String>();
+    Map<String, String> vsacVersionMap = new HashMap<>();
 
     vsacConcepts.forEach(
-        vsacConcept -> {
-          vsacVersionMap.put(
-              vsacConcept.getCodeSystemVersion(), vsacConcept.getCodeSystemVersion());
-        });
+        vsacConcept ->
+            vsacVersionMap.put(
+                vsacConcept.getCodeSystemVersion(), vsacConcept.getCodeSystemVersion()));
     return vsacVersionMap;
   }
 

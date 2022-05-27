@@ -1,5 +1,4 @@
 server:
-  port: 8081
   servlet:
     context-path: /api
 
@@ -22,3 +21,7 @@ client:
   vsac_base_url: https://vsac.nlm.nih.gov/vsac
   service_ticket_endpoint: /ws/Ticket/%s?service=http://umlsks.nlm.nih.gov
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}
+
+mapping:
+  data:
+    code-system-entry-url: ${CODE_SYSTEM_ENTRY_URL:https://madie-dev-static.s3.amazonaws.com/mappings/code-system-entry.json}

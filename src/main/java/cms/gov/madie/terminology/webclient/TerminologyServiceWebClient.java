@@ -1,10 +1,12 @@
 package cms.gov.madie.terminology.webclient;
 
+import gov.cms.madiejavamodels.cql.terminology.VsacCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
-import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -20,43 +22,31 @@ public class TerminologyServiceWebClient {
 
   private final WebClient terminologyClient;
   private final String baseUrl;
-  private final String serviceticketEndpoint;
-  private final String valuesetEndpoint;
+  private final String serviceTicketEndpoint;
+  private final String valueSetEndpoint;
 
   public TerminologyServiceWebClient(
       WebClient.Builder webClientBuilder,
       @Value("${client.vsac_base_url}") String baseUrl,
-      @Value("${client.service_ticket_endpoint}") String serviceticketEndpoint,
-      @Value("${client.valueset_endpoint}") String valuesetEndpoint) {
+      @Value("${client.service_ticket_endpoint}") String serviceTicketEndpoint,
+      @Value("${client.valueset_endpoint}") String valueSetEndpoint) {
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
-    this.serviceticketEndpoint = serviceticketEndpoint;
-    this.valuesetEndpoint = valuesetEndpoint;
-    log.debug("baseUrl = " + baseUrl + " serviceticketEndpoint = " + serviceticketEndpoint);
+    this.serviceTicketEndpoint = serviceTicketEndpoint;
+    this.valueSetEndpoint = valueSetEndpoint;
+    log.debug("baseUrl = " + baseUrl + " serviceTicketEndpoint = " + serviceTicketEndpoint);
   }
 
-  public String getServiceTicket(String tgt) throws InterruptedException, ExecutionException {
-    String uri = String.format(baseUrl + serviceticketEndpoint, tgt);
-    Mono<String> responseMono =
-        terminologyClient
-            .post()
-            .uri(uri)
-            .bodyValue(tgt)
-            .retrieve()
-            .onStatus(
-                HttpStatus::is5xxServerError,
-                response -> {
-                  return response.createException();
-                })
-            .onStatus(
-                HttpStatus::is4xxClientError,
-                response -> {
-                  return response.createException();
-                })
-            .bodyToMono(String.class);
-    responseMono.subscribe();
-    log.debug("Exiting getServiceTicket()");
-    return responseMono.toFuture().get();
+  public String getServiceTicket(String tgt) {
+    return terminologyClient
+        .post()
+        .uri(String.format(baseUrl + serviceTicketEndpoint, tgt))
+        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+        .retrieve()
+        .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
+        .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
+        .bodyToMono(String.class)
+        .block();
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
@@ -73,16 +63,8 @@ public class TerminologyServiceWebClient {
             .get()
             .uri(valuesetURI)
             .retrieve()
-            .onStatus(
-                HttpStatus::is5xxServerError,
-                response -> {
-                  return response.createException();
-                })
-            .onStatus(
-                HttpStatus::is4xxClientError,
-                response -> {
-                  return response.createException();
-                })
+            .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
+            .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
             .bodyToMono(RetrieveMultipleValueSetsResponse.class);
     // temp use of block until fixing 401 issue
     return responseMono.block();
@@ -97,6 +79,19 @@ public class TerminologyServiceWebClient {
       String version) {
 
     return TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
-        baseUrl, valuesetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
+        baseUrl, valueSetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
+  }
+
+  public VsacCode getCode(String codePath, String serviceTicket) {
+    URI codeUri = TerminologyServiceUtil.buildRetrieveCodeUri(baseUrl, codePath, serviceTicket);
+    log.debug("Retrieving vsacCode for codePath {}", codePath);
+    return terminologyClient
+        .get()
+        .uri(codeUri)
+        .retrieve()
+        .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
+        .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
+        .bodyToMono(VsacCode.class)
+        .block();
   }
 }

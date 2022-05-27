@@ -11,14 +11,12 @@ public class FhirContextAndIParserConfig {
 
   @Bean
   public FhirContext fhirContext() {
-    FhirContext ctx = FhirContext.forR4();
-    return ctx;
+    return FhirContext.forR4();
   }
 
   @Bean
   public IParser iParser() {
     FhirContext ctx = fhirContext();
-    IParser parser = ctx.newJsonParser();
-    return parser;
+    return ctx.newJsonParser();
   }
 }
