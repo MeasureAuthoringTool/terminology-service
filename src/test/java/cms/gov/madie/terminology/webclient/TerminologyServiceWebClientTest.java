@@ -36,6 +36,7 @@ public class TerminologyServiceWebClientTest {
       "/service/ticket/%s?service=http://test.ticket.com";
   private static final String VALUE_SET_ENDPOINT =
       "/valueset?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}";
+  private static final String UTS_LOGIN_ENDPOINT = "http://testuts.com";
   private static final String TEST = "test";
   private RetrieveMultipleValueSetsResponse mockValueSetsResponse;
   private DescribedValueSet mockDescribedValueSet;
@@ -72,7 +73,11 @@ public class TerminologyServiceWebClientTest {
 
     TerminologyServiceWebClient terminologyServiceWebClient =
         new TerminologyServiceWebClient(
-            mockWebClientBuilder, BASE_URL, SERVICE_TICKET_ENDPOINT, VALUE_SET_ENDPOINT);
+            mockWebClientBuilder,
+            BASE_URL,
+            SERVICE_TICKET_ENDPOINT,
+            VALUE_SET_ENDPOINT,
+            UTS_LOGIN_ENDPOINT);
     String result = terminologyServiceWebClient.getServiceTicket(TEST);
 
     assertEquals(TEST, result);

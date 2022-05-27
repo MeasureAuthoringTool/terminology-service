@@ -22,17 +22,26 @@ public class TerminologyServiceWebClient {
   private final String baseUrl;
   private final String serviceticketEndpoint;
   private final String valuesetEndpoint;
+  private final String utsLoginEndpoint;
 
   public TerminologyServiceWebClient(
       WebClient.Builder webClientBuilder,
       @Value("${client.vsac_base_url}") String baseUrl,
       @Value("${client.service_ticket_endpoint}") String serviceticketEndpoint,
-      @Value("${client.valueset_endpoint}") String valuesetEndpoint) {
+      @Value("${client.valueset_endpoint}") String valuesetEndpoint,
+      @Value("${client.uts_login}") String utsLoginEndpoint) {
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
     this.serviceticketEndpoint = serviceticketEndpoint;
     this.valuesetEndpoint = valuesetEndpoint;
-    log.debug("baseUrl = " + baseUrl + " serviceticketEndpoint = " + serviceticketEndpoint);
+    this.utsLoginEndpoint = utsLoginEndpoint;
+    log.debug(
+        "baseUrl = "
+            + baseUrl
+            + " serviceticketEndpoint = "
+            + serviceticketEndpoint
+            + " utsLoginEndpoint = "
+            + utsLoginEndpoint);
   }
 
   public String getServiceTicket(String tgt) throws InterruptedException, ExecutionException {
@@ -98,5 +107,29 @@ public class TerminologyServiceWebClient {
 
     return TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
         baseUrl, valuesetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
+  }
+
+  public String getTgt(String apiKey) throws InterruptedException, ExecutionException {
+    String uri = String.format(baseUrl + utsLoginEndpoint, apiKey);
+    Mono<String> responseMono =
+        terminologyClient
+            .post()
+            .uri(uri)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .retrieve()
+            .onStatus(
+                HttpStatus::is5xxServerError,
+                response -> {
+                  return response.createException();
+                })
+            .onStatus(
+                HttpStatus::is4xxClientError,
+                response -> {
+                  return response.createException();
+                })
+            .bodyToMono(String.class);
+    responseMono.subscribe();
+    log.debug("Exiting getTgt()");
+    return responseMono.toFuture().get();
   }
 }
