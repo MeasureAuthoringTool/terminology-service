@@ -4,9 +4,10 @@ import ca.uhn.fhir.context.FhirContext;
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.service.VsacService;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import gov.cms.madiejavamodels.cql.terminology.CqlCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,20 +23,16 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping(path = "/vsac")
 @Slf4j
+@RequiredArgsConstructor
 public class VsacController {
 
   private final VsacService vsacService;
-
-  @Autowired private FhirContext fhirContext;
-
-  public VsacController(VsacService vsacService) {
-    this.vsacService = vsacService;
-  }
+  private final FhirContext fhirContext;
 
   @GetMapping(path = "/valueSet", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getValueSet(
-      @RequestParam(required = true, name = "tgt") String tgt,
-      @RequestParam(required = true, name = "oid") String oid,
+      @RequestParam(name = "tgt") String tgt,
+      @RequestParam(name = "oid") String oid,
       @RequestParam(required = false, name = "profile") String profile,
       @RequestParam(required = false, name = "includeDraft") String includeDraft,
       @RequestParam(required = false, name = "release") String release,
@@ -65,6 +62,12 @@ public class VsacController {
         fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));
 
     return ResponseEntity.ok().body("[" + serializedValueSets + "]");
+  }
+
+  @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<CqlCode>> validateCodes(
+    @RequestBody List<CqlCode> cqlCodes, @RequestParam String tgt) {
+    return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, tgt));
   }
 
   protected String serializeFhirValueset(ValueSet fhirValueSet) {

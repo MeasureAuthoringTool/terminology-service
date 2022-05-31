@@ -1,25 +1,23 @@
 package cms.gov.madie.terminology.mapper;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList.Concept;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
 import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
-import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList.Concept;
-
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -42,7 +40,7 @@ public class VsacToFhirValueSetMapper {
       ValueSet fhirValueSet, DescribedValueSet vsacDescribedValueSet, String oid) {
     fhirValueSet.setId(vsacDescribedValueSet.getID());
     fhirValueSet.setUrl("http://cts.nlm.nih.gov/fhir/ValueSet/" + vsacDescribedValueSet.getID());
-    List<Identifier> ids = new ArrayList<Identifier>();
+    List<Identifier> ids = new ArrayList<>();
     Identifier id = new Identifier();
     id.setId(oid);
     fhirValueSet.setIdentifier(ids);
@@ -72,8 +70,8 @@ public class VsacToFhirValueSetMapper {
   protected Map<String, List<Concept>> getConceptMapByCodeAndVersion(
       List<Concept> vsacConceptList) {
     Map<String, String> codeMap = getVsacCodeMap(vsacConceptList);
-    Map<String, List<Concept>> conceptsByCodeMap = new HashMap<String, List<Concept>>();
-    Map<String, List<Concept>> conceptsByCodeAndVersionMap = new HashMap<String, List<Concept>>();
+    Map<String, List<Concept>> conceptsByCodeMap = new HashMap<>();
+    Map<String, List<Concept>> conceptsByCodeAndVersionMap = new HashMap<>();
     codeMap
         .entrySet()
         .forEach(
@@ -99,11 +97,9 @@ public class VsacToFhirValueSetMapper {
   }
 
   protected Map<String, String> getVsacCodeMap(List<Concept> vsacConcepts) {
-    Map<String, String> vsacCodeMap = new HashMap<String, String>();
+    Map<String, String> vsacCodeMap = new HashMap<>();
     vsacConcepts.forEach(
-        vsacConcept -> {
-          vsacCodeMap.put(vsacConcept.getCodeSystem(), vsacConcept.getCodeSystem());
-        });
+        vsacConcept -> vsacCodeMap.put(vsacConcept.getCodeSystem(), vsacConcept.getCodeSystem()));
     return vsacCodeMap;
   }
 
@@ -124,13 +120,12 @@ public class VsacToFhirValueSetMapper {
   }
 
   protected Map<String, String> getVsacVersionMap(List<Concept> vsacConcepts) {
-    Map<String, String> vsacVersionMap = new HashMap<String, String>();
+    Map<String, String> vsacVersionMap = new HashMap<>();
 
     vsacConcepts.forEach(
-        vsacConcept -> {
-          vsacVersionMap.put(
-              vsacConcept.getCodeSystemVersion(), vsacConcept.getCodeSystemVersion());
-        });
+        vsacConcept ->
+            vsacVersionMap.put(
+                vsacConcept.getCodeSystemVersion(), vsacConcept.getCodeSystemVersion()));
     return vsacVersionMap;
   }
 

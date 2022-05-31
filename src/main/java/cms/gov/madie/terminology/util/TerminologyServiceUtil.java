@@ -3,7 +3,6 @@ package cms.gov.madie.terminology.util;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -45,5 +44,33 @@ public class TerminologyServiceUtil {
     }
     log.debug("RetrieveMultipleValueSetsUri = " + url);
     return UriComponentsBuilder.fromUriString(url).buildAndExpand(params).encode().toUri();
+  }
+
+  public static URI buildRetrieveCodeUri(String baseUrl, String codePath, String serviceTicket) {
+    Map<String, String> params = new HashMap<>();
+    params.put("st", serviceTicket);
+    params.put("resultFormat", "json");
+    params.put("resultSet", "standard");
+    return UriComponentsBuilder.fromUriString(
+            baseUrl + codePath + "?ticket={st}&resultFormat={resultFormat}&resultSet={resultSet}")
+        .buildAndExpand(params)
+        .encode()
+        .toUri();
+  }
+
+  public static String buildCodePath(
+      String codeSystemName, String codeSystemVersion, String codeId) {
+    // "/CodeSystem/LOINC22/Version/2.67/Code/21112-8/Info";
+    return "/CodeSystem/"
+        + codeSystemName
+        + "/Version/"
+        + codeSystemVersion
+        + "/Code/"
+        + codeId
+        + "/Info";
+  }
+
+  public static String sanitizeInput(String input) {
+    return input.replaceAll("'", "");
   }
 }
