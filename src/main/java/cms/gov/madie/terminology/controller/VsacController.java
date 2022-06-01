@@ -42,7 +42,8 @@ public class VsacController {
 
   @GetMapping(path = "/valueSet", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getValueSet(
-      @RequestParam(required = true, name = "tgt") String tgt,
+      // @RequestParam(required = true, name = "tgt") String tgt,
+      Principal principal,
       @RequestParam(required = true, name = "oid") String oid,
       @RequestParam(required = false, name = "profile") String profile,
       @RequestParam(required = false, name = "includeDraft") String includeDraft,
@@ -52,15 +53,20 @@ public class VsacController {
 
     log.debug("Entering: getValueSet()");
 
-    String serviceTicket = vsacService.getServiceTicket(tgt);
+    final String username = principal.getName();
+    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
+    String serialized = null;
+    if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
+      String serviceTicket = vsacService.getServiceTicket(umlsUser.get().getTgt());
 
-    RetrieveMultipleValueSetsResponse valuesetResponse =
-        vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
+      RetrieveMultipleValueSetsResponse valuesetResponse =
+          vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
 
-    ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
-    log.debug("valueset id = " + fhirValueSet.getId());
+      ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
+      log.debug("valueset id = " + fhirValueSet.getId());
 
-    String serialized = serializeFhirValueset(fhirValueSet);
+      serialized = serializeFhirValueset(fhirValueSet);
+    }
 
     return ResponseEntity.ok().body(serialized);
   }

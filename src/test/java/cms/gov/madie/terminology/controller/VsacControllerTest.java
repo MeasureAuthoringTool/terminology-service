@@ -4,9 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import java.security.Principal;
+
 import org.hl7.fhir.r4.model.ValueSet;
 
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,22 +36,26 @@ public class VsacControllerTest {
 
   @Test
   void testGetValueSetFailWhenGettingServiceTicketFailed() throws Exception {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
     doThrow(new WebClientResponseException(401, "Error", null, null, null))
         .when(vsacService)
         .getServiceTicket(anyString());
     assertThrows(
         WebClientResponseException.class,
-        () -> vsacController.getValueSet(TEST, TEST, TEST, TEST, TEST, TEST));
+        () -> vsacController.getValueSet(principal, TEST, TEST, TEST, TEST, TEST));
   }
 
   @Test
   void testGetValueSetFailWhenGettingValueSetFailed() throws Exception {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("test.user");
     when(vsacService.getServiceTicket(anyString())).thenReturn(TEST);
     doThrow(new WebClientResponseException(401, "Error", null, null, null))
         .when(vsacService)
         .getValueSet(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
     assertThrows(
         WebClientResponseException.class,
-        () -> vsacController.getValueSet(TEST, TEST, TEST, TEST, TEST, TEST));
+        () -> vsacController.getValueSet(principal, TEST, TEST, TEST, TEST, TEST));
   }
 }

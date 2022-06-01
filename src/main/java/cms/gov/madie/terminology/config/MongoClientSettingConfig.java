@@ -1,14 +1,20 @@
 package cms.gov.madie.terminology.config;
 
-import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+// import java.nio.file.StandardOpenOption;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import static java.util.Collections.singletonList;
 
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.Binary;
@@ -38,17 +44,30 @@ public class MongoClientSettingConfig {
   @Value("${spring.data.mongodb.uri}")
   private String mongoConnectionUri;
 
+  @Value("${environment}")
+  private String environment;
+
+  String rootPath = System.getProperty("user.dir");
+  String keyPath = rootPath + "/" + "master-key.txt";
+
   private static final String keyVaultNamespace = "encryption.__keyVault";
 
   @Bean
   public MongoClientSettingsBuilderCustomizer customizer() {
 
-    // temp: get the Locally-Managed Master Key
-    byte[] localMasterKey = getMasterKey();
-    log.info("\n\nstep 2: localMasterKey = " + localMasterKey.toString() + "\n\n");
+    byte[] masterKey = null;
+
+    if ("local".equalsIgnoreCase(environment)) {
+      // temp: get the Locally-Managed Master Key
+      masterKey = readKeyLocally();
+      if (masterKey == null) {
+        masterKey = getMasterKey();
+        writeKeyLocally(masterKey);
+      }
+    }
 
     // Specify KMS Provider Settings
-    Map<String, Map<String, Object>> kmsProviders = setKMSProviders(localMasterKey);
+    Map<String, Map<String, Object>> kmsProviders = setKMSProviders(masterKey);
 
     // Create a Data Encryption Key
     String base64KeyId = createDataEncryptionKey(kmsProviders);
@@ -59,26 +78,47 @@ public class MongoClientSettingConfig {
     return getMongoClientSettingsBuilderCustomizer(kmsProviders, base64KeyId);
   }
 
+  protected byte[] readKeyLocally() {
+    byte[] content = null;
+    try {
+      content = Files.readAllBytes(Paths.get(keyPath));
+    } catch (IOException e) {
+      // e.printStackTrace();
+      log.error("readKeyLocally(): IOException -> " + e.getMessage());
+    }
+    return content;
+  }
+
   protected byte[] getMasterKey() {
     byte[] localMasterKey = new byte[96];
     new SecureRandom().nextBytes(localMasterKey);
     return localMasterKey;
   }
 
-  protected File getFileFromResource(String filePath) {
-    ClassLoader classloader = Thread.currentThread().getContextClassLoader();
-    return new File(Objects.requireNonNull(classloader.getResource(filePath)).getFile());
+  protected void writeKeyLocally(byte[] localMasterKey) {
+    try (FileOutputStream stream = new FileOutputStream(keyPath)) {
+      stream.write(localMasterKey);
+      log.debug("master key created and writen to " + keyPath);
+    } catch (FileNotFoundException e) {
+      log.error("CreateMasterKeyFile(): FileNotFoundException -> " + e.getMessage());
+    } catch (IOException e) {
+      log.error("CreateMasterKeyFile(): IOException -> " + e.getMessage());
+    }
   }
 
   protected Map<String, Map<String, Object>> setKMSProviders(byte[] localMasterKey) {
     Map<String, Object> keyMap = new HashMap<String, Object>();
-    keyMap.put("key", localMasterKey);
+    
     Map<String, Map<String, Object>> kmsProviders = new HashMap<String, Map<String, Object>>();
-    kmsProviders.put("local", keyMap);
-    // for AWS
-    // keyMap.put("accessKeyId", "testAccessKeyId");
-    // keyMap.put("secretAccessKey", "testSecretAccessKey");
-    // kmsProviders.put("aws", keyMap);
+    if ("local".equalsIgnoreCase(environment)) {
+    	keyMap.put("key", localMasterKey);
+      kmsProviders.put("local", keyMap);
+    } else {
+      // for AWS, Authenticate with IAM Roles in Production
+      keyMap.put("accessKeyId", "testAccessKeyId");
+      keyMap.put("secretAccessKey", "testSecretAccessKey");
+      kmsProviders.put("aws", keyMap);
+    }
     return kmsProviders;
   }
 
@@ -93,17 +133,32 @@ public class MongoClientSettingConfig {
             .keyVaultNamespace(keyVaultNamespace)
             .kmsProviders(kmsProviders)
             .build();
-    log.info("\n\ncreateDataEncryptionKey(): test 1");
     ClientEncryption clientEncryption = ClientEncryptions.create(clientEncryptionSettings);
-    log.info("\n\ncreateDataEncryptionKey(): test 2");
 
     // temp: use local
     // BsonBinary dataKeyId = clientEncryption.createDataKey(kmsProvider, new DataKeyOptions());
-    BsonBinary dataKeyId = clientEncryption.createDataKey("local", new DataKeyOptions());
-    System.out.println("DataKeyId [UUID]: " + dataKeyId.asUuid());
-    String base64DataKeyId = Base64.getEncoder().encodeToString(dataKeyId.getData());
-    System.out.println("DataKeyId [base64]: " + base64DataKeyId);
 
+    BsonBinary dataKeyId = null;
+    if ("local".equalsIgnoreCase(environment)) {
+      dataKeyId = clientEncryption.createDataKey("local", new DataKeyOptions());
+    } else {
+      // AWS
+      BsonString masterKeyArn =
+          new BsonString(
+              "arn:aws:kms:us-east-1:000000000000:key/6b92c992-474c-4d16-91f5-5e01f073bb43");
+      BsonString masterKeyRegion = new BsonString("us-east-1");
+      BsonString awsEndpoint = new BsonString("https://0.0.0.0:4566");
+      DataKeyOptions dataKeyOptions =
+          new DataKeyOptions()
+              .masterKey(
+                  new BsonDocument()
+                      .append("key", masterKeyArn)
+                      .append("region", masterKeyRegion)
+                      .append("endpoint", awsEndpoint))
+              .keyAltNames(singletonList("me"));
+      dataKeyId = clientEncryption.createDataKey("aws", dataKeyOptions);
+    }
+    String base64DataKeyId = Base64.getEncoder().encodeToString(dataKeyId.getData());
     return base64DataKeyId;
   }
 
@@ -136,6 +191,13 @@ public class MongoClientSettingConfig {
               .build();
 
       builder.autoEncryptionSettings(autoEncryptionSettings);
+      //      if(!"local".equalsIgnoreCase(environment)) {
+      //      	// AWS
+      //        Block<SslSettings.Builder> sslSettings =
+      //                  sslBuilder -> sslBuilder.enabled(true).invalidHostNameAllowed(true);
+      //
+      //        builder.applyToSslSettings(sslSettings);
+      //      }
     };
   }
 

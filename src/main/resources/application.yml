@@ -30,3 +30,5 @@ spring:
   data:
     mongodb:
       uri: mongodb://root:E5press0@localhost:27017/terminology?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+
+environment: local
