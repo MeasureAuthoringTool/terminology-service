@@ -21,8 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList;
@@ -36,7 +34,7 @@ public class VsacToFhirValueSetMapperTest {
   private DescribedValueSet describedValueSet;
   private static final String TEST_ID = "testId";
   private static final String TEST = "test";
-  private Date today = new Date();
+  private final Date today = new Date();
   private Concept vsacConcept1;
   private Concept vsacConcept2;
   private Concept vsacConcept3;
@@ -46,7 +44,7 @@ public class VsacToFhirValueSetMapperTest {
   private List<Concept> vsacConceptList;
 
   @BeforeEach
-  public void setUp() throws JsonProcessingException {
+  public void setUp() {
     describedValueSet = new DescribedValueSet();
     describedValueSet.setID(TEST_ID);
     describedValueSet.setDisplayName(TEST);
@@ -105,7 +103,7 @@ public class VsacToFhirValueSetMapperTest {
             "2021",
             "Home visit for the evaluation and management of a new patient, which requires these 3 key components: A detailed history; A detailed examination; and Medical decision making of moderate complexity. Counseling and/or coordination of care with other physicians, other qualified health care professionals, or agencies are provided consistent with the nature of the problem(s) and the patient's and/or family's needs. Usually, the presenting problem(s) are of moderate to high severity. Typically, 45 minutes are spent face-to-face with the patient and/or family.");
 
-    vsacConceptList = new ArrayList<Concept>();
+    vsacConceptList = new ArrayList<>();
     vsacConceptList.add(vsacConcept1);
     vsacConceptList.add(vsacConcept2);
     vsacConceptList.add(vsacConcept3);
