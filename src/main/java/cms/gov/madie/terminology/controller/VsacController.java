@@ -73,8 +73,13 @@ public class VsacController {
 
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CqlCode>> validateCodes(
-      @RequestBody List<CqlCode> cqlCodes, @RequestParam String tgt) {
-    return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, tgt));
+      Principal principal, @RequestBody List<CqlCode> cqlCodes) {
+    final String username = principal.getName();
+    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
+    if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
+      return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, umlsUser.get().getTgt()));
+    }
+    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
   }
 
   @PostMapping(path = "/umlsLogin")

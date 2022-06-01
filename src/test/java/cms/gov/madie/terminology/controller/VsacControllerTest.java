@@ -77,11 +77,19 @@ public class VsacControllerTest {
 
   @Test
   void testValidateCodes() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    UmlsUser mockUmlsUser = mock(UmlsUser.class);
+    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
+    when(mockUmlsUser.getTgt()).thenReturn(TEST);
+    when(mockUmlsUser.getApiKey()).thenReturn(TEST);
+    when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
+
     CqlCode cqlCode = CqlCode.builder().name("test-code").codeId("test-codeId").build();
     when(vsacService.validateCodes(any(), anyString())).thenReturn(List.of(cqlCode));
     cqlCode.setValid(true);
     ResponseEntity<List<CqlCode>> response =
-        vsacController.validateCodes(List.of(cqlCode), "TGT-Token");
+        vsacController.validateCodes(principal, List.of(cqlCode));
     assertEquals(1, Objects.requireNonNull(response.getBody()).size());
     assertEquals("test-code", response.getBody().get(0).getName());
     assertTrue(response.getBody().get(0).isValid());
