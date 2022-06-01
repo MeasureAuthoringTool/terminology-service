@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.List;
 
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
@@ -22,8 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import org.springframework.util.CollectionUtils;
 
-import java.util.List;
-// import java.util.Optional;
 
 @Service
 @Slf4j
@@ -34,16 +33,6 @@ public class VsacService {
   private final VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
   private final MappingService mappingService;
   private final UmlsUserRepository umlsUserRepository;
-
-  //  @Autowired
-  //  public VsacService(
-  //      TerminologyServiceWebClient terminologyWebClient,
-  //      VsacToFhirValueSetMapper vsacToFhirValueSetMapper,
-  //      UmlsUserRepository umlsUserRepository) {
-  //    this.terminologyWebClient = terminologyWebClient;
-  //    this.vsacToFhirValueSetMapper = vsacToFhirValueSetMapper;
-  //    this.umlsUserRepository = umlsUserRepository;
-  //  }
 
   public String getServiceTicket(String tgt) {
     return terminologyWebClient.getServiceTicket(tgt);
