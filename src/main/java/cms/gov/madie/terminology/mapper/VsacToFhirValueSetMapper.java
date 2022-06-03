@@ -1,35 +1,33 @@
 package cms.gov.madie.terminology.mapper;
 
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList.Concept;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
+import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
+import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.ValueSet;
-import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
-import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
-import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
-import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
-import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList.Concept;
-
-import lombok.extern.slf4j.Slf4j;
-
 @Component
 @Slf4j
 public class VsacToFhirValueSetMapper {
 
-  public ValueSet convertToFHIRValueSet(
-      RetrieveMultipleValueSetsResponse vsacValuesetResponse, String oid) {
-    DescribedValueSet vsacDescribedValueSet = vsacValuesetResponse.getDescribedValueSet();
+  public ValueSet convertToFHIRValueSet(RetrieveMultipleValueSetsResponse vsacValueSetResponse) {
+    DescribedValueSet vsacDescribedValueSet = vsacValueSetResponse.getDescribedValueSet();
     ValueSet fhirValueSet = new ValueSet();
-    fhirValueSet = setFhirMainAttributes(fhirValueSet, vsacDescribedValueSet, oid);
+    fhirValueSet =
+        setFhirMainAttributes(fhirValueSet, vsacDescribedValueSet, vsacDescribedValueSet.getID());
     if (vsacDescribedValueSet.getConceptList() != null
         && !CollectionUtils.isEmpty(vsacDescribedValueSet.getConceptList().getConcepts())) {
       addFhirValueSetComposeComponent(

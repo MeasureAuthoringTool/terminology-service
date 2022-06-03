@@ -46,6 +46,7 @@ public class TerminologyServiceWebClientTest {
       "/service/ticket/%s?service=https://test.ticket.com";
   private static final String VALUE_SET_ENDPOINT =
       "/valueset?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}";
+  private static final String DEFAULT_PROFILE = "eCQM Update 2022-05-05";
   private static final String SERVICE_TICKET = "st-test";
   private static final String TGT = "tgt-test";
 
@@ -55,7 +56,11 @@ public class TerminologyServiceWebClientTest {
     when(webClientBuilderMock.build()).thenReturn(webClientMock);
     terminologyServiceWebClient =
         new TerminologyServiceWebClient(
-            webClientBuilderMock, BASE_URL, SERVICE_TICKET_ENDPOINT, VALUE_SET_ENDPOINT);
+            webClientBuilderMock,
+            BASE_URL,
+            SERVICE_TICKET_ENDPOINT,
+            VALUE_SET_ENDPOINT,
+            DEFAULT_PROFILE);
   }
 
   @Test

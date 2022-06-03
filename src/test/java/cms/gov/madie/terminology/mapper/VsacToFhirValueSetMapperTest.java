@@ -230,7 +230,7 @@ public class VsacToFhirValueSetMapperTest {
 
     vsacValuesetResponse.setDescribedValueSet(describedValueSet);
 
-    ValueSet fhirValueSet = mapper.convertToFHIRValueSet(vsacValuesetResponse, TEST_ID);
+    ValueSet fhirValueSet = mapper.convertToFHIRValueSet(vsacValuesetResponse);
 
     assertEquals(fhirValueSet.getId(), TEST_ID);
     assertEquals(fhirValueSet.getName(), TEST);

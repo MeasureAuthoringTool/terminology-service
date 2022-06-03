@@ -2,6 +2,7 @@ package cms.gov.madie.terminology.webclient;
 
 import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import org.springframework.http.MediaType;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -24,16 +25,19 @@ public class TerminologyServiceWebClient {
   private final String baseUrl;
   private final String serviceTicketEndpoint;
   private final String valueSetEndpoint;
+  private final String defaultProfile;
 
   public TerminologyServiceWebClient(
       WebClient.Builder webClientBuilder,
       @Value("${client.vsac_base_url}") String baseUrl,
       @Value("${client.service_ticket_endpoint}") String serviceTicketEndpoint,
-      @Value("${client.valueset_endpoint}") String valueSetEndpoint) {
+      @Value("${client.valueset_endpoint}") String valueSetEndpoint,
+      @Value("${client.default_profile}") String defaultProfile) {
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
     this.serviceTicketEndpoint = serviceTicketEndpoint;
     this.valueSetEndpoint = valueSetEndpoint;
+    this.defaultProfile = defaultProfile;
     log.debug("baseUrl = " + baseUrl + " serviceTicketEndpoint = " + serviceTicketEndpoint);
   }
 
@@ -77,7 +81,7 @@ public class TerminologyServiceWebClient {
       String includeDraft,
       String release,
       String version) {
-
+    profile = StringUtils.isBlank(profile) ? defaultProfile : profile;
     return TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
         baseUrl, valueSetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
   }

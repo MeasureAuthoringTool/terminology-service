@@ -1,22 +1,24 @@
 package cms.gov.madie.terminology.service;
 
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
+import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
+import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.stereotype.Service;
-
-import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
-import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
-import lombok.extern.slf4j.Slf4j;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -32,19 +34,47 @@ public class VsacService {
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
-      String oid,
-      String serviceTicket,
-      String profile,
-      String includeDraft,
-      String release,
-      String version) {
+      String oid, String tgt, String profile, String includeDraft, String release, String version) {
+    log.debug("Fetching SVS ValueSet: " + oid);
+    String serviceTicket;
+    try {
+      serviceTicket = getServiceTicket(tgt);
+    } catch (Exception e) {
+      log.error("Error while getting service ticket", e);
+      throw new VsacGenericException(
+          "Error occurred while fetching service ticket. "
+              + "Please make sure you are logged in to UMLS.");
+    }
     return terminologyWebClient.getValueSet(
         oid, serviceTicket, profile, includeDraft, release, version);
   }
 
-  public ValueSet convertToFHIRValueSet(
-      RetrieveMultipleValueSetsResponse vsacValuesetResponse, String oid) {
-    return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValuesetResponse, oid);
+  public ValueSet convertToFHIRValueSet(RetrieveMultipleValueSetsResponse vsacValueSetResponse) {
+    return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValueSetResponse);
+  }
+
+  public List<ValueSet> convertToFHIRValueSets(
+      List<RetrieveMultipleValueSetsResponse> vsacValueSets) {
+    return vsacValueSets.stream()
+        .map(vsacToFhirValueSetMapper::convertToFHIRValueSet)
+        .collect(Collectors.toList());
+  }
+
+  public List<RetrieveMultipleValueSetsResponse> getValueSets(
+      ValueSetsSearchCriteria searchCriteria) {
+    List<ValueSetsSearchCriteria.ValueSetParams> valueSetParams =
+        searchCriteria.getValueSetParams();
+    return valueSetParams.stream()
+        .map(
+            vsParam ->
+                getValueSet(
+                    vsParam.getOid(),
+                    searchCriteria.getTgt(),
+                    searchCriteria.getProfile(),
+                    searchCriteria.getIncludeDraft(),
+                    vsParam.getRelease(),
+                    vsParam.getVersion()))
+        .collect(Collectors.toList());
   }
 
   public List<CqlCode> validateCodes(List<CqlCode> cqlCodes, String tgt) {
