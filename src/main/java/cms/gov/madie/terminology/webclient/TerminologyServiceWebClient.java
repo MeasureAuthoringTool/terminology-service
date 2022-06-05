@@ -82,16 +82,29 @@ public class TerminologyServiceWebClient {
         baseUrl, valueSetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
   }
 
+  /**
+   * @param codePath code path build to call VSAC services
+   * @param serviceTicket single use service ticket
+   * @return the response from VSAC is the statusCode is either 200 or 400 Status Code 200 indicates
+   *     a valid code Status Code 400 indicates either CodeSystem or CodeSystem version or Code is
+   *     not found
+   */
   public VsacCode getCode(String codePath, String serviceTicket) {
     URI codeUri = TerminologyServiceUtil.buildRetrieveCodeUri(baseUrl, codePath, serviceTicket);
     log.debug("Retrieving vsacCode for codePath {}", codePath);
     return terminologyClient
         .get()
         .uri(codeUri)
-        .retrieve()
-        .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-        .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
-        .bodyToMono(VsacCode.class)
+        .exchangeToMono(
+            clientResponse -> {
+              if (clientResponse.statusCode().equals(HttpStatus.BAD_REQUEST)
+                  || clientResponse.statusCode().equals(HttpStatus.OK)) {
+                return clientResponse.bodyToMono(VsacCode.class);
+              } else {
+                log.debug("Received NON-OK response while retrieving codePath {}", codePath);
+                return clientResponse.createException().flatMap(Mono::error);
+              }
+            })
         .block();
   }
 }
