@@ -39,10 +39,10 @@ public class VsacController {
   private final VsacService vsacService;
   private final IParser parser;
 
-  @GetMapping(path = "/valueSet", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(path = "/valueset", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getValueSet(
       Principal principal,
-      @RequestParam(required = true, name = "oid") String oid,
+      @RequestParam String oid,
       @RequestParam(required = false, name = "profile") String profile,
       @RequestParam(required = false, name = "includeDraft") String includeDraft,
       @RequestParam(required = false, name = "release") String release,
@@ -82,9 +82,8 @@ public class VsacController {
     return new ResponseEntity<>(HttpStatus.NOT_FOUND);
   }
 
-  @PostMapping(path = "/umlsLogin")
-  public ResponseEntity<String> umlsLogin(
-      Principal principal, @RequestParam(required = true, name = "apiKey") String apiKey)
+  @PostMapping(path = "/umls/login")
+  public ResponseEntity<String> umlsLogin(Principal principal, @RequestParam String apiKey)
       throws InterruptedException, ExecutionException {
     final String username = principal.getName();
     log.debug("Entering: umlsLogin(): username = " + username);
@@ -96,7 +95,7 @@ public class VsacController {
     return ResponseEntity.ok().body(msg);
   }
 
-  @GetMapping("/checkLogin")
+  @GetMapping("/check/login")
   public ResponseEntity<Boolean> checkUserLogin(Principal principal) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
