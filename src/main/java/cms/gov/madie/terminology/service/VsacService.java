@@ -109,7 +109,14 @@ public class VsacService {
                       codeSystemVersion,
                       TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeId()));
               VsacCode vsacCode = terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
-              cqlCode.setValid(vsacCode != null);
+              /* if the statusCode is "error" and either CodeSystem or CodeSystem version
+               or Code is not found
+              if the statusCode is "ok" then it is a valid code */
+              if (vsacCode.getStatus().equalsIgnoreCase("error")) {
+                buildVsacErrorMessage(cqlCode, vsacCode);
+              } else {
+                cqlCode.setValid(true);
+              }
             }
           }
         } else {
@@ -173,6 +180,25 @@ public class VsacService {
         return "";
       }
       return codeSystemEntryVersion.get(0).getVsac();
+    }
+  }
+
+  /**
+   * @param cqlCode input cqlCode
+   * @param vsacCode response from vsac builds error message based on errorCode from VSAC. errorCode
+   *     800 indicates CodeSystem not found. errorCode 801 indicates CodeSystem Version not found.
+   *     errorCode 802 indicates Code not found.
+   */
+  private void buildVsacErrorMessage(CqlCode cqlCode, VsacCode vsacCode) {
+    int errorCode = Integer.parseInt(vsacCode.getErrors().getResultSet().get(0).getErrCode());
+    if (errorCode == 800 || errorCode == 801) {
+      cqlCode.getCodeSystem().setValid(false);
+      cqlCode
+          .getCodeSystem()
+          .setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
+    } else if (errorCode == 802) {
+      cqlCode.setValid(false);
+      cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
     }
   }
 }

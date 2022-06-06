@@ -8,6 +8,7 @@ import com.okta.commons.lang.Collections;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 import gov.cms.madiejavamodels.cql.terminology.VsacCode;
+import gov.cms.madiejavamodels.cql.terminology.VsacCode.VsacError;
 import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,7 @@ class VsacServiceTest {
 
     vsacCode = new VsacCode();
     vsacCode.setMessage("This is a valid code");
+    vsacCode.setStatus("ok");
 
     codeSystemEntries = new ArrayList<>();
     CodeSystemEntry.Version version = new CodeSystemEntry.Version();
@@ -107,13 +109,57 @@ class VsacServiceTest {
   }
 
   @Test
-  void testAnInValidCodeFromVsac() {
+  void testCodeSystemNotFoundFromVsac() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
-    vsacCode = null;
+    vsacCode.setStatus("error");
+
+    VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
+    vsacErrorResultSet.setErrCode("800");
+    vsacErrorResultSet.setErrDesc("CodeSystem not found");
+    VsacError vsacError = new VsacError();
+    vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
+    vsacCode.setErrors(vsacError);
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
+    assertFalse(result.get(0).getCodeSystem().isValid());
+    assertEquals("CodeSystem not found", result.get(0).getCodeSystem().getErrorMessage());
+  }
+
+  @Test
+  void testCodeSystemVersionNotFoundFromVsac() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
+    vsacCode.setStatus("error");
+
+    VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
+    vsacErrorResultSet.setErrCode("801");
+    vsacErrorResultSet.setErrDesc("CodeSystem version not found");
+    VsacError vsacError = new VsacError();
+    vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
+    vsacCode.setErrors(vsacError);
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
+    assertFalse(result.get(0).getCodeSystem().isValid());
+    assertEquals("CodeSystem version not found", result.get(0).getCodeSystem().getErrorMessage());
+  }
+
+  @Test
+  void testCodeNotFoundFromVsac() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
+    vsacCode.setStatus("error");
+
+    VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
+    vsacErrorResultSet.setErrCode("802");
+    vsacErrorResultSet.setErrDesc("Code not found");
+    VsacError vsacError = new VsacError();
+    vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
+    vsacCode.setErrors(vsacError);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
     assertFalse(result.get(0).isValid());
+    assertEquals("Code not found", result.get(0).getErrorMessage());
   }
 
   @Test
