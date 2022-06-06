@@ -1,7 +1,11 @@
 package cms.gov.madie.terminology.service;
 
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
+import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import cms.gov.madie.terminology.helpers.TestHelpers;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import com.okta.commons.lang.Collections;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import gov.cms.madiejavamodels.cql.terminology.VsacCode.VsacError;
@@ -13,13 +17,24 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class VsacServiceTest {
@@ -33,9 +48,11 @@ class VsacServiceTest {
   List<CqlCode> cqlCodes;
   VsacCode vsacCode;
   List<CodeSystemEntry> codeSystemEntries;
+  private ValueSetsSearchCriteria valueSetsSearchCriteria;
+  private RetrieveMultipleValueSetsResponse svsValueSet;
 
   @BeforeEach
-  public void setUp() {
+  public void setUp() throws JAXBException {
     cqlCodes = new ArrayList<>();
     CqlCode cqlCode =
         CqlCode.builder()
@@ -66,6 +83,20 @@ class VsacServiceTest {
             .version(Collections.toList(version))
             .build();
     codeSystemEntries.add(codeSystemEntry);
+
+    File file = TestHelpers.getTestResourceFile("/value-sets/svs_office_visit.xml");
+    JAXBContext jaxbContext = JAXBContext.newInstance(RetrieveMultipleValueSetsResponse.class);
+    Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+    svsValueSet = (RetrieveMultipleValueSetsResponse) jaxbUnmarshaller.unmarshal(file);
+    ValueSetsSearchCriteria.ValueSetParams valueSetParams =
+        new ValueSetsSearchCriteria.ValueSetParams();
+    valueSetParams.setOid("2.16.840.1.113883.3.464.1003.101.12.1001");
+    valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .tgt("TGT-Xy4z-pQr-FaK3")
+            .profile("eCQM Update 2030-05-05")
+            .valueSetParams(List.of(valueSetParams))
+            .build();
   }
 
   @Test
@@ -192,5 +223,40 @@ class VsacServiceTest {
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
     assertTrue(result.get(0).isValid());
+  }
+
+  @Test
+  public void testGetValueSets() {
+    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("ST-fake");
+    when(terminologyServiceWebClient.getValueSet(any(), any(), any(), any(), any(), any()))
+        .thenReturn(svsValueSet);
+
+    List<RetrieveMultipleValueSetsResponse> vsacValueSets =
+        vsacService.getValueSets(valueSetsSearchCriteria);
+
+    RetrieveMultipleValueSetsResponse.DescribedValueSet describedValueSet =
+        vsacValueSets.get(0).getDescribedValueSet();
+    assertThat(
+        describedValueSet.getID(),
+        is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
+    assertThat(describedValueSet.getDisplayName(), is(equalTo("Office Visit")));
+    assertThat(describedValueSet.getConceptList().getConcepts().size(), is(equalTo(16)));
+  }
+
+  @Test
+  public void testGetValueSetsWhenErrorOccurredWhileFetchingServiceTicket() {
+    doThrow(new VsacGenericException("Error occurred while fetching service ticket"))
+        .when(terminologyServiceWebClient)
+        .getServiceTicket(anyString());
+
+    VsacGenericException exception =
+        assertThrows(
+            VsacGenericException.class, () -> vsacService.getValueSets(valueSetsSearchCriteria));
+
+    assertThat(
+        exception.getMessage(),
+        is(
+            equalTo(
+                "Error occurred while fetching service ticket. Please make sure you are logged in to UMLS.")));
   }
 }

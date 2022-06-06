@@ -1,8 +1,8 @@
 package cms.gov.madie.terminology.controller;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.HashMap;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @ControllerAdvice
@@ -51,6 +51,17 @@ public class VsacControllerAdvice {
   @ResponseBody
   Map<String, Object> onMissingServletRequestParameterException(
       MissingServletRequestParameterException ex, WebRequest request) {
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(VsacGenericException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onVsacGenericException(VsacGenericException ex, WebRequest request) {
     Map<String, String> validationErrors = new HashMap<>();
     validationErrors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);

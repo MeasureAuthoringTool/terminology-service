@@ -1,11 +1,8 @@
 package cms.gov.madie.terminology.controller;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import cms.gov.madie.terminology.service.VsacService;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
-import static org.mockito.Mockito.doThrow;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,32 +10,38 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import cms.gov.madie.terminology.service.VsacService;
+
 import java.util.List;
 import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class VsacControllerTest {
 
   @Mock private VsacService vsacService;
-
   @InjectMocks private VsacController vsacController;
 
   private static final String TEST = "test";
 
   @Test
   void testGetValueSetFailWhenGettingServiceTicketFailed() {
-    doThrow(new WebClientResponseException(401, "Error", null, null, null))
+    doThrow(new VsacGenericException("Error while getting ST"))
         .when(vsacService)
-        .getServiceTicket(anyString());
+        .getValueSet(TEST, TEST, TEST, TEST, TEST, TEST);
     assertThrows(
-        WebClientResponseException.class,
+        VsacGenericException.class,
         () -> vsacController.getValueSet(TEST, TEST, TEST, TEST, TEST, TEST));
   }
 
   @Test
   void testGetValueSetFailWhenGettingValueSetFailed() {
-    when(vsacService.getServiceTicket(anyString())).thenReturn(TEST);
     doThrow(new WebClientResponseException(401, "Error", null, null, null))
         .when(vsacService)
         .getValueSet(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
