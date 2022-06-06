@@ -27,9 +27,18 @@ public class MappingService {
       CodeSystemEntry[] data =
           objectMapper.readValue(new URL(codeSystemEntryUrl), CodeSystemEntry[].class);
       if (data != null) {
+        // temp
+        for (CodeSystemEntry entry : data) {
+          System.out.println("entry = " + entry.toString());
+        }
         return Arrays.asList(data);
+      } // temp
+      else {
+        System.out.println("data is null");
       }
     } catch (IOException ioException) {
+      // temp
+      ioException.printStackTrace();
       throw new RuntimeException(
           "Error while accessing code system entry mapping document", ioException);
     }

@@ -3,6 +3,7 @@ package cms.gov.madie.terminology.controller;
 import java.security.Principal;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-// import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import ca.uhn.fhir.parser.IParser;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -28,8 +28,6 @@ import cms.gov.madie.terminology.service.VsacService;
 
 import lombok.extern.slf4j.Slf4j;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-
-import java.util.List;
 
 @RestController
 @RequestMapping(path = "/vsac")
@@ -78,7 +76,7 @@ public class VsacController {
     return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, tgt));
   }
 
-  @PostMapping(path = "/umls/login")
+  @PostMapping(path = "/umls-credentials")
   public ResponseEntity<String> umlsLogin(Principal principal, @RequestParam String apiKey)
       throws InterruptedException, ExecutionException {
     final String username = principal.getName();
@@ -91,7 +89,7 @@ public class VsacController {
     return ResponseEntity.ok().body(msg);
   }
 
-  @GetMapping("/check/login")
+  @GetMapping("/umls-credentials/status")
   public ResponseEntity<Boolean> checkUserLogin(Principal principal) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
