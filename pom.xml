@@ -168,31 +168,6 @@
           </excludes>
         </configuration>
       </plugin>
-      <!--      <plugin>-->
-      <!--        <groupId>org.apache.maven.plugins</groupId>-->
-      <!--        <artifactId>maven-surefire-plugin</artifactId>-->
-      <!--        <configuration>-->
-      <!--          <argLine>${surefire.jacoco.args}</argLine>-->
-      <!--          <forkedProcessExitTimeoutInSeconds>60</forkedProcessExitTimeoutInSeconds>-->
-      <!--        </configuration>-->
-      <!--      </plugin>-->
-      <!--      <plugin>-->
-      <!--        <groupId>org.apache.maven.plugins</groupId>-->
-      <!--        <artifactId>maven-failsafe-plugin</artifactId>-->
-      <!--        <configuration>-->
-      <!--          <argLine>${failsafe.jacoco.args}</argLine>-->
-      <!--          <forkedProcessExitTimeoutInSeconds>60</forkedProcessExitTimeoutInSeconds>-->
-      <!--          <summaryFile>target/failsafe-reports/testsuite.xml</summaryFile>-->
-      <!--        </configuration>-->
-      <!--        <executions>-->
-      <!--          <execution>-->
-      <!--            <goals>-->
-      <!--              <goal>integration-test</goal>-->
-      <!--              <goal>verify</goal>-->
-      <!--            </goals>-->
-      <!--          </execution>-->
-      <!--        </executions>-->
-      <!--      </plugin>-->
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
