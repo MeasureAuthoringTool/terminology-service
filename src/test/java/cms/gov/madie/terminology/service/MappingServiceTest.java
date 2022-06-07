@@ -41,7 +41,7 @@ class MappingServiceTest {
             .name("ActPriority")
             .oid("1.2.3.4.5.6.7.8.9")
             .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
-            .version(Collections.toList(version))
+            .versions(Collections.toList(version))
             .build();
     codeSystemEntries[0] = codeSystemEntry;
   }

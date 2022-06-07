@@ -148,7 +148,7 @@ public class VsacService {
    */
   private String buildCodeSystemVersion(CqlCode cqlCode, CodeSystemEntry codeSystemEntry) {
     String cqlCodeSystemVersion = cqlCode.getCodeSystem().getVersion();
-    List<CodeSystemEntry.Version> codeSystemEntryVersion = codeSystemEntry.getVersion();
+    List<CodeSystemEntry.Version> codeSystemEntryVersion = codeSystemEntry.getVersions();
     if (!StringUtils.isBlank(cqlCodeSystemVersion)) { // sanitize before checking for null value
       if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
         log.debug(
@@ -156,7 +156,7 @@ public class VsacService {
         return TerminologyServiceUtil.sanitizeInput(cqlCodeSystemVersion);
       } else {
         Optional<CodeSystemEntry.Version> optionalCodeSystemVersion =
-            codeSystemEntry.getVersion().stream()
+            codeSystemEntry.getVersions().stream()
                 .filter(
                     v ->
                         v.getFhir()

@@ -4,6 +4,8 @@ import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import cms.gov.madie.terminology.helpers.TestHelpers;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okta.commons.lang.Collections;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
@@ -33,6 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -80,7 +84,7 @@ class VsacServiceTest {
             .name("ActPriority")
             .oid("1.2.3.4.5.6.7.8.9")
             .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
-            .version(Collections.toList(version))
+            .versions(Collections.toList(version))
             .build();
     codeSystemEntries.add(codeSystemEntry);
 
@@ -103,7 +107,9 @@ class VsacServiceTest {
   void testAValidCodeFromVsac() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
-    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
+    when(terminologyServiceWebClient.getCode(
+            eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
+        .thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
     assertTrue(result.get(0).isValid());
   }
@@ -207,7 +213,7 @@ class VsacServiceTest {
   @Test
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsNotProvided() {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
-    codeSystemEntries.get(0).setVersion(null);
+    codeSystemEntries.get(0).setVersions(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
     assertFalse(result.get(0).getCodeSystem().isValid());
@@ -217,7 +223,7 @@ class VsacServiceTest {
 
   @Test
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsProvided() {
-    codeSystemEntries.get(0).setVersion(null);
+    codeSystemEntries.get(0).setVersions(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
@@ -258,5 +264,42 @@ class VsacServiceTest {
         is(
             equalTo(
                 "Error occurred while fetching service ticket. Please make sure you are logged in to UMLS.")));
+  }
+
+  @Test
+  public void testVersionMapping() throws JsonProcessingException {
+    CqlCode snomedCode =
+        CqlCode.builder()
+            .name("37687000")
+            .codeId("37687000")
+            .codeSystem(
+                CqlCode.CqlCodeSystem.builder()
+                    .oid("http://snomed.info/sct")
+                    .name("SNOMEDCT")
+                    .version("http://snomed.info/sct/731000124108/version/20220301")
+                    .build())
+            .build();
+
+    String snomedMapping =
+        "{"
+            + "\"oid\": \"urn:oid:2.16.840.1.113883.6.96\","
+            + "\"url\": \"http://snomed.info/sct\","
+            + "\"name\": \"SNOMEDCT\","
+            + "\"versions\": ["
+            + "  {"
+            + "    \"vsac\": \"2022-03\","
+            + "        \"fhir\": \"http://snomed.info/sct/731000124108/version/20220301\""
+            + "  }"
+            + "]"
+            + "}";
+    ObjectMapper objectMapper = new ObjectMapper();
+    CodeSystemEntry snomedCsEntry = objectMapper.readValue(snomedMapping, CodeSystemEntry.class);
+    when(mappingService.getCodeSystemEntries()).thenReturn(List.of(snomedCsEntry));
+    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
+    when(terminologyServiceWebClient.getCode(
+            eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
+        .thenReturn(vsacCode);
+    List<CqlCode> result = vsacService.validateCodes(List.of(snomedCode), "Test-TGT-Token");
+    assertTrue(result.get(0).isValid());
   }
 }
