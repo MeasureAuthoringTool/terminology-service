@@ -50,11 +50,10 @@ public class VsacController {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     String serialized = null;
-    if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
-      String serviceTicket = vsacService.getServiceTicket(umlsUser.get().getTgt());
-
+    if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
       RetrieveMultipleValueSetsResponse valuesetResponse =
-          vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
+          vsacService.getValueSet(
+              oid, umlsUser.get().getTgt(), profile, includeDraft, release, version);
 
       ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse);
       log.debug("valueset id = " + fhirValueSet.getId());

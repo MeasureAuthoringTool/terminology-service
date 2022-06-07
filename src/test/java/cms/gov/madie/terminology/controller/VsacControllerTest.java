@@ -47,12 +47,11 @@ public class VsacControllerTest {
     UmlsUser umlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(umlsUser);
     when(umlsUser.getTgt()).thenReturn(TEST);
-    when(umlsUser.getApiKey()).thenReturn(TEST);
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
 
     doThrow(new VsacGenericException("Error while getting ST"))
         .when(vsacService)
-        .getServiceTicket(anyString());
+        .getValueSet(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
     assertThrows(
         VsacGenericException.class,
         () -> vsacController.getValueSet(principal, TEST, TEST, TEST, TEST, TEST));
@@ -67,10 +66,7 @@ public class VsacControllerTest {
     UmlsUser mockUmlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
     when(mockUmlsUser.getTgt()).thenReturn(TEST);
-    when(mockUmlsUser.getApiKey()).thenReturn(TEST);
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
-
-    when(vsacService.getServiceTicket(anyString())).thenReturn(TEST);
 
     doThrow(new WebClientResponseException(401, "Error", null, null, null))
         .when(vsacService)
