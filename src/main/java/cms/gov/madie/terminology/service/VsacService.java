@@ -4,26 +4,29 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.util.CollectionUtils;
+import org.springframework.stereotype.Service;
+
+import org.apache.commons.lang3.StringUtils;
+
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
+import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
+import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
+import cms.gov.madie.terminology.models.UmlsUser;
+import cms.gov.madie.terminology.repositories.UmlsUserRepository;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
-import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.springframework.stereotype.Service;
 
-import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
-import cms.gov.madie.terminology.models.UmlsUser;
-import cms.gov.madie.terminology.repositories.UmlsUserRepository;
-import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import org.springframework.util.CollectionUtils;
-
-import java.util.List;
-// import java.util.Optional;
 
 @Service
 @Slf4j
@@ -35,34 +38,52 @@ public class VsacService {
   private final MappingService mappingService;
   private final UmlsUserRepository umlsUserRepository;
 
-  //  @Autowired
-  //  public VsacService(
-  //      TerminologyServiceWebClient terminologyWebClient,
-  //      VsacToFhirValueSetMapper vsacToFhirValueSetMapper,
-  //      UmlsUserRepository umlsUserRepository) {
-  //    this.terminologyWebClient = terminologyWebClient;
-  //    this.vsacToFhirValueSetMapper = vsacToFhirValueSetMapper;
-  //    this.umlsUserRepository = umlsUserRepository;
-  //  }
-
   public String getServiceTicket(String tgt) {
     return terminologyWebClient.getServiceTicket(tgt);
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
-      String oid,
-      String serviceTicket,
-      String profile,
-      String includeDraft,
-      String release,
-      String version) {
+      String oid, String tgt, String profile, String includeDraft, String release, String version) {
+    log.debug("Fetching SVS ValueSet: " + oid);
+    String serviceTicket;
+    try {
+      serviceTicket = getServiceTicket(tgt);
+    } catch (Exception e) {
+      log.error("Error while getting service ticket", e);
+      throw new VsacGenericException(
+          "Error occurred while fetching service ticket. "
+              + "Please make sure you are logged in to UMLS.");
+    }
     return terminologyWebClient.getValueSet(
         oid, serviceTicket, profile, includeDraft, release, version);
   }
 
-  public ValueSet convertToFHIRValueSet(
-      RetrieveMultipleValueSetsResponse vsacValuesetResponse, String oid) {
-    return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValuesetResponse, oid);
+  public ValueSet convertToFHIRValueSet(RetrieveMultipleValueSetsResponse vsacValueSetResponse) {
+    return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValueSetResponse);
+  }
+
+  public List<ValueSet> convertToFHIRValueSets(
+      List<RetrieveMultipleValueSetsResponse> vsacValueSets) {
+    return vsacValueSets.stream()
+        .map(vsacToFhirValueSetMapper::convertToFHIRValueSet)
+        .collect(Collectors.toList());
+  }
+
+  public List<RetrieveMultipleValueSetsResponse> getValueSets(
+      ValueSetsSearchCriteria searchCriteria) {
+    List<ValueSetsSearchCriteria.ValueSetParams> valueSetParams =
+        searchCriteria.getValueSetParams();
+    return valueSetParams.stream()
+        .map(
+            vsParam ->
+                getValueSet(
+                    vsParam.getOid(),
+                    searchCriteria.getTgt(),
+                    searchCriteria.getProfile(),
+                    searchCriteria.getIncludeDraft(),
+                    vsParam.getRelease(),
+                    vsParam.getVersion()))
+        .collect(Collectors.toList());
   }
 
   public List<CqlCode> validateCodes(List<CqlCode> cqlCodes, String tgt) {
@@ -97,7 +118,14 @@ public class VsacService {
                       codeSystemVersion,
                       TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeId()));
               VsacCode vsacCode = terminologyWebClient.getCode(codePath, getServiceTicket(tgt));
-              cqlCode.setValid(vsacCode != null);
+              /* if the statusCode is "error" and either CodeSystem or CodeSystem version
+               or Code is not found
+              if the statusCode is "ok" then it is a valid code */
+              if (vsacCode.getStatus().equalsIgnoreCase("error")) {
+                buildVsacErrorMessage(cqlCode, vsacCode);
+              } else {
+                cqlCode.setValid(true);
+              }
             }
           }
         } else {
@@ -161,6 +189,25 @@ public class VsacService {
         return "";
       }
       return codeSystemEntryVersion.get(0).getVsac();
+    }
+  }
+
+  /**
+   * @param cqlCode input cqlCode
+   * @param vsacCode response from vsac builds error message based on errorCode from VSAC. errorCode
+   *     800 indicates CodeSystem not found. errorCode 801 indicates CodeSystem Version not found.
+   *     errorCode 802 indicates Code not found.
+   */
+  private void buildVsacErrorMessage(CqlCode cqlCode, VsacCode vsacCode) {
+    int errorCode = Integer.parseInt(vsacCode.getErrors().getResultSet().get(0).getErrCode());
+    if (errorCode == 800 || errorCode == 801) {
+      cqlCode.getCodeSystem().setValid(false);
+      cqlCode
+          .getCodeSystem()
+          .setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
+    } else if (errorCode == 802) {
+      cqlCode.setValid(false);
+      cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
     }
   }
 
