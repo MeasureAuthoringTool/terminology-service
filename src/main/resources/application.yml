@@ -30,7 +30,8 @@ spring:
     store-type: none
   data:
     mongodb:
-      uri: mongodb://root:E5press0@localhost:27017/terminology?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+      database: ${MONGO_DATABASE:terminology}
+      uri: ${MONGO_URI:mongodb://${DBUSER:root}:${DBPASS:E5press0}@localhost:27017/terminology}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
 
 mapping:
   data:
