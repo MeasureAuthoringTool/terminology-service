@@ -80,7 +80,7 @@ class VsacServiceTest {
             .name("ActPriority")
             .oid("1.2.3.4.5.6.7.8.9")
             .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
-            .version(Collections.toList(version))
+            .versions(Collections.toList(version))
             .build();
     codeSystemEntries.add(codeSystemEntry);
 
@@ -207,7 +207,7 @@ class VsacServiceTest {
   @Test
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsNotProvided() {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
-    codeSystemEntries.get(0).setVersion(null);
+    codeSystemEntries.get(0).setVersions(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
     assertFalse(result.get(0).getCodeSystem().isValid());
@@ -217,7 +217,7 @@ class VsacServiceTest {
 
   @Test
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsProvided() {
-    codeSystemEntries.get(0).setVersion(null);
+    codeSystemEntries.get(0).setVersions(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
