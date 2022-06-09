@@ -59,9 +59,10 @@ public class VsacController {
       log.debug("valueset id = " + fhirValueSet.getId());
 
       serialized = serializeFhirValueset(fhirValueSet);
+      return ResponseEntity.ok().body(serialized);
     }
 
-    return ResponseEntity.ok().body(serialized);
+    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
   protected String serializeFhirValueset(ValueSet fhirValueSet) {
