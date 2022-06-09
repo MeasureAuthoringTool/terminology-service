@@ -65,6 +65,9 @@ class VsacServiceTest {
   private ValueSetsSearchCriteria valueSetsSearchCriteria;
   private RetrieveMultipleValueSetsResponse svsValueSet;
   private UmlsUser umlsUser;
+  private static final String TEST_HARP_ID = "te$tHarpId";
+  private static final String TEST_API_KEY = "te$tKey";
+  private static final String TEST_TGT = "te$tTgt";
 
   @BeforeEach
   public void setUp() throws JAXBException {
@@ -113,7 +116,7 @@ class VsacServiceTest {
             .valueSetParams(List.of(valueSetParams))
             .build();
 
-    umlsUser = UmlsUser.builder().apiKey("testKey").harpId("testHarpId").tgt("testTgt").build();
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).tgt(TEST_TGT).build();
   }
 
   @Test
@@ -320,28 +323,28 @@ class VsacServiceTest {
   public void testSaveUmlsUser() {
     ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
     doReturn(umlsUser).when(repository).save(any(UmlsUser.class));
-    UmlsUser saved = vsacService.saveUmlsUser("testKey", "testHarpId", "testTgt");
+    UmlsUser saved = vsacService.saveUmlsUser(TEST_API_KEY, TEST_HARP_ID, TEST_TGT);
     verify(repository, times(1)).save(captor.capture());
     UmlsUser captored = captor.getValue();
     assertNotNull(captored);
-    assertEquals("testHarpId", captored.getApiKey());
-    assertEquals("testKey", saved.getApiKey());
+    assertEquals(TEST_HARP_ID, captored.getApiKey());
+    assertEquals(TEST_API_KEY, saved.getApiKey());
   }
 
   @Test
   public void testFindByHarpId() {
     Optional<UmlsUser> optional = Optional.of(umlsUser);
     doReturn(optional).when(repository).findByHarpId(anyString());
-    Optional<UmlsUser> result = vsacService.findByHarpId("testHarpId");
+    Optional<UmlsUser> result = vsacService.findByHarpId(TEST_HARP_ID);
     assertNotNull(result);
-    assertEquals("testHarpId", result.get().getHarpId());
-    assertEquals("testKey", result.get().getApiKey());
+    assertEquals(TEST_HARP_ID, result.get().getHarpId());
+    assertEquals(TEST_API_KEY, result.get().getApiKey());
   }
 
   @Test
   public void testGetTGT() throws InterruptedException, ExecutionException {
-    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn("testTGT");
-    String result = vsacService.getTgt("testKey");
-    assertEquals("testTGT", result);
+    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn(TEST_TGT);
+    String result = vsacService.getTgt(TEST_API_KEY);
+    assertEquals(TEST_TGT, result);
   }
 }
