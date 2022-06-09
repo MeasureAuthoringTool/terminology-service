@@ -1,5 +1,7 @@
 package cms.gov.madie.terminology.controller;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import java.security.Principal;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -9,26 +11,22 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-
-import gov.cms.madiejavamodels.cql.terminology.CqlCode;
-import lombok.RequiredArgsConstructor;
-
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.ValueSet;
-
-import cms.gov.madie.terminology.models.UmlsUser;
+import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.service.VsacService;
-
-import lombok.extern.slf4j.Slf4j;
+import cms.gov.madie.terminology.models.UmlsUser;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping(path = "/vsac")
@@ -37,7 +35,7 @@ import java.util.List;
 public class VsacController {
 
   private final VsacService vsacService;
-  private final IParser parser;
+  private final FhirContext fhirContext;
 
   @GetMapping(path = "/valueset", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getValueSet(
@@ -52,13 +50,12 @@ public class VsacController {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     String serialized = null;
-    if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
-      String serviceTicket = vsacService.getServiceTicket(umlsUser.get().getTgt());
-
+    if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
       RetrieveMultipleValueSetsResponse valuesetResponse =
-          vsacService.getValueSet(oid, serviceTicket, profile, includeDraft, release, version);
+          vsacService.getValueSet(
+              oid, umlsUser.get().getTgt(), profile, includeDraft, release, version);
 
-      ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse, oid);
+      ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse);
       log.debug("valueset id = " + fhirValueSet.getId());
 
       serialized = serializeFhirValueset(fhirValueSet);
@@ -68,7 +65,20 @@ public class VsacController {
   }
 
   protected String serializeFhirValueset(ValueSet fhirValueSet) {
-    return parser.encodeResourceToString(fhirValueSet);
+    return fhirContext.newJsonParser().encodeResourceToString(fhirValueSet);
+  }
+
+  @PutMapping(path = "/value-sets/searches", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<String> searchValueSets(
+      @RequestBody ValueSetsSearchCriteria searchCriteria) {
+    log.debug("VsacController::getValueSets");
+    List<RetrieveMultipleValueSetsResponse> vsacValueSets =
+        vsacService.getValueSets(searchCriteria);
+    List<ValueSet> fhirValueSets = vsacService.convertToFHIRValueSets(vsacValueSets);
+    String serializedValueSets =
+        fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));
+
+    return ResponseEntity.ok().body("[" + serializedValueSets + "]");
   }
 
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -82,7 +92,7 @@ public class VsacController {
     return new ResponseEntity<>(HttpStatus.NOT_FOUND);
   }
 
-  @PostMapping(path = "/umls/login")
+  @PostMapping(path = "/umls-credentials")
   public ResponseEntity<String> umlsLogin(Principal principal, @RequestParam String apiKey)
       throws InterruptedException, ExecutionException {
     final String username = principal.getName();
@@ -95,7 +105,7 @@ public class VsacController {
     return ResponseEntity.ok().body(msg);
   }
 
-  @GetMapping("/check/login")
+  @GetMapping("/umls-credentials/status")
   public ResponseEntity<Boolean> checkUserLogin(Principal principal) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);

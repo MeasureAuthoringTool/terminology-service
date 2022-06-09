@@ -2,6 +2,7 @@ package cms.gov.madie.terminology.webclient;
 
 import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import org.springframework.http.MediaType;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,6 +26,7 @@ public class TerminologyServiceWebClient {
   private final String baseUrl;
   private final String serviceTicketEndpoint;
   private final String valueSetEndpoint;
+  private final String defaultProfile;
   private final String utsLoginEndpoint;
 
   public TerminologyServiceWebClient(
@@ -32,11 +34,14 @@ public class TerminologyServiceWebClient {
       @Value("${client.vsac_base_url}") String baseUrl,
       @Value("${client.service_ticket_endpoint}") String serviceTicketEndpoint,
       @Value("${client.valueset_endpoint}") String valueSetEndpoint,
+      @Value("${client.default_profile}") String defaultProfile,
       @Value("${client.uts_login}") String utsLoginEndpoint) {
+
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
     this.serviceTicketEndpoint = serviceTicketEndpoint;
     this.valueSetEndpoint = valueSetEndpoint;
+    this.defaultProfile = defaultProfile;
     this.utsLoginEndpoint = utsLoginEndpoint;
     log.debug(
         "baseUrl = "
@@ -87,21 +92,34 @@ public class TerminologyServiceWebClient {
       String includeDraft,
       String release,
       String version) {
-
+    profile = StringUtils.isBlank(profile) ? defaultProfile : profile;
     return TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
         baseUrl, valueSetEndpoint, oid, serviceTicket, profile, includeDraft, release, version);
   }
 
+  /**
+   * @param codePath code path build to call VSAC services
+   * @param serviceTicket single use service ticket
+   * @return the response from VSAC is the statusCode is either 200 or 400 Status Code 200 indicates
+   *     a valid code Status Code 400 indicates either CodeSystem or CodeSystem version or Code is
+   *     not found
+   */
   public VsacCode getCode(String codePath, String serviceTicket) {
     URI codeUri = TerminologyServiceUtil.buildRetrieveCodeUri(baseUrl, codePath, serviceTicket);
     log.debug("Retrieving vsacCode for codePath {}", codePath);
     return terminologyClient
         .get()
         .uri(codeUri)
-        .retrieve()
-        .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-        .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
-        .bodyToMono(VsacCode.class)
+        .exchangeToMono(
+            clientResponse -> {
+              if (clientResponse.statusCode().equals(HttpStatus.BAD_REQUEST)
+                  || clientResponse.statusCode().equals(HttpStatus.OK)) {
+                return clientResponse.bodyToMono(VsacCode.class);
+              } else {
+                log.debug("Received NON-OK response while retrieving codePath {}", codePath);
+                return clientResponse.createException().flatMap(Mono::error);
+              }
+            })
         .block();
   }
 
