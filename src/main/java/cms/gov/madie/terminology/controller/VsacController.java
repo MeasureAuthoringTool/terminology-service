@@ -118,6 +118,6 @@ public class VsacController {
     } else {
       log.error("UmlsApiKey is null");
     }
-    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 }
