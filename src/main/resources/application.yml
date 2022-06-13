@@ -23,7 +23,7 @@ client:
   service_ticket_endpoint: /ws/Ticket/%s?service=http://umlsks.nlm.nih.gov
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}
   default_profile: ${DEFAULT_VSAC_PROFILE:Most Recent Code System Versions in VSAC}
-  uts_login: /ws/Ticket?apikey=%s
+  uts_login: /ws/Ticket
   
 spring:
   session:

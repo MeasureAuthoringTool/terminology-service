@@ -4,6 +4,9 @@ import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import org.springframework.http.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -124,12 +127,14 @@ public class TerminologyServiceWebClient {
   }
 
   public String getTgt(String apiKey) throws InterruptedException, ExecutionException {
-    String uri = String.format(baseUrl + utsLoginEndpoint, apiKey);
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formData.add("apikey", apiKey);
     Mono<String> responseMono =
         terminologyClient
             .post()
-            .uri(uri)
-            .header("Content-Type", "application/x-www-form-urlencoded")
+            .uri(baseUrl + utsLoginEndpoint)
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(BodyInserters.fromValue(formData))
             .retrieve()
             .onStatus(
                 HttpStatus::is5xxServerError,
