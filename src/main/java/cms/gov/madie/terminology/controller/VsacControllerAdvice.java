@@ -1,6 +1,7 @@
 package cms.gov.madie.terminology.controller;
 
 import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import cms.gov.madie.terminology.exceptions.VsacUnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
@@ -65,6 +66,18 @@ public class VsacControllerAdvice {
     Map<String, String> validationErrors = new HashMap<>();
     validationErrors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(VsacUnauthorizedException.class)
+  @ResponseStatus(HttpStatus.UNAUTHORIZED)
+  @ResponseBody
+  Map<String, Object> onVsacUnauthorizedException(
+      VsacUnauthorizedException ex, WebRequest request) {
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.UNAUTHORIZED);
     errorAttributes.put("validationErrors", validationErrors);
     return errorAttributes;
   }
