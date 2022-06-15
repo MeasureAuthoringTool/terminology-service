@@ -1,7 +1,7 @@
 package cms.gov.madie.terminology.service;
 
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
-import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import cms.gov.madie.terminology.exceptions.VsacUnauthorizedException;
 import cms.gov.madie.terminology.helpers.TestHelpers;
 import cms.gov.madie.terminology.models.UmlsUser;
 import cms.gov.madie.terminology.repositories.UmlsUserRepository;
@@ -267,13 +267,14 @@ class VsacServiceTest {
 
   @Test
   public void testGetValueSetsWhenErrorOccurredWhileFetchingServiceTicket() {
-    doThrow(new VsacGenericException("Error occurred while fetching service ticket"))
+    doThrow(new VsacUnauthorizedException("Error occurred while fetching service ticket"))
         .when(terminologyServiceWebClient)
         .getServiceTicket(anyString());
 
-    VsacGenericException exception =
+    VsacUnauthorizedException exception =
         assertThrows(
-            VsacGenericException.class, () -> vsacService.getValueSets(valueSetsSearchCriteria));
+            VsacUnauthorizedException.class,
+            () -> vsacService.getValueSets(valueSetsSearchCriteria));
 
     assertThat(
         exception.getMessage(),

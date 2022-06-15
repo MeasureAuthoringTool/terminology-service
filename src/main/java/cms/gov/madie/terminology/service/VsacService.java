@@ -11,7 +11,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
-import cms.gov.madie.terminology.exceptions.VsacGenericException;
+import cms.gov.madie.terminology.exceptions.VsacUnauthorizedException;
 import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import cms.gov.madie.terminology.models.UmlsUser;
 import cms.gov.madie.terminology.repositories.UmlsUserRepository;
@@ -49,7 +49,7 @@ public class VsacService {
       serviceTicket = getServiceTicket(tgt);
     } catch (Exception e) {
       log.error("Error while getting service ticket", e);
-      throw new VsacGenericException(
+      throw new VsacUnauthorizedException(
           "Error occurred while fetching service ticket. "
               + "Please make sure you are logged in to UMLS.");
     }

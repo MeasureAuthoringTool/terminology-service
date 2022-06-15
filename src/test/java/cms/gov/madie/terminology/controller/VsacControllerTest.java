@@ -1,5 +1,6 @@
 package cms.gov.madie.terminology.controller;
 
+import cms.gov.madie.terminology.exceptions.VsacUnauthorizedException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,7 +24,6 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import cms.gov.madie.terminology.service.VsacService;
 import cms.gov.madie.terminology.models.UmlsUser;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
@@ -48,11 +48,11 @@ public class VsacControllerTest {
     when(umlsUser.getTgt()).thenReturn(TEST);
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
 
-    doThrow(new VsacGenericException("Error while getting ST"))
+    doThrow(new VsacUnauthorizedException("Error while getting ST"))
         .when(vsacService)
         .getValueSet(TEST, TEST, TEST, TEST, TEST, TEST);
     assertThrows(
-        VsacGenericException.class,
+        VsacUnauthorizedException.class,
         () -> vsacController.getValueSet(principal, TEST, TEST, TEST, TEST, TEST));
   }
 
