@@ -4,10 +4,14 @@ import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import org.springframework.http.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
+import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,19 +30,29 @@ public class TerminologyServiceWebClient {
   private final String serviceTicketEndpoint;
   private final String valueSetEndpoint;
   private final String defaultProfile;
+  private final String utsLoginEndpoint;
 
   public TerminologyServiceWebClient(
       WebClient.Builder webClientBuilder,
       @Value("${client.vsac_base_url}") String baseUrl,
       @Value("${client.service_ticket_endpoint}") String serviceTicketEndpoint,
       @Value("${client.valueset_endpoint}") String valueSetEndpoint,
-      @Value("${client.default_profile}") String defaultProfile) {
+      @Value("${client.default_profile}") String defaultProfile,
+      @Value("${client.uts_login}") String utsLoginEndpoint) {
+
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
     this.serviceTicketEndpoint = serviceTicketEndpoint;
     this.valueSetEndpoint = valueSetEndpoint;
     this.defaultProfile = defaultProfile;
-    log.debug("baseUrl = " + baseUrl + " serviceTicketEndpoint = " + serviceTicketEndpoint);
+    this.utsLoginEndpoint = utsLoginEndpoint;
+    log.debug(
+        "baseUrl = "
+            + baseUrl
+            + " serviceTicketEndpoint = "
+            + serviceTicketEndpoint
+            + " utsLoginEndpoint = "
+            + utsLoginEndpoint);
   }
 
   public String getServiceTicket(String tgt) {
@@ -110,5 +124,31 @@ public class TerminologyServiceWebClient {
               }
             })
         .block();
+  }
+
+  public String getTgt(String apiKey) throws InterruptedException, ExecutionException {
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formData.add("apikey", apiKey);
+    Mono<String> responseMono =
+        terminologyClient
+            .post()
+            .uri(baseUrl + utsLoginEndpoint)
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(BodyInserters.fromValue(formData))
+            .retrieve()
+            .onStatus(
+                HttpStatus::is5xxServerError,
+                response -> {
+                  return response.createException();
+                })
+            .onStatus(
+                HttpStatus::is4xxClientError,
+                response -> {
+                  return response.createException();
+                })
+            .bodyToMono(String.class);
+    responseMono.subscribe();
+    log.debug("Exiting getTgt()");
+    return responseMono.toFuture().get();
   }
 }

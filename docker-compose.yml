@@ -8,3 +8,21 @@ services:
       - ~/.m2:/root/.m2:consistent
     ports:
       - "8081:8081"
+    depends_on:
+      - "madie-terminology-mongo"
+    environment:
+      WAIT_HOSTS: madie-mongo:27017  
+
+  madie-terminology-mongo:
+    image: mongo:4.4
+    tmpfs: /data/db
+    restart: always
+    container_name: 'madie-terminology-mongo'
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=E5press0
+      - MONGO_INITDB_DATABASE=admin
+    volumes:
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro

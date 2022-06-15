@@ -3,6 +3,8 @@ package cms.gov.madie.terminology.service;
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import cms.gov.madie.terminology.helpers.TestHelpers;
+import cms.gov.madie.terminology.models.UmlsUser;
+import cms.gov.madie.terminology.repositories.UmlsUserRepository;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,6 +17,7 @@ import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,12 +28,15 @@ import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,6 +44,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +55,8 @@ class VsacServiceTest {
 
   @Mock MappingService mappingService;
 
+  @Mock UmlsUserRepository repository;
+
   @InjectMocks VsacService vsacService;
 
   List<CqlCode> cqlCodes;
@@ -54,6 +64,10 @@ class VsacServiceTest {
   List<CodeSystemEntry> codeSystemEntries;
   private ValueSetsSearchCriteria valueSetsSearchCriteria;
   private RetrieveMultipleValueSetsResponse svsValueSet;
+  private UmlsUser umlsUser;
+  private static final String TEST_HARP_ID = "te$tHarpId";
+  private static final String TEST_API_KEY = "te$tKey";
+  private static final String TEST_TGT = "te$tTgt";
 
   @BeforeEach
   public void setUp() throws JAXBException {
@@ -101,6 +115,8 @@ class VsacServiceTest {
             .profile("eCQM Update 2030-05-05")
             .valueSetParams(List.of(valueSetParams))
             .build();
+
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).tgt(TEST_TGT).build();
   }
 
   @Test
@@ -301,5 +317,34 @@ class VsacServiceTest {
         .thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(List.of(snomedCode), "Test-TGT-Token");
     assertTrue(result.get(0).isValid());
+  }
+
+  @Test
+  public void testSaveUmlsUser() {
+    ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
+    doReturn(umlsUser).when(repository).save(any(UmlsUser.class));
+    UmlsUser saved = vsacService.saveUmlsUser(TEST_API_KEY, TEST_HARP_ID, TEST_TGT);
+    verify(repository, times(1)).save(captor.capture());
+    UmlsUser captored = captor.getValue();
+    assertNotNull(captored);
+    assertEquals(TEST_HARP_ID, captored.getApiKey());
+    assertEquals(TEST_API_KEY, saved.getApiKey());
+  }
+
+  @Test
+  public void testFindByHarpId() {
+    Optional<UmlsUser> optional = Optional.of(umlsUser);
+    doReturn(optional).when(repository).findByHarpId(anyString());
+    Optional<UmlsUser> result = vsacService.findByHarpId(TEST_HARP_ID);
+    assertNotNull(result);
+    assertEquals(TEST_HARP_ID, result.get().getHarpId());
+    assertEquals(TEST_API_KEY, result.get().getApiKey());
+  }
+
+  @Test
+  public void testGetTGT() throws InterruptedException, ExecutionException {
+    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn(TEST_TGT);
+    String result = vsacService.getTgt(TEST_API_KEY);
+    assertEquals(TEST_TGT, result);
   }
 }

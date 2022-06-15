@@ -1,24 +1,31 @@
 package cms.gov.madie.terminology.service;
 
+import java.util.stream.Collectors;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.List;
+
+import org.springframework.util.CollectionUtils;
+import org.springframework.stereotype.Service;
+
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import cms.gov.madie.terminology.mapper.VsacToFhirValueSetMapper;
+import cms.gov.madie.terminology.models.UmlsUser;
+import cms.gov.madie.terminology.repositories.UmlsUserRepository;
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madiejavamodels.cql.terminology.CqlCode;
 import gov.cms.madiejavamodels.cql.terminology.VsacCode;
 import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
+import org.hl7.fhir.r4.model.ValueSet;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.hl7.fhir.r4.model.ValueSet;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -28,6 +35,7 @@ public class VsacService {
   private final TerminologyServiceWebClient terminologyWebClient;
   private final VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
   private final MappingService mappingService;
+  private final UmlsUserRepository umlsUserRepository;
 
   public String getServiceTicket(String tgt) {
     return terminologyWebClient.getServiceTicket(tgt);
@@ -200,5 +208,28 @@ public class VsacService {
       cqlCode.setValid(false);
       cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
     }
+  }
+
+  public UmlsUser saveUmlsUser(String harpId, String apiKey, String tgt) {
+    Instant now = Instant.now();
+    Instant nowPlus8Hours = now.plus(8, ChronoUnit.HOURS);
+    UmlsUser umlsUser =
+        UmlsUser.builder()
+            .apiKey(apiKey)
+            .harpId(harpId)
+            .tgt(tgt)
+            .tgtExpiryTime(nowPlus8Hours)
+            .createdAt(now)
+            .modifiedAt(now)
+            .build();
+    return umlsUserRepository.save(umlsUser);
+  }
+
+  public Optional<UmlsUser> findByHarpId(String harpId) {
+    return umlsUserRepository.findByHarpId(harpId);
+  }
+
+  public String getTgt(String apiKey) throws InterruptedException, ExecutionException {
+    return terminologyWebClient.getTgt(apiKey);
   }
 }
