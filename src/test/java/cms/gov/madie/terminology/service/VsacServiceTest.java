@@ -1,6 +1,7 @@
 package cms.gov.madie.terminology.service;
 
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
+import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import cms.gov.madie.terminology.exceptions.VsacUnauthorizedException;
 import cms.gov.madie.terminology.helpers.TestHelpers;
 import cms.gov.madie.terminology.models.UmlsUser;
@@ -111,7 +112,6 @@ class VsacServiceTest {
     valueSetParams.setOid("2.16.840.1.113883.3.464.1003.101.12.1001");
     valueSetsSearchCriteria =
         ValueSetsSearchCriteria.builder()
-            .tgt("TGT-Xy4z-pQr-FaK3")
             .profile("eCQM Update 2030-05-05")
             .valueSetParams(List.of(valueSetParams))
             .build();
@@ -254,7 +254,7 @@ class VsacServiceTest {
         .thenReturn(svsValueSet);
 
     List<RetrieveMultipleValueSetsResponse> vsacValueSets =
-        vsacService.getValueSets(valueSetsSearchCriteria);
+        vsacService.getValueSets(valueSetsSearchCriteria, TEST_TGT);
 
     RetrieveMultipleValueSetsResponse.DescribedValueSet describedValueSet =
         vsacValueSets.get(0).getDescribedValueSet();
@@ -274,7 +274,7 @@ class VsacServiceTest {
     VsacUnauthorizedException exception =
         assertThrows(
             VsacUnauthorizedException.class,
-            () -> vsacService.getValueSets(valueSetsSearchCriteria));
+            () -> vsacService.getValueSets(valueSetsSearchCriteria, TEST_TGT));
 
     assertThat(
         exception.getMessage(),

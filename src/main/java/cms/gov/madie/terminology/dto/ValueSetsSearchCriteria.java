@@ -12,8 +12,6 @@ public class ValueSetsSearchCriteria {
   private String profile;
   private String includeDraft;
   private List<ValueSetParams> valueSetParams;
-  // TODO: remove this oce we complete MAT-4203
-  private String tgt;
 
   @Data
   public static class ValueSetParams {

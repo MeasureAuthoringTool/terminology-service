@@ -71,15 +71,21 @@ public class VsacController {
 
   @PutMapping(path = "/value-sets/searches", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> searchValueSets(
-      @RequestBody ValueSetsSearchCriteria searchCriteria) {
+      Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     log.debug("VsacController::getValueSets");
-    List<RetrieveMultipleValueSetsResponse> vsacValueSets =
-        vsacService.getValueSets(searchCriteria);
-    List<ValueSet> fhirValueSets = vsacService.convertToFHIRValueSets(vsacValueSets);
-    String serializedValueSets =
-        fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));
 
-    return ResponseEntity.ok().body("[" + serializedValueSets + "]");
+    final String username = principal.getName();
+    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
+    if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
+      List<RetrieveMultipleValueSetsResponse> vsacValueSets =
+          vsacService.getValueSets(searchCriteria, umlsUser.get().getTgt());
+      List<ValueSet> fhirValueSets = vsacService.convertToFHIRValueSets(vsacValueSets);
+      String serializedValueSets =
+          fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));
+
+      return ResponseEntity.ok().body("[" + serializedValueSets + "]");
+    }
+    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)

@@ -3,6 +3,7 @@ package cms.gov.madie.terminology.controller;
 import ca.uhn.fhir.context.FhirContext;
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.helpers.TestHelpers;
+import cms.gov.madie.terminology.models.UmlsUser;
 import cms.gov.madie.terminology.service.VsacService;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -22,12 +23,16 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,6 +52,8 @@ public class VsacControllerMvcTest {
 
   private RetrieveMultipleValueSetsResponse svsValueSet;
   private ValueSet fhirValueSet;
+  private static final String TEST = "test";
+  private static final String TEST_USER = "test.user";
 
   @BeforeEach
   public void setup() throws JAXBException, IOException {
@@ -64,7 +71,6 @@ public class VsacControllerMvcTest {
     String searchCriteria =
         "{\n"
             + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
-            + "    \"tgt\": \"TGT-Xy4z-pQr-FaK3\",\n"
             + "    \"includeDraft\": true,\n"
             + "    \"valueSetParams\": [\n"
             + "        {\n"
@@ -72,8 +78,15 @@ public class VsacControllerMvcTest {
             + "        }\n"
             + "    ]\n"
             + "}";
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
 
-    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class)))
+    UmlsUser mockUmlsUser = mock(UmlsUser.class);
+    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
+    when(mockUmlsUser.getTgt()).thenReturn(TEST);
+    when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
+
+    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class), anyString()))
         .thenReturn(List.of(svsValueSet));
     when(vsacService.convertToFHIRValueSets(List.of(svsValueSet)))
         .thenReturn(List.of(fhirValueSet));
@@ -90,7 +103,7 @@ public class VsacControllerMvcTest {
             .andExpect(status().isOk())
             .andReturn();
     String content = result.getResponse().getContentAsString();
-    verify(vsacService, times(1)).getValueSets(any(ValueSetsSearchCriteria.class));
+    verify(vsacService, times(1)).getValueSets(any(ValueSetsSearchCriteria.class), anyString());
     assertThat(content, containsString("\"resourceType\":\"ValueSet\""));
     assertThat(content, containsString("\"name\":\"Office Visit\""));
     assertThat(content, containsString("\"system\":\"2.16.840.1.113883.6.12\""));
@@ -103,7 +116,6 @@ public class VsacControllerMvcTest {
     String searchCriteria =
         "{\n"
             + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
-            + "    \"tgt\": \"TGT-Xy4z-pQr-FaK3\",\n"
             + "    \"includeDraft\": true,\n"
             + "    \"valueSetParams\": [\n"
             + "        {\n"
@@ -112,9 +124,20 @@ public class VsacControllerMvcTest {
             + "    ]\n"
             + "}";
 
+    UmlsUser mockUmlsUser = mock(UmlsUser.class);
+    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
+    when(mockUmlsUser.getTgt()).thenReturn(TEST);
+    when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
+
+    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class), anyString()))
+        .thenReturn(List.of(svsValueSet));
+    when(vsacService.convertToFHIRValueSets(List.of(svsValueSet)))
+        .thenReturn(List.of(fhirValueSet));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+
     doThrow(new WebClientResponseException(404, "Error", null, null, null))
         .when(vsacService)
-        .getValueSets(any(ValueSetsSearchCriteria.class));
+        .getValueSets(any(ValueSetsSearchCriteria.class), anyString());
 
     MvcResult result =
         mockMvc
