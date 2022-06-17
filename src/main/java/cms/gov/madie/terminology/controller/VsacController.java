@@ -100,7 +100,7 @@ public class VsacController {
   }
 
   @PostMapping(path = "/umls-credentials")
-  public ResponseEntity<String> umlsLogin(Principal principal, @RequestParam String apiKey)
+  public ResponseEntity<String> umlsLogin(Principal principal, @RequestBody String apiKey)
       throws InterruptedException, ExecutionException {
     final String username = principal.getName();
     log.debug("Entering: umlsLogin(): username = " + username);
@@ -122,9 +122,7 @@ public class VsacController {
       vsacService.getServiceTicket(tgt);
       log.debug("User: " + username + " has valid TGT");
       return ResponseEntity.ok().body(Boolean.TRUE);
-    } else {
-      log.error("UmlsApiKey is null");
-    }
+    } 
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 }
