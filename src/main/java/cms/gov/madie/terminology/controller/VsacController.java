@@ -122,7 +122,7 @@ public class VsacController {
       vsacService.getServiceTicket(tgt);
       log.debug("User: " + username + " has valid TGT");
       return ResponseEntity.ok().body(Boolean.TRUE);
-    } 
+    }
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 }
