@@ -1,6 +1,6 @@
 package cms.gov.madie.terminology.webclient;
 
-import gov.cms.madiejavamodels.cql.terminology.VsacCode;
+import gov.cms.madie.models.cql.terminology.VsacCode;
 import org.springframework.http.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;

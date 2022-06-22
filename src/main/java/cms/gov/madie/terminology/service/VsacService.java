@@ -18,9 +18,9 @@ import cms.gov.madie.terminology.repositories.UmlsUserRepository;
 import cms.gov.madie.terminology.util.TerminologyServiceUtil;
 import cms.gov.madie.terminology.webclient.TerminologyServiceWebClient;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import gov.cms.madiejavamodels.cql.terminology.CqlCode;
-import gov.cms.madiejavamodels.cql.terminology.VsacCode;
-import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
+import gov.cms.madie.models.cql.terminology.CqlCode;
+import gov.cms.madie.models.cql.terminology.VsacCode;
+import gov.cms.madie.models.mapping.CodeSystemEntry;
 import org.hl7.fhir.r4.model.ValueSet;
 
 import lombok.RequiredArgsConstructor;
