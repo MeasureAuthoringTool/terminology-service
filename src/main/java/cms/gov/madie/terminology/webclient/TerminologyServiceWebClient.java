@@ -138,14 +138,10 @@ public class TerminologyServiceWebClient {
             .retrieve()
             .onStatus(
                 HttpStatus::is5xxServerError,
-                response -> {
-                  return response.createException();
-                })
+                ClientResponse::createException)
             .onStatus(
                 HttpStatus::is4xxClientError,
-                response -> {
-                  return response.createException();
-                })
+                ClientResponse::createException)
             .bodyToMono(String.class);
     responseMono.subscribe();
     log.debug("Exiting getTgt()");
