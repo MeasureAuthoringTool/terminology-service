@@ -1,6 +1,6 @@
 package cms.gov.madie.terminology.webclient;
 
-import gov.cms.madiejavamodels.cql.terminology.VsacCode;
+import gov.cms.madie.models.cql.terminology.VsacCode;
 import org.springframework.http.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -138,14 +138,10 @@ public class TerminologyServiceWebClient {
             .retrieve()
             .onStatus(
                 HttpStatus::is5xxServerError,
-                response -> {
-                  return response.createException();
-                })
+                ClientResponse::createException)
             .onStatus(
                 HttpStatus::is4xxClientError,
-                response -> {
-                  return response.createException();
-                })
+                ClientResponse::createException)
             .bodyToMono(String.class);
     responseMono.subscribe();
     log.debug("Exiting getTgt()");

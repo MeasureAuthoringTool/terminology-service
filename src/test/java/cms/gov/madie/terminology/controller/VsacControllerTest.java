@@ -26,7 +26,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import cms.gov.madie.terminology.service.VsacService;
 import cms.gov.madie.terminology.models.UmlsUser;
-import gov.cms.madiejavamodels.cql.terminology.CqlCode;
+import gov.cms.madie.models.cql.terminology.CqlCode;
 
 @ExtendWith(MockitoExtension.class)
 public class VsacControllerTest {

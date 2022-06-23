@@ -23,7 +23,7 @@ import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
 import cms.gov.madie.terminology.service.VsacService;
 import cms.gov.madie.terminology.models.UmlsUser;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import gov.cms.madiejavamodels.cql.terminology.CqlCode;
+import gov.cms.madie.models.cql.terminology.CqlCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -2,7 +2,7 @@ package cms.gov.madie.terminology.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okta.commons.lang.Collections;
-import gov.cms.madiejavamodels.mappingData.CodeSystemEntry;
+import gov.cms.madie.models.mapping.CodeSystemEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
