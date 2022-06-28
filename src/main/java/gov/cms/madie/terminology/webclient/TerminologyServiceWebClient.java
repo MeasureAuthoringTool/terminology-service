@@ -137,16 +137,8 @@ public class TerminologyServiceWebClient {
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .body(BodyInserters.fromValue(formData))
             .retrieve()
-            .onStatus(
-                HttpStatus::is5xxServerError,
-                response -> {
-                  return response.createException();
-                })
-            .onStatus(
-                HttpStatus::is4xxClientError,
-                response -> {
-                  return response.createException();
-                })
+            .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
+            .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
             .bodyToMono(String.class);
     responseMono.subscribe();
     log.debug("Exiting getTgt()");

@@ -24,7 +24,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import gov.cms.madie.models.cql.terminology.CqlCode;
-import gov.cms.madie.terminology.controller.VsacController;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.VsacService;

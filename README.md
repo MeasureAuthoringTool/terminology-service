@@ -6,9 +6,21 @@ To build
 ```
 mvn clean verify ```
 
-To run, first add 
+
+Clone the support-data repository for the latest code system mapping json file:
 ```
-port: 8081 ``` in application.yml file if it's not there, for server port configuration, and then run
+https://github.com/MeasureAuthoringTool/support-data
+```
+<br />
+
+Update the configuration in application.yml to use the local json file instead of dev instance:
+<br />
+```
+code-system-entry-url: file:/Users/{git repo location}/support-data/dev/madie/code-system-entry.json
+```
+<br />
+
+To run:
 ```
 mvn install spring-boot:run ```
 

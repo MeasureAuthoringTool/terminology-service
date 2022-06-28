@@ -8,13 +8,12 @@ import gov.cms.madie.models.cql.terminology.CqlCode;
 import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.cql.terminology.VsacCode.VsacError;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
+
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.helpers.TestHelpers;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.UmlsUserRepository;
-import gov.cms.madie.terminology.service.MappingService;
-import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.webclient.TerminologyServiceWebClient;
 
 import org.junit.jupiter.api.BeforeEach;

@@ -49,7 +49,6 @@ public class VsacController {
 
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
-    String serialized = null;
     if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
       RetrieveMultipleValueSetsResponse valuesetResponse =
           vsacService.getValueSet(
@@ -58,8 +57,7 @@ public class VsacController {
       ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse);
       log.debug("valueset id = " + fhirValueSet.getId());
 
-      serialized = serializeFhirValueset(fhirValueSet);
-      return ResponseEntity.ok().body(serialized);
+      return ResponseEntity.ok().body(serializeFhirValueset(fhirValueSet));
     }
 
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);

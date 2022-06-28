@@ -3,7 +3,6 @@ package gov.cms.madie.terminology.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okta.commons.lang.Collections;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
-import gov.cms.madie.terminology.service.MappingService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
