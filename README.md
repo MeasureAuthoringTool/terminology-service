@@ -13,10 +13,12 @@ https://github.com/MeasureAuthoringTool/support-data
 ```
 <br />
 
-Update the configuration in application.yml to use the local json file instead of dev instance:
+Use the configuration in application-local.yml to use the local json file instead of dev instance:
 <br />
 ```
 code-system-entry-url: file:/Users/{git repo location}/support-data/dev/madie/code-system-entry.json
+
+Alternatively, I have run [http-server](https://www.npmjs.com/package/http-server),  a node application to provide a simple web-server so that I can server code-system-entry.json from a local webserver.  
 ```
 <br />
 

@@ -1,0 +1,6 @@
+server:
+  port: 8086
+
+mapping:
+  data:
+    code-system-entry-url: http://localhost:8087/code-system-entry.json
