@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -93,6 +94,20 @@ public class VsacControllerTest {
     assertEquals(1, Objects.requireNonNull(response.getBody()).size());
     assertEquals("test-code", response.getBody().get(0).getName());
     assertTrue(response.getBody().get(0).isValid());
+  }
+
+  @Test
+  void testValidateCodesWhenUserIsNotLoggedIntoUmls() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    UmlsUser mockUmlsUser = mock(UmlsUser.class);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.of(mockUmlsUser));
+    when(mockUmlsUser.getApiKey()).thenReturn(null);
+    var cqlCode = CqlCode.builder().name("test-code").codeId("test-codeId").build();
+    ResponseEntity<List<CqlCode>> response =
+        vsacController.validateCodes(principal, List.of(cqlCode));
+    assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
   }
 
   @Test
