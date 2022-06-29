@@ -1,7 +1,6 @@
 package cms.gov.madie.terminology.service;
 
 import cms.gov.madie.terminology.dto.ValueSetsSearchCriteria;
-import cms.gov.madie.terminology.exceptions.VsacGenericException;
 import cms.gov.madie.terminology.exceptions.VsacUnauthorizedException;
 import cms.gov.madie.terminology.helpers.TestHelpers;
 import cms.gov.madie.terminology.models.UmlsUser;
@@ -230,6 +229,17 @@ class VsacServiceTest {
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsNotProvided() {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
     codeSystemEntries.get(0).setVersions(null);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
+    assertFalse(result.get(0).getCodeSystem().isValid());
+    assertEquals(
+        "Unable to find a code system version", result.get(0).getCodeSystem().getErrorMessage());
+  }
+
+  @Test
+  void testIfCodeSystemEntryDoesHaveAKnownFhirVersionButAssociatedVsacVersionIsNull() {
+    cqlCodes.get(0).getCodeSystem().setVersion(null);
+    codeSystemEntries.get(0).getVersions().get(0).setVsac(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
     assertFalse(result.get(0).getCodeSystem().isValid());

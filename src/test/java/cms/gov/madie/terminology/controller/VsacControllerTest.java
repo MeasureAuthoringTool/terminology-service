@@ -108,7 +108,7 @@ public class VsacControllerTest {
 
     ResponseEntity<String> response = vsacController.umlsLogin(principal, TEST);
 
-    assertEquals(response.getBody(), "User: " + TEST_USER + " successfully loggin in to UMLS.");
+    assertEquals(response.getBody(), "User: " + TEST_USER + " is successfully logged in to UMLS.");
   }
 
   @Test

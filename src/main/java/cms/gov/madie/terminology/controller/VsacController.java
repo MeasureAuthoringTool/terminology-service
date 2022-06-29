@@ -94,7 +94,7 @@ public class VsacController {
     if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
       return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, umlsUser.get().getTgt()));
     }
-    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
   @PostMapping(path = "/umls-credentials")
@@ -105,7 +105,7 @@ public class VsacController {
 
     String tgt = vsacService.getTgt(apiKey);
     UmlsUser umlsUser = vsacService.saveUmlsUser(username, apiKey, tgt);
-    String msg = "User: " + umlsUser.getHarpId() + " successfully loggin in to UMLS.";
+    String msg = "User: " + umlsUser.getHarpId() + " is successfully logged in to UMLS.";
     log.debug("msg = ");
     return ResponseEntity.ok().body(msg);
   }
