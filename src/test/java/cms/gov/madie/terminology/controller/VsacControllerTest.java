@@ -112,7 +112,7 @@ public class VsacControllerTest {
   }
 
   @Test
-  void testCheckUserLogin() throws InterruptedException, ExecutionException {
+  void testCheckUserLogin() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
 
