@@ -160,34 +160,34 @@ public class VsacService {
    *     version from codeSystemEntry (first element in the version List).
    */
   private String buildCodeSystemVersion(CqlCode cqlCode, CodeSystemEntry codeSystemEntry) {
-    String cqlCodeSystemVersion = cqlCode.getCodeSystem().getVersion();
     List<CodeSystemEntry.Version> codeSystemEntryVersion = codeSystemEntry.getVersions();
-    if (!StringUtils.isBlank(cqlCodeSystemVersion)) { // sanitize before checking for null value
+    if (!StringUtils.isBlank(cqlCode.getCodeSystem().getVersion())) {
+      String cqlCodeSystemVersion =
+          TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeSystem().getVersion());
       if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
         log.debug(
             "CodeSystem {} does not have any known versions", cqlCode.getCodeSystem().getOid());
-        return TerminologyServiceUtil.sanitizeInput(cqlCodeSystemVersion);
+        return cqlCodeSystemVersion;
       } else {
         Optional<CodeSystemEntry.Version> optionalCodeSystemVersion =
             codeSystemEntry.getVersions().stream()
-                .filter(
-                    v ->
-                        v.getFhir()
-                            .equalsIgnoreCase(
-                                TerminologyServiceUtil.sanitizeInput(cqlCodeSystemVersion)))
+                .filter(v -> v.getFhir().equalsIgnoreCase(cqlCodeSystemVersion))
                 .findFirst();
         if (optionalCodeSystemVersion.isPresent()) {
-          return optionalCodeSystemVersion.get().getVsac();
+          return optionalCodeSystemVersion.get().getVsac() == null
+              ? cqlCodeSystemVersion
+              : optionalCodeSystemVersion.get().getVsac();
         } else {
           log.debug(
               "None of the known FHIR code system versions {} matches with version {}",
               cqlCode.getCodeSystem().getOid(),
               cqlCodeSystemVersion);
-          return TerminologyServiceUtil.sanitizeInput(cqlCodeSystemVersion);
+          return cqlCodeSystemVersion;
         }
       }
     } else {
-      if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
+      if (CollectionUtils.isEmpty(codeSystemEntryVersion)
+          || codeSystemEntryVersion.get(0).getVsac() == null) {
         cqlCode.getCodeSystem().setValid(false);
         cqlCode.getCodeSystem().setErrorMessage("Unable to find a code system version");
         return "";

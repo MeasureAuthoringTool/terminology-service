@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -96,6 +97,20 @@ public class VsacControllerTest {
   }
 
   @Test
+  void testValidateCodesWhenUserIsNotLoggedIntoUmls() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    UmlsUser mockUmlsUser = mock(UmlsUser.class);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.of(mockUmlsUser));
+    when(mockUmlsUser.getApiKey()).thenReturn(null);
+    var cqlCode = CqlCode.builder().name("test-code").codeId("test-codeId").build();
+    ResponseEntity<List<CqlCode>> response =
+        vsacController.validateCodes(principal, List.of(cqlCode));
+    assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+  }
+
+  @Test
   void testUMLSLogin() throws InterruptedException, ExecutionException {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
@@ -108,11 +123,11 @@ public class VsacControllerTest {
 
     ResponseEntity<String> response = vsacController.umlsLogin(principal, TEST);
 
-    assertEquals(response.getBody(), "User: " + TEST_USER + " successfully loggin in to UMLS.");
+    assertEquals(response.getBody(), "User: " + TEST_USER + " is successfully logged in to UMLS.");
   }
 
   @Test
-  void testCheckUserLogin() throws InterruptedException, ExecutionException {
+  void testCheckUserLogin() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
 

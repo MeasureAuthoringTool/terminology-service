@@ -239,6 +239,17 @@ class VsacServiceTest {
   }
 
   @Test
+  void testIfCodeSystemEntryHasAKnownVersionButTheVsacValueIsNull() {
+    cqlCodes.get(0).getCodeSystem().setVersion(null);
+    codeSystemEntries.get(0).getVersions().get(0).setVsac(null);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, "Test-TGT-Token");
+    assertFalse(result.get(0).getCodeSystem().isValid());
+    assertEquals(
+        "Unable to find a code system version", result.get(0).getCodeSystem().getErrorMessage());
+  }
+
+  @Test
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsProvided() {
     codeSystemEntries.get(0).setVersions(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
