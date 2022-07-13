@@ -163,14 +163,7 @@ public class VsacService {
                         codeSystemEntry.get().getName(),
                         codeSystemVersion,
                         TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeId()));
-                String serviceTicket = getServiceTicket(umlsUser);
-                if (StringUtils.isEmpty(serviceTicket)) {
-                  log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
-                  throw new VsacUnauthorizedException(
-                      "Error occurred while fetching service ticket. "
-                          + "Please contact helpdesk.");
-                }
-                VsacCode vsacCode = terminologyWebClient.getCode(codePath, serviceTicket);
+                VsacCode vsacCode = validateCodeAgainstVsac(codePath, umlsUser);
                 /* if the statusCode is "error" and either CodeSystem or CodeSystem version
                  or Code is not found
                 if the statusCode is "ok" then it is a valid code */
@@ -198,6 +191,16 @@ public class VsacService {
       }
     }
     return cqlCodes;
+  }
+
+  private VsacCode validateCodeAgainstVsac(String codePath, UmlsUser umlsUser) {
+    String serviceTicket = getServiceTicket(umlsUser);
+    if (StringUtils.isEmpty(serviceTicket)) {
+      log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
+      throw new VsacUnauthorizedException(
+          "Error occurred while fetching service ticket. " + "Please contact helpdesk.");
+    }
+    return terminologyWebClient.getCode(codePath, serviceTicket);
   }
 
   /**
