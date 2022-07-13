@@ -1,27 +1,24 @@
 package gov.cms.madie.terminology.webclient;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
 import gov.cms.madie.models.cql.terminology.VsacCode;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.util.concurrent.ExecutionException;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class TerminologyServiceWebClientTest {
@@ -44,8 +41,6 @@ public class TerminologyServiceWebClientTest {
 
   @Mock private WebClient.ResponseSpec responseSpecMock;
 
-  @Mock private ClientResponse clientResponse;
-
   private TerminologyServiceWebClient terminologyServiceWebClient;
 
   private static final String BASE_URL = "https://test.com";
@@ -56,6 +51,8 @@ public class TerminologyServiceWebClientTest {
   private static final String DEFAULT_PROFILE = "eCQM Update 2022-05-05";
   private static final String SERVICE_TICKET = "st-test";
   private static final String TGT = "tgt-test";
+
+  private static final String TEST_API_KEY = "te$tKey";
   private static final String UTS_LOGIN_ENDPOINT = "/uts/login";
 
   @BeforeEach
@@ -77,11 +74,39 @@ public class TerminologyServiceWebClientTest {
     when(webClientMock.post()).thenReturn(requestBodyUriSpecMock);
     when(requestBodyUriSpecMock.uri(anyString())).thenReturn(requestBodySpecMock);
     when(requestBodySpecMock.contentType(any())).thenReturn(requestBodySpecMock);
-    when(requestBodySpecMock.retrieve()).thenReturn(responseSpecMock);
-    when(responseSpecMock.onStatus(any(), any())).thenReturn(responseSpecMock);
-    when(responseSpecMock.bodyToMono(String.class)).thenReturn(Mono.just(SERVICE_TICKET));
+    when(requestBodySpecMock.exchangeToMono(any())).thenReturn(Mono.just(SERVICE_TICKET));
 
     assertEquals(SERVICE_TICKET, terminologyServiceWebClient.getServiceTicket(TGT));
+  }
+
+  @Test
+  void testGetTgt() throws InterruptedException, ExecutionException {
+
+    when(webClientMock.post()).thenReturn(requestBodyUriSpecMock);
+    when(requestBodyUriSpecMock.uri(anyString())).thenReturn(requestBodySpecMock);
+    when(requestBodySpecMock.contentType(MediaType.APPLICATION_FORM_URLENCODED))
+        .thenReturn(requestBodySpecMock);
+    when(requestBodySpecMock.body(any())).thenReturn(requestHeadersSpecMock);
+    when(requestHeadersSpecMock.retrieve()).thenReturn(responseSpecMock);
+    when(responseSpecMock.onStatus(any(), any())).thenReturn(responseSpecMock);
+    when(responseSpecMock.bodyToMono(String.class)).thenReturn(Mono.just(TGT));
+
+    assertEquals(TGT, terminologyServiceWebClient.getTgt(TEST_API_KEY));
+  }
+
+  @Test
+  void testGetTgtThrows4xxClientError() {
+
+    when(webClientMock.post()).thenReturn(requestBodyUriSpecMock);
+    when(requestBodyUriSpecMock.uri(anyString())).thenReturn(requestBodySpecMock);
+    when(requestBodySpecMock.contentType(MediaType.APPLICATION_FORM_URLENCODED))
+        .thenReturn(requestBodySpecMock);
+    when(requestBodySpecMock.body(any())).thenReturn(requestHeadersSpecMock);
+    when(requestHeadersSpecMock.retrieve()).thenReturn(responseSpecMock);
+
+    WebClientResponseException webClientResponseException = mock(WebClientResponseException.class);
+    when(responseSpecMock.onStatus(any(), any())).thenThrow(webClientResponseException);
+    assertThrows(WebClientResponseException.class, () -> terminologyServiceWebClient.getTgt(TEST_API_KEY));
   }
 
   @Test
@@ -95,17 +120,4 @@ public class TerminologyServiceWebClientTest {
     assertNotNull(terminologyServiceWebClient.getCode(codePath, SERVICE_TICKET));
   }
 
-  @Test
-  void testGetTgt() throws InterruptedException, ExecutionException {
-
-    when(webClientMock.post()).thenReturn(requestBodyUriSpecMock);
-    when(requestBodyUriSpecMock.uri(anyString())).thenReturn(requestBodySpecMock);
-    when(requestBodySpecMock.contentType(MediaType.APPLICATION_FORM_URLENCODED))
-        .thenReturn(requestBodySpecMock);
-    when(requestBodySpecMock.retrieve()).thenReturn(responseSpecMock);
-    when(responseSpecMock.onStatus(any(), any())).thenReturn(responseSpecMock);
-    when(responseSpecMock.bodyToMono(String.class)).thenReturn(Mono.just(TGT));
-
-    assertEquals(TGT, terminologyServiceWebClient.getServiceTicket(TGT));
-  }
 }

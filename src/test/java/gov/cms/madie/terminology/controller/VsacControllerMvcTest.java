@@ -2,7 +2,6 @@ package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import gov.cms.madie.terminology.controller.VsacController;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.helpers.TestHelpers;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -71,15 +70,16 @@ public class VsacControllerMvcTest {
   @Test
   void testSearchValueSets() throws Exception {
     String searchCriteria =
-        "{\n"
-            + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
-            + "    \"includeDraft\": true,\n"
-            + "    \"valueSetParams\": [\n"
-            + "        {\n"
-            + "            \"oid\": \"2.16.840.1.113883.3.464.1003.101.12.1001\"\n"
-            + "        }\n"
-            + "    ]\n"
-            + "}";
+        """
+            {
+                "profile": "eCQM Update 2030-05-05",
+                "includeDraft": true,
+                "valueSetParams": [
+                    {
+                        "oid": "2.16.840.1.113883.3.464.1003.101.12.1001"
+                    }
+                ]
+            }""";
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
 
@@ -88,7 +88,7 @@ public class VsacControllerMvcTest {
     when(mockUmlsUser.getTgt()).thenReturn(TEST);
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
 
-    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class), anyString()))
+    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class), any()))
         .thenReturn(List.of(svsValueSet));
     when(vsacService.convertToFHIRValueSets(List.of(svsValueSet)))
         .thenReturn(List.of(fhirValueSet));
@@ -105,7 +105,7 @@ public class VsacControllerMvcTest {
             .andExpect(status().isOk())
             .andReturn();
     String content = result.getResponse().getContentAsString();
-    verify(vsacService, times(1)).getValueSets(any(ValueSetsSearchCriteria.class), anyString());
+    verify(vsacService, times(1)).getValueSets(any(ValueSetsSearchCriteria.class), any());
     assertThat(content, containsString("\"resourceType\":\"ValueSet\""));
     assertThat(content, containsString("\"name\":\"Office Visit\""));
     assertThat(content, containsString("\"system\":\"2.16.840.1.113883.6.12\""));
@@ -116,22 +116,23 @@ public class VsacControllerMvcTest {
   @Test
   void testSearchValueSetsWhenNoValueSetFound() throws Exception {
     String searchCriteria =
-        "{\n"
-            + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
-            + "    \"includeDraft\": true,\n"
-            + "    \"valueSetParams\": [\n"
-            + "        {\n"
-            + "            \"oid\": \"2.16.840.1.113883.3.464.1003.101.12.1001\"\n"
-            + "        }\n"
-            + "    ]\n"
-            + "}";
+        """
+            {
+                "profile": "eCQM Update 2030-05-05",
+                "includeDraft": true,
+                "valueSetParams": [
+                    {
+                        "oid": "2.16.840.1.113883.3.464.1003.101.12.1001"
+                    }
+                ]
+            }""";
 
     UmlsUser mockUmlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
     when(mockUmlsUser.getTgt()).thenReturn(TEST);
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
 
-    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class), anyString()))
+    when(vsacService.getValueSets(any(ValueSetsSearchCriteria.class), any()))
         .thenReturn(List.of(svsValueSet));
     when(vsacService.convertToFHIRValueSets(List.of(svsValueSet)))
         .thenReturn(List.of(fhirValueSet));
@@ -139,7 +140,7 @@ public class VsacControllerMvcTest {
 
     doThrow(new WebClientResponseException(404, "Error", null, null, null))
         .when(vsacService)
-        .getValueSets(any(ValueSetsSearchCriteria.class), anyString());
+        .getValueSets(any(ValueSetsSearchCriteria.class), any());
 
     MvcResult result =
         mockMvc
