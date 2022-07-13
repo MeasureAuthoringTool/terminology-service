@@ -70,16 +70,15 @@ public class VsacControllerMvcTest {
   @Test
   void testSearchValueSets() throws Exception {
     String searchCriteria =
-        """
-            {
-                "profile": "eCQM Update 2030-05-05",
-                "includeDraft": true,
-                "valueSetParams": [
-                    {
-                        "oid": "2.16.840.1.113883.3.464.1003.101.12.1001"
-                    }
-                ]
-            }""";
+        "{\n"
+            + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
+            + "    \"includeDraft\": true,\n"
+            + "    \"valueSetParams\": [\n"
+            + "        {\n"
+            + "            \"oid\": \"2.16.840.1.113883.3.464.1003.101.12.1001\"\n"
+            + "        }\n"
+            + "    ]\n"
+            + "}";
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
 
@@ -116,16 +115,15 @@ public class VsacControllerMvcTest {
   @Test
   void testSearchValueSetsWhenNoValueSetFound() throws Exception {
     String searchCriteria =
-        """
-            {
-                "profile": "eCQM Update 2030-05-05",
-                "includeDraft": true,
-                "valueSetParams": [
-                    {
-                        "oid": "2.16.840.1.113883.3.464.1003.101.12.1001"
-                    }
-                ]
-            }""";
+        "{\n"
+            + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
+            + "    \"includeDraft\": true,\n"
+            + "    \"valueSetParams\": [\n"
+            + "        {\n"
+            + "            \"oid\": \"2.16.840.1.113883.3.464.1003.101.12.1001\"\n"
+            + "        }\n"
+            + "    ]\n"
+            + "}";
 
     UmlsUser mockUmlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);

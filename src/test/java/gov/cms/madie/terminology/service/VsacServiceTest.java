@@ -414,7 +414,7 @@ class VsacServiceTest {
     ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
     umlsUser.setTgt("new_tgt");
     doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));
-    assertFalse(vsacService.validateUmlsInformation("test_user"));
+    assertTrue(vsacService.validateUmlsInformation("test_user"));
     verify(umlsUserRepository, times(1)).save(captor.capture());
     UmlsUser captored = captor.getValue();
     assertNotNull(captored);
