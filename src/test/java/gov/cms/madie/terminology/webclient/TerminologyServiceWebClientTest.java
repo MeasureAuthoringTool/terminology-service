@@ -106,7 +106,8 @@ public class TerminologyServiceWebClientTest {
 
     WebClientResponseException webClientResponseException = mock(WebClientResponseException.class);
     when(responseSpecMock.onStatus(any(), any())).thenThrow(webClientResponseException);
-    assertThrows(WebClientResponseException.class, () -> terminologyServiceWebClient.getTgt(TEST_API_KEY));
+    assertThrows(
+        WebClientResponseException.class, () -> terminologyServiceWebClient.getTgt(TEST_API_KEY));
   }
 
   @Test
@@ -119,5 +120,4 @@ public class TerminologyServiceWebClientTest {
 
     assertNotNull(terminologyServiceWebClient.getCode(codePath, SERVICE_TICKET));
   }
-
 }

@@ -61,14 +61,15 @@ public class TerminologyServiceWebClient {
         .post()
         .uri(String.format(baseUrl + serviceTicketEndpoint, tgt))
         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-        .exchangeToMono(clientResponse -> {
-          if (clientResponse.statusCode().equals(HttpStatus.OK)
-              || clientResponse.statusCode().equals(HttpStatus.UNAUTHORIZED)) {
-            return clientResponse.bodyToMono(String.class);
-          } else {
-            return clientResponse.createException().flatMap(Mono::error);
-          }
-        })
+        .exchangeToMono(
+            clientResponse -> {
+              if (clientResponse.statusCode().equals(HttpStatus.OK)
+                  || clientResponse.statusCode().equals(HttpStatus.UNAUTHORIZED)) {
+                return clientResponse.bodyToMono(String.class);
+              } else {
+                return clientResponse.createException().flatMap(Mono::error);
+              }
+            })
         .block();
   }
 

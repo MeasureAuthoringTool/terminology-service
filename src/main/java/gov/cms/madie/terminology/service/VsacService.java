@@ -41,12 +41,12 @@ public class VsacService {
   private int maxRetries = 0;
 
   /**
-   * If serviceTicket is null, then the TGT is expired.
-   * so it fetches a new TGT and tries to generate a service ticket.
-   * max retires is 3.
+   * If serviceTicket is null, then the TGT is expired. so it fetches a new TGT and tries to
+   * generate a service ticket. max retires is 3.
+   *
    * @param umlsUser data from db
-   * @return service ticket valid for 5 minutes or for a single VSAC call
-   * or null / empty string if unable to generate service ticket.
+   * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
+   *     unable to generate service ticket.
    */
   private String getServiceTicket(UmlsUser umlsUser) {
     String serviceTicket = terminologyWebClient.getServiceTicket(umlsUser.getTgt());
@@ -60,10 +60,11 @@ public class VsacService {
   }
 
   /**
-   * If umlsUser is not available or if API-KEY is unavailable then return false
-   * If API-KEY is available, and TGT is null, then fetch a new TGT and stores in DB
-   * If TGT is available in DB, then verify if TGT is still valid
-   * If serviceTicket is null, i.e TGT is invalid. Fetch the latest TGT and store it in DB.
+   * If umlsUser is not available or if API-KEY is unavailable then return false If API-KEY is
+   * available, and TGT is null, then fetch a new TGT and stores in DB If TGT is available in DB,
+   * then verify if TGT is still valid If serviceTicket is null, i.e TGT is invalid. Fetch the
+   * latest TGT and store it in DB.
+   *
    * @param userName harpId
    * @return true/false based on if user is authenticated with UMLS
    */
@@ -84,7 +85,12 @@ public class VsacService {
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
-      String oid, UmlsUser umlsUser, String profile, String includeDraft, String release, String version) {
+      String oid,
+      UmlsUser umlsUser,
+      String profile,
+      String includeDraft,
+      String release,
+      String version) {
     log.debug("Fetching SVS ValueSet: " + oid);
     String serviceTicket = getServiceTicket(umlsUser);
     if (StringUtils.isEmpty(serviceTicket)) {
@@ -303,8 +309,7 @@ public class VsacService {
       return terminologyWebClient.getTgt(apiKey);
     } catch (Exception e) {
       log.error("Error while fetching tgt from UMLS", e);
-      throw new VsacUnauthorizedException(
-          "Error occurred while fetching tgt from UMLS.");
+      throw new VsacUnauthorizedException("Error occurred while fetching tgt from UMLS.");
     }
   }
 }

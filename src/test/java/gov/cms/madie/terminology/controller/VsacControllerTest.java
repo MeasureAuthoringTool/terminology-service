@@ -46,11 +46,7 @@ public class VsacControllerTest {
 
   @BeforeEach
   public void setUp() {
-    umlsUser = UmlsUser.builder()
-        .apiKey(TEST_API_KEY)
-        .harpId(TEST_HARP_ID)
-        .tgt(TEST_TGT)
-        .build();
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).tgt(TEST_TGT).build();
   }
 
   @Test

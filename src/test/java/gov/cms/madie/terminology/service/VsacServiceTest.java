@@ -113,11 +113,7 @@ class VsacServiceTest {
             .valueSetParams(List.of(valueSetParams))
             .build();
 
-    umlsUser = UmlsUser.builder()
-        .apiKey(TEST_API_KEY)
-        .harpId(TEST_HARP_ID)
-        .tgt(TEST_TGT)
-        .build();
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).tgt(TEST_TGT).build();
   }
 
   @Test
@@ -289,9 +285,7 @@ class VsacServiceTest {
 
     assertThat(
         exception.getMessage(),
-        is(
-            equalTo(
-                "Error occurred while fetching service ticket. Please contact helpdesk.")));
+        is(equalTo("Error occurred while fetching service ticket. Please contact helpdesk.")));
   }
 
   @Test
@@ -372,7 +366,8 @@ class VsacServiceTest {
   }
 
   @Test
-  public void testValidateUmlsInformationWhenTgtIsNotAvailable() throws ExecutionException, InterruptedException {
+  public void testValidateUmlsInformationWhenTgtIsNotAvailable()
+      throws ExecutionException, InterruptedException {
     UmlsUser mockUmlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
 
@@ -395,13 +390,15 @@ class VsacServiceTest {
   public void testValidateUmlsInformationWhenTgtIsNotExpired() {
     Optional<UmlsUser> optionalUmlsUser = Optional.of(umlsUser);
     when(umlsUserRepository.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("test_service_ticket");
+    when(terminologyServiceWebClient.getServiceTicket(anyString()))
+        .thenReturn("test_service_ticket");
 
     assertTrue(vsacService.validateUmlsInformation("test_user"));
   }
 
   @Test
-  public void testValidateUmlsInformationWhenTgtIsExpired() throws ExecutionException, InterruptedException {
+  public void testValidateUmlsInformationWhenTgtIsExpired()
+      throws ExecutionException, InterruptedException {
     UmlsUser mockUmlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
 
@@ -411,8 +408,7 @@ class VsacServiceTest {
     when(optionalUmlsUser.get().getTgt()).thenReturn(TEST_TGT);
     when(terminologyServiceWebClient.getServiceTicket(TEST_TGT)).thenReturn(null); // tgt expired
 
-
-    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn("new_tgt"); //fetching new tgt
+    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn("new_tgt"); // fetching new tgt
     when(terminologyServiceWebClient.getServiceTicket("new_tgt")).thenReturn("test_service_ticket");
 
     ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
@@ -425,13 +421,14 @@ class VsacServiceTest {
   }
 
   @Test
-  public void testValidateUmlsInformationWhenTgtIsExpiredAndUnableToGenerateNewServiceTicket() throws ExecutionException, InterruptedException {
+  public void testValidateUmlsInformationWhenTgtIsExpiredAndUnableToGenerateNewServiceTicket()
+      throws ExecutionException, InterruptedException {
     Optional<UmlsUser> optionalUmlsUser = Optional.of(umlsUser);
 
     when(umlsUserRepository.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn(null);
 
-    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn("new_tgt"); //fetching new tgt
+    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn("new_tgt"); // fetching new tgt
 
     ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
     doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));

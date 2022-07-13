@@ -50,8 +50,7 @@ public class VsacController {
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
       RetrieveMultipleValueSetsResponse valuesetResponse =
-          vsacService.getValueSet(
-              oid, umlsUser.get(), profile, includeDraft, release, version);
+          vsacService.getValueSet(oid, umlsUser.get(), profile, includeDraft, release, version);
 
       ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse);
       log.debug("valueset id = " + fhirValueSet.getId());
@@ -113,6 +112,7 @@ public class VsacController {
   @GetMapping("/umls-credentials/status")
   public ResponseEntity<Boolean> checkUserLogin(Principal principal) {
     return vsacService.validateUmlsInformation(principal.getName())
-        ? ResponseEntity.ok().body(Boolean.TRUE) : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        ? ResponseEntity.ok().body(Boolean.TRUE)
+        : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 }
