@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.security.Principal;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -51,8 +50,7 @@ public class VsacController {
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
       RetrieveMultipleValueSetsResponse valuesetResponse =
-          vsacService.getValueSet(
-              oid, umlsUser.get().getTgt(), profile, includeDraft, release, version);
+          vsacService.getValueSet(oid, umlsUser.get(), profile, includeDraft, release, version);
 
       ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse);
       log.debug("valueset id = " + fhirValueSet.getId());
@@ -77,7 +75,7 @@ public class VsacController {
     if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
 
       List<RetrieveMultipleValueSetsResponse> vsacValueSets =
-          vsacService.getValueSets(searchCriteria, umlsUser.get().getTgt());
+          vsacService.getValueSets(searchCriteria, umlsUser.get());
 
       List<ValueSet> fhirValueSets = vsacService.convertToFHIRValueSets(vsacValueSets);
       String serializedValueSets =
@@ -94,14 +92,13 @@ public class VsacController {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
-      return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, umlsUser.get().getTgt()));
+      return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, umlsUser.get()));
     }
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
   @PostMapping(path = "/umls-credentials")
-  public ResponseEntity<String> umlsLogin(Principal principal, @RequestBody String apiKey)
-      throws InterruptedException, ExecutionException {
+  public ResponseEntity<String> umlsLogin(Principal principal, @RequestBody String apiKey) {
     final String username = principal.getName();
     log.debug("Entering: umlsLogin(): username = " + username);
 
@@ -114,15 +111,8 @@ public class VsacController {
 
   @GetMapping("/umls-credentials/status")
   public ResponseEntity<Boolean> checkUserLogin(Principal principal) {
-    final String username = principal.getName();
-    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
-    if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
-      UmlsUser user = umlsUser.get();
-      String tgt = user.getTgt();
-      vsacService.getServiceTicket(tgt);
-      log.debug("User: " + username + " has valid TGT");
-      return ResponseEntity.ok().body(Boolean.TRUE);
-    }
-    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    return vsacService.validateUmlsInformation(principal.getName())
+        ? ResponseEntity.ok().body(Boolean.TRUE)
+        : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 }

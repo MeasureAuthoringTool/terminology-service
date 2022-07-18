@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.controller;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,7 +19,6 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,20 +38,29 @@ public class VsacControllerTest {
   private static final String TEST = "test";
   private static final String TEST_USER = "test.user";
 
+  private UmlsUser umlsUser;
+
+  private static final String TEST_HARP_ID = "te$tHarpId";
+  private static final String TEST_API_KEY = "te$tKey";
+  private static final String TEST_TGT = "te$tTgt";
+
+  @BeforeEach
+  public void setUp() {
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).tgt(TEST_TGT).build();
+  }
+
   @Test
   void testGetValueSetFailWhenGettingServiceTicketFailed() {
 
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
 
-    UmlsUser umlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(umlsUser);
-    when(umlsUser.getTgt()).thenReturn(TEST);
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
 
     doThrow(new VsacUnauthorizedException("Error while getting ST"))
         .when(vsacService)
-        .getValueSet(TEST, TEST, TEST, TEST, TEST, TEST);
+        .getValueSet(TEST, umlsUser, TEST, TEST, TEST, TEST);
     assertThrows(
         VsacUnauthorizedException.class,
         () -> vsacController.getValueSet(principal, TEST, TEST, TEST, TEST, TEST));
@@ -70,7 +79,7 @@ public class VsacControllerTest {
 
     doThrow(new WebClientResponseException(401, "Error", null, null, null))
         .when(vsacService)
-        .getValueSet(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
+        .getValueSet(anyString(), any(), anyString(), anyString(), anyString(), anyString());
     assertThrows(
         WebClientResponseException.class,
         () -> vsacController.getValueSet(principal, TEST, TEST, TEST, TEST, TEST));
@@ -82,12 +91,11 @@ public class VsacControllerTest {
     when(principal.getName()).thenReturn(TEST_USER);
     UmlsUser mockUmlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
-    when(mockUmlsUser.getTgt()).thenReturn(TEST);
     when(mockUmlsUser.getApiKey()).thenReturn(TEST);
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
 
     CqlCode cqlCode = CqlCode.builder().name("test-code").codeId("test-codeId").build();
-    when(vsacService.validateCodes(any(), anyString())).thenReturn(List.of(cqlCode));
+    when(vsacService.validateCodes(any(), any())).thenReturn(List.of(cqlCode));
     cqlCode.setValid(true);
     ResponseEntity<List<CqlCode>> response =
         vsacController.validateCodes(principal, List.of(cqlCode));
@@ -111,7 +119,7 @@ public class VsacControllerTest {
   }
 
   @Test
-  void testUMLSLogin() throws InterruptedException, ExecutionException {
+  void testUMLSLogin() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
 
@@ -127,19 +135,24 @@ public class VsacControllerTest {
   }
 
   @Test
-  void testCheckUserLogin() {
+  void testValidUserUmlsLogin() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
 
-    UmlsUser mockUmlsUser = mock(UmlsUser.class);
-    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
-
-    when(mockUmlsUser.getTgt()).thenReturn(TEST);
-    when(mockUmlsUser.getApiKey()).thenReturn(TEST);
-    when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
-
+    when(vsacService.validateUmlsInformation(anyString())).thenReturn(true);
     ResponseEntity<Boolean> response = vsacController.checkUserLogin(principal);
 
     assertEquals(response.getBody(), Boolean.TRUE);
+  }
+
+  @Test
+  void testInvalidUserUmlsLogin() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    when(vsacService.validateUmlsInformation(anyString())).thenReturn(false);
+    ResponseEntity<Boolean> response = vsacController.checkUserLogin(principal);
+
+    assertEquals(response.getStatusCode(), HttpStatus.UNAUTHORIZED);
   }
 }

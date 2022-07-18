@@ -170,9 +170,8 @@ public class VsacToFhirValueSetMapper {
 
     if (!StringUtils.isBlank(oid)) {
       Optional<CodeSystemEntry> codeSystemEntry =
-          codeSystemEntries.stream().filter(cse -> cse.getOid()
-              .replace("urn:oid:","")
-              .equals(oid))
+          codeSystemEntries.stream()
+              .filter(cse -> cse.getOid().replace("urn:oid:", "").equals(oid))
               .findFirst();
       if (codeSystemEntry.isPresent()) {
         return codeSystemEntry.get().getUrl();

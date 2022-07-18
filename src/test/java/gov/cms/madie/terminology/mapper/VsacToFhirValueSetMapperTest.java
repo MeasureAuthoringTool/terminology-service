@@ -295,16 +295,10 @@ public class VsacToFhirValueSetMapperTest {
 
   @Test
   public void testGetUrlByOidWithSimilarMatches() {
-    CodeSystemEntry substringOid = CodeSystemEntry.builder()
-        .name(TEST)
-        .oid(TEST_OID)
-        .url(TEST_URL)
-        .build();
-    CodeSystemEntry fullOid = CodeSystemEntry.builder()
-        .oid(TEST_OID + "1")
-        .url(TEST_URL + "/1")
-        .name(TEST + "1")
-        .build();
+    CodeSystemEntry substringOid =
+        CodeSystemEntry.builder().name(TEST).oid(TEST_OID).url(TEST_URL).build();
+    CodeSystemEntry fullOid =
+        CodeSystemEntry.builder().oid(TEST_OID + "1").url(TEST_URL + "/1").name(TEST + "1").build();
     List<CodeSystemEntry> codeSystemList = List.of(fullOid, substringOid);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemList);
 

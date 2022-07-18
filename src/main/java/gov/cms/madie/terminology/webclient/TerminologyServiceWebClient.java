@@ -61,11 +61,34 @@ public class TerminologyServiceWebClient {
         .post()
         .uri(String.format(baseUrl + serviceTicketEndpoint, tgt))
         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-        .retrieve()
-        .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-        .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
-        .bodyToMono(String.class)
+        .exchangeToMono(
+            clientResponse -> {
+              if (clientResponse.statusCode().equals(HttpStatus.OK)
+                  || clientResponse.statusCode().equals(HttpStatus.UNAUTHORIZED)) {
+                return clientResponse.bodyToMono(String.class);
+              } else {
+                return clientResponse.createException().flatMap(Mono::error);
+              }
+            })
         .block();
+  }
+
+  public String getTgt(String apiKey) throws InterruptedException, ExecutionException {
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formData.add("apikey", apiKey);
+    Mono<String> responseMono =
+        terminologyClient
+            .post()
+            .uri(baseUrl + utsLoginEndpoint)
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(BodyInserters.fromValue(formData))
+            .retrieve()
+            .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
+            .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
+            .bodyToMono(String.class);
+    responseMono.subscribe();
+    log.debug("Exiting getTgt()");
+    return responseMono.toFuture().get();
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
@@ -125,23 +148,5 @@ public class TerminologyServiceWebClient {
               }
             })
         .block();
-  }
-
-  public String getTgt(String apiKey) throws InterruptedException, ExecutionException {
-    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-    formData.add("apikey", apiKey);
-    Mono<String> responseMono =
-        terminologyClient
-            .post()
-            .uri(baseUrl + utsLoginEndpoint)
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(BodyInserters.fromValue(formData))
-            .retrieve()
-            .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-            .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
-            .bodyToMono(String.class);
-    responseMono.subscribe();
-    log.debug("Exiting getTgt()");
-    return responseMono.toFuture().get();
   }
 }
