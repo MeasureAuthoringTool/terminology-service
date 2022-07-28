@@ -38,8 +38,6 @@ public class VsacService {
   private final MappingService mappingService;
   private final UmlsUserRepository umlsUserRepository;
 
-  private int maxRetries = 0;
-
   /**
    * If serviceTicket is null, then the TGT is expired. so it fetches a new TGT and tries to
    * generate a service ticket. max retires is 3.
@@ -48,13 +46,13 @@ public class VsacService {
    * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
    *     unable to generate service ticket.
    */
-  private String getServiceTicket(UmlsUser umlsUser) {
+  private String getServiceTicket(UmlsUser umlsUser, int maxRetries) {
     String serviceTicket = terminologyWebClient.getServiceTicket(umlsUser.getTgt());
     if (StringUtils.isEmpty(serviceTicket) && maxRetries < 3) {
       log.debug("TGT for User {} is expired or invalid, fetching a new TGT", umlsUser.getHarpId());
       UmlsUser umlsUserWithNewTgt = generateNewTgtForUmlsUserAndUpdateDb(umlsUser);
       maxRetries++;
-      serviceTicket = getServiceTicket(umlsUserWithNewTgt);
+      serviceTicket = getServiceTicket(umlsUserWithNewTgt, maxRetries);
     }
     return serviceTicket;
   }
@@ -73,7 +71,7 @@ public class VsacService {
     if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
       String existingTgt = umlsUser.get().getTgt();
       if (!StringUtils.isEmpty(existingTgt)) {
-        return !StringUtils.isEmpty(getServiceTicket(umlsUser.get()));
+        return !StringUtils.isEmpty(getServiceTicket(umlsUser.get(), 0));
       } else {
         // API-KEY is available, so get a new TGT and store it in DB.
         generateNewTgtForUmlsUserAndUpdateDb(umlsUser.get());
@@ -92,7 +90,7 @@ public class VsacService {
       String release,
       String version) {
     log.debug("Fetching SVS ValueSet: " + oid);
-    String serviceTicket = getServiceTicket(umlsUser);
+    String serviceTicket = getServiceTicket(umlsUser, 0);
     if (StringUtils.isEmpty(serviceTicket)) {
       log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
       throw new VsacUnauthorizedException(
@@ -194,7 +192,7 @@ public class VsacService {
   }
 
   private VsacCode validateCodeAgainstVsac(String codePath, UmlsUser umlsUser) {
-    String serviceTicket = getServiceTicket(umlsUser);
+    String serviceTicket = getServiceTicket(umlsUser, 0);
     if (StringUtils.isEmpty(serviceTicket)) {
       log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
       throw new VsacUnauthorizedException(
