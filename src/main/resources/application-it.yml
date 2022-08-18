@@ -1,5 +1,8 @@
 spring:
-   data:
-      mongodb:
-         uri: mongodb://gakins:E5press0@madie-terminology-mongo:27017/madie?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+  data:
+    mongodb:
+      database: ${MONGO_DATABASE:madie}
+      uri: ${MONGO_URI:mongodb://gakins:E5press0@madie-terminology-mongo:27017/madie?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000}
 
+
+    
