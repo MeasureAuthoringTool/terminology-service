@@ -11,7 +11,7 @@ services:
     depends_on:
       - "madie-terminology-mongo"
     environment:
-      WAIT_HOSTS: madie-mongo:27017  
+      WAIT_HOSTS: madie-terminology-mongo:27017  
 
   madie-terminology-mongo:
     image: mongo:4.4
