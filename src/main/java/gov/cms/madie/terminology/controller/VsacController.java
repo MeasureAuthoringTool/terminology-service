@@ -58,7 +58,7 @@ public class VsacController {
       return ResponseEntity.ok().body(serializeFhirValueset(fhirValueSet));
     }
 
-    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    return new ResponseEntity<>("No UMLS session", HttpStatus.UNAUTHORIZED);
   }
 
   protected String serializeFhirValueset(ValueSet fhirValueSet) {

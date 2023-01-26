@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 
@@ -105,8 +106,18 @@ public class TerminologyServiceWebClient {
             .get()
             .uri(valuesetURI)
             .retrieve()
-            .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-            .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
+            .onStatus(HttpStatus::is5xxServerError, response ->
+              {
+                log.error(response.statusCode() + ":: VSAC Error Response :: " +
+                    ((WebClientResponseException)response).getResponseBodyAsString());
+                return response.createException();
+              })
+            .onStatus(HttpStatus::is4xxClientError, response ->
+              {
+                log.error(response.statusCode() + ":: VSAC Error Response :: " +
+                    ((WebClientResponseException)response).getResponseBodyAsString());
+                return response.createException();
+              })
             .bodyToMono(RetrieveMultipleValueSetsResponse.class);
     // temp use of block until fixing 401 issue
     return responseMono.block();

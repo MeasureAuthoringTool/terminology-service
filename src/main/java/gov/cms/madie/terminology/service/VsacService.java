@@ -40,27 +40,36 @@ public class VsacService {
 
   /**
    * If serviceTicket is null, then the TGT is expired. so it fetches a new TGT and tries to
-   * generate a service ticket. max retires is 3.
+   * generate a service ticket. Max retires is 3.
    *
    * @param umlsUser data from db
    * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
    *     unable to generate service ticket.
    */
-  private String getServiceTicket(UmlsUser umlsUser, int maxRetries) {
+  private String getServiceTicket(UmlsUser umlsUser, int retryCount) {
     String serviceTicket = terminologyWebClient.getServiceTicket(umlsUser.getTgt());
-    if (StringUtils.isEmpty(serviceTicket) && maxRetries < 3) {
+    if (StringUtils.isEmpty(serviceTicket) && retryCount < 3) {
       log.debug("TGT for User {} is expired or invalid, fetching a new TGT", umlsUser.getHarpId());
       UmlsUser umlsUserWithNewTgt = generateNewTgtForUmlsUserAndUpdateDb(umlsUser);
-      maxRetries++;
-      serviceTicket = getServiceTicket(umlsUserWithNewTgt, maxRetries);
+      serviceTicket = getServiceTicket(umlsUserWithNewTgt, ++retryCount);
     }
     return serviceTicket;
   }
 
   /**
-   * If umlsUser is not available or if API-KEY is unavailable then return false If API-KEY is
-   * available, and TGT is null, then fetch a new TGT and stores in DB If TGT is available in DB,
-   * then verify if TGT is still valid If serviceTicket is null, i.e TGT is invalid. Fetch the
+   * Convenience overload. Retries 3 times.
+   * @param umlsUser data from db.
+   * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
+   *         unable to generate service ticket.
+   */
+  private String getServiceTicket(UmlsUser umlsUser) {
+    return getServiceTicket(umlsUser, 0);
+  }
+
+  /**
+   * If umlsUser is not available or if API-KEY is unavailable then return false. If API-KEY is
+   * available, and TGT is null, then fetch a new TGT and stores in DB. If TGT is available in DB,
+   * then verify if TGT is still valid. If serviceTicket is null, i.e TGT is invalid. Fetch the
    * latest TGT and store it in DB.
    *
    * @param userName harpId
@@ -71,7 +80,7 @@ public class VsacService {
     if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
       String existingTgt = umlsUser.get().getTgt();
       if (!StringUtils.isEmpty(existingTgt)) {
-        return !StringUtils.isEmpty(getServiceTicket(umlsUser.get(), 0));
+        return !StringUtils.isEmpty(getServiceTicket(umlsUser.get()));
       } else {
         // API-KEY is available, so get a new TGT and store it in DB.
         generateNewTgtForUmlsUserAndUpdateDb(umlsUser.get());
@@ -90,7 +99,7 @@ public class VsacService {
       String release,
       String version) {
     log.debug("Fetching SVS ValueSet: " + oid);
-    String serviceTicket = getServiceTicket(umlsUser, 0);
+    String serviceTicket = getServiceTicket(umlsUser);
     if (StringUtils.isEmpty(serviceTicket)) {
       log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
       throw new VsacUnauthorizedException(
@@ -192,7 +201,7 @@ public class VsacService {
   }
 
   private VsacCode validateCodeAgainstVsac(String codePath, UmlsUser umlsUser) {
-    String serviceTicket = getServiceTicket(umlsUser, 0);
+    String serviceTicket = getServiceTicket(umlsUser);
     if (StringUtils.isEmpty(serviceTicket)) {
       log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
       throw new VsacUnauthorizedException(
