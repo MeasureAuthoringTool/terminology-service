@@ -40,19 +40,18 @@ public class VsacService {
 
   /**
    * If serviceTicket is null, then the TGT is expired. so it fetches a new TGT and tries to
-   * generate a service ticket. max retires is 3.
+   * generate a service ticket. Max retires is 3.
    *
    * @param umlsUser data from db
    * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
    *     unable to generate service ticket.
    */
-  private String getServiceTicket(UmlsUser umlsUser, int maxRetries) {
+  private String getServiceTicket(UmlsUser umlsUser, int retryCount) {
     String serviceTicket = terminologyWebClient.getServiceTicket(umlsUser.getTgt());
-    if (StringUtils.isEmpty(serviceTicket) && maxRetries < 3) {
+    if (StringUtils.isEmpty(serviceTicket) && retryCount < 3) {
       log.debug("TGT for User {} is expired or invalid, fetching a new TGT", umlsUser.getHarpId());
       UmlsUser umlsUserWithNewTgt = generateNewTgtForUmlsUserAndUpdateDb(umlsUser);
-      maxRetries++;
-      serviceTicket = getServiceTicket(umlsUserWithNewTgt, maxRetries);
+      serviceTicket = getServiceTicket(umlsUserWithNewTgt, ++retryCount);
     }
     return serviceTicket;
   }
