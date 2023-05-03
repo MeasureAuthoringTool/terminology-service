@@ -43,6 +43,7 @@ public class VsacControllerTest {
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
   private static final String TEST_TGT = "te$tTgt";
+  private static final String FHIR_DATA_MODEL = "FHIR";
 
   @BeforeEach
   public void setUp() {
@@ -95,10 +96,10 @@ public class VsacControllerTest {
     when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
 
     CqlCode cqlCode = CqlCode.builder().name("test-code").codeId("test-codeId").build();
-    when(vsacService.validateCodes(any(), any())).thenReturn(List.of(cqlCode));
+    when(vsacService.validateCodes(any(), any(), anyString())).thenReturn(List.of(cqlCode));
     cqlCode.setValid(true);
     ResponseEntity<List<CqlCode>> response =
-        vsacController.validateCodes(principal, List.of(cqlCode));
+        vsacController.validateCodes(principal, List.of(cqlCode), FHIR_DATA_MODEL);
     assertEquals(1, Objects.requireNonNull(response.getBody()).size());
     assertEquals("test-code", response.getBody().get(0).getName());
     assertTrue(response.getBody().get(0).isValid());
@@ -114,7 +115,7 @@ public class VsacControllerTest {
     when(mockUmlsUser.getApiKey()).thenReturn(null);
     var cqlCode = CqlCode.builder().name("test-code").codeId("test-codeId").build();
     ResponseEntity<List<CqlCode>> response =
-        vsacController.validateCodes(principal, List.of(cqlCode));
+        vsacController.validateCodes(principal, List.of(cqlCode), FHIR_DATA_MODEL);
     assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
   }
 

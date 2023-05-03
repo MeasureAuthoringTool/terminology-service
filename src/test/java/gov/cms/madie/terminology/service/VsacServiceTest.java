@@ -66,6 +66,8 @@ class VsacServiceTest {
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
   private static final String TEST_TGT = "te$tTgt";
+  private static final String QDM_MODEL = "QDM";
+  private static final String FHIR_MODEL = "FHIR";
 
   @BeforeEach
   public void setUp() throws JAXBException {
@@ -94,7 +96,7 @@ class VsacServiceTest {
     var codeSystemEntry =
         CodeSystemEntry.builder()
             .name("ActPriority")
-            .oid("1.2.3.4.5.6.7.8.9")
+            .oid("urn:oid:1.2.3.4.5.6.7.8.9")
             .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
             .versions(Collections.toList(version))
             .build();
@@ -123,7 +125,7 @@ class VsacServiceTest {
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
         .thenReturn(vsacCode);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertTrue(result.get(0).isValid());
   }
 
@@ -140,7 +142,7 @@ class VsacServiceTest {
     vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
     vsacCode.setErrors(vsacError);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals("CodeSystem not found", result.get(0).getCodeSystem().getErrorMessage());
   }
@@ -158,7 +160,7 @@ class VsacServiceTest {
     vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
     vsacCode.setErrors(vsacError);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals("CodeSystem version not found", result.get(0).getCodeSystem().getErrorMessage());
   }
@@ -176,7 +178,7 @@ class VsacServiceTest {
     vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
     vsacCode.setErrors(vsacError);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).isValid());
     assertEquals("Code not found", result.get(0).getErrorMessage());
   }
@@ -184,7 +186,7 @@ class VsacServiceTest {
   @Test
   void testIfCqlCodesListIsEmpty() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    List<CqlCode> result = vsacService.validateCodes(new ArrayList<>(), umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(new ArrayList<>(), umlsUser, FHIR_MODEL);
     assertEquals(0, result.size());
   }
 
@@ -192,7 +194,7 @@ class VsacServiceTest {
   void testIfCqlCodeDoesNotContainOid() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     cqlCodes.get(0).getCodeSystem().setOid(null);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals("Code system URL is required", result.get(0).getCodeSystem().getErrorMessage());
   }
@@ -201,7 +203,7 @@ class VsacServiceTest {
   void testIfThereIsNoAssociatedCodeSystemEntry() {
     codeSystemEntries.get(0).setUrl("test-Url");
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals("Invalid Code system", result.get(0).getCodeSystem().getErrorMessage());
   }
@@ -210,7 +212,7 @@ class VsacServiceTest {
   void testIfCodeSystemIsNotInVsac() {
     codeSystemEntries.get(0).setOid("NOT.IN.VSAC");
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertTrue(result.get(0).isValid());
   }
 
@@ -218,7 +220,7 @@ class VsacServiceTest {
   void testIfCodeIdIsNotProvided() {
     cqlCodes.get(0).setCodeId(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).isValid());
     assertEquals("Code Id is required", result.get(0).getErrorMessage());
   }
@@ -228,7 +230,7 @@ class VsacServiceTest {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
     codeSystemEntries.get(0).setVersions(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals(
         "Unable to find a code system version", result.get(0).getCodeSystem().getErrorMessage());
@@ -239,7 +241,7 @@ class VsacServiceTest {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
     codeSystemEntries.get(0).getVersions().get(0).setVsac(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals(
         "Unable to find a code system version", result.get(0).getCodeSystem().getErrorMessage());
@@ -251,7 +253,7 @@ class VsacServiceTest {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertTrue(result.get(0).isValid());
   }
 
@@ -321,7 +323,7 @@ class VsacServiceTest {
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
         .thenReturn(vsacCode);
-    List<CqlCode> result = vsacService.validateCodes(List.of(snomedCode), umlsUser);
+    List<CqlCode> result = vsacService.validateCodes(List.of(snomedCode), umlsUser, FHIR_MODEL);
     assertTrue(result.get(0).isValid());
   }
 
@@ -436,5 +438,42 @@ class VsacServiceTest {
     verify(umlsUserRepository, times(3)).save(captor.capture());
     UmlsUser captored = captor.getValue();
     assertNotNull(captored);
+  }
+
+  @Test
+  public void testValidateCodesForQDMFormat() throws JsonProcessingException {
+    CqlCode snomedCode =
+        CqlCode.builder()
+            .name("37687000")
+            .codeId("37687000")
+            .codeSystem(
+                CqlCode.CqlCodeSystem.builder()
+                    .oid("urn:oid:2.16.840.1.113883.6.96")
+                    .name("SNOMEDCT")
+                    .version("http://snomed.info/sct/731000124108/version/20220301")
+                    .build())
+            .build();
+
+    String snomedMapping =
+        "{"
+            + "\"oid\": \"urn:oid:2.16.840.1.113883.6.96\","
+            + "\"url\": \"http://snomed.info/sct\","
+            + "\"name\": \"SNOMEDCT\","
+            + "\"versions\": ["
+            + "  {"
+            + "    \"vsac\": \"2022-03\","
+            + "        \"fhir\": \"http://snomed.info/sct/731000124108/version/20220301\""
+            + "  }"
+            + "]"
+            + "}";
+    ObjectMapper objectMapper = new ObjectMapper();
+    CodeSystemEntry snomedCsEntry = objectMapper.readValue(snomedMapping, CodeSystemEntry.class);
+    when(mappingService.getCodeSystemEntries()).thenReturn(List.of(snomedCsEntry));
+    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
+    when(terminologyServiceWebClient.getCode(
+            eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
+        .thenReturn(vsacCode);
+    List<CqlCode> result = vsacService.validateCodes(List.of(snomedCode), umlsUser, QDM_MODEL);
+    assertTrue(result.get(0).isValid());
   }
 }

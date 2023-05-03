@@ -88,11 +88,11 @@ public class VsacController {
 
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CqlCode>> validateCodes(
-      Principal principal, @RequestBody List<CqlCode> cqlCodes) {
+      Principal principal, @RequestBody List<CqlCode> cqlCodes, @RequestParam String model) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
-      return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, umlsUser.get()));
+      return ResponseEntity.ok().body(vsacService.validateCodes(cqlCodes, umlsUser.get(), model));
     }
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
