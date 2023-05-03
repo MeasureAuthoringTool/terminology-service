@@ -34,7 +34,6 @@ spring:
     mongodb:
       uri: ${MONGO_URI:mongodb://${DBUSER:root}:${DBPASS:E5press0}@localhost:27017/terminology}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
 
-
 mapping:
   data:
     code-system-entry-url: ${CODE_SYSTEM_ENTRY_URL:https://madie-dev-static.s3.amazonaws.com/mappings/code-system-entry.json}
