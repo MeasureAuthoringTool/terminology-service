@@ -58,9 +58,10 @@ public class VsacService {
 
   /**
    * Convenience overload. Retries 3 times.
+   *
    * @param umlsUser data from db.
    * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
-   *         unable to generate service ticket.
+   *     unable to generate service ticket.
    */
   private String getServiceTicket(UmlsUser umlsUser) {
     return getServiceTicket(umlsUser, 0);
@@ -144,7 +145,7 @@ public class VsacService {
    *     available for a code, then this method will skip validating that code, an error will be
    *     displayed to user by cql-elm-translator
    */
-  public List<CqlCode> validateCodes(List<CqlCode> cqlCodes, UmlsUser umlsUser) {
+  public List<CqlCode> validateCodes(List<CqlCode> cqlCodes, UmlsUser umlsUser, String model) {
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
     for (CqlCode cqlCode : cqlCodes) {
       cqlCode.setValid(true);
@@ -153,7 +154,7 @@ public class VsacService {
         String cqlCodeSystemOid = cqlCode.getCodeSystem().getOid();
         if (!StringUtils.isBlank(cqlCodeSystemOid)) {
           Optional<CodeSystemEntry> codeSystemEntry =
-              getCodeSystemEntry(codeSystemEntries, cqlCodeSystemOid);
+              getCodeSystemEntry(codeSystemEntries, cqlCodeSystemOid, model);
           if (codeSystemEntry.isPresent()) {
             // if codeSystemEntry is available in mapping json, but listed as NOT IN VSAC, then it
             // is a valid FHIR code system.
@@ -276,13 +277,17 @@ public class VsacService {
   }
 
   private Optional<CodeSystemEntry> getCodeSystemEntry(
-      List<CodeSystemEntry> codeSystemEntries, String cqlCodeSystemOid) {
+      List<CodeSystemEntry> codeSystemEntries, String cqlCodeSystemOid, String model) {
     return codeSystemEntries.stream()
-        .filter(
-            cse ->
-                cse.getUrl()
-                    .equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(cqlCodeSystemOid)))
+        .filter(cse -> isCodeSystemMatch(cse, cqlCodeSystemOid, model))
         .findFirst();
+  }
+
+  private boolean isCodeSystemMatch(CodeSystemEntry cse, String oid, String model) {
+    if ("QDM".equals(model)) {
+      return cse.getOid().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
+    }
+    return cse.getUrl().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
   }
 
   public UmlsUser saveUmlsUser(String harpId, String apiKey, String tgt) {

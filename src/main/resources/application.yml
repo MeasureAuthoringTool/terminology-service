@@ -5,26 +5,26 @@ server:
 
 madie:
   allowedApi: http://localhost:9000
-  
+
 management:
   endpoints:
     enabled-by-default: false
   endpoint:
     health:
       enabled: true
-  
+
 okta:
   oauth2:
     issuer: ${OKTA_ISSUER:https://dev-18092578.okta.com/oauth2/default}
     audience: ${OKTA_AUDIENCE:api://default}
-    
+
 client:
   vsac_base_url: https://vsac.nlm.nih.gov/vsac
   service_ticket_endpoint: /ws/Ticket/%s?service=http://umlsks.nlm.nih.gov
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&ticket={st}&profile={profile}&includeDraft={includeDraft}
   default_profile: ${DEFAULT_VSAC_PROFILE:Most Recent Code System Versions in VSAC}
   uts_login: /ws/Ticket
-  
+
 spring:
   session:
     store-type: none
@@ -33,7 +33,6 @@ spring:
   data:
     mongodb:
       uri: ${MONGO_URI:mongodb://${DBUSER:root}:${DBPASS:E5press0}@localhost:27017/terminology}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
-
 
 mapping:
   data:
