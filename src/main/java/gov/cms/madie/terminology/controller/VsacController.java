@@ -88,7 +88,8 @@ public class VsacController {
 
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CqlCode>> validateCodes(
-      Principal principal, @RequestBody List<CqlCode> cqlCodes, @RequestParam String model) {
+      Principal principal, @RequestBody List<CqlCode> cqlCodes,
+      @RequestParam(required = false, defaultValue = "FHIR") String model) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
