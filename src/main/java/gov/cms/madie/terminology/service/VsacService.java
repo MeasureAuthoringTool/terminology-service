@@ -1,19 +1,10 @@
 package gov.cms.madie.terminology.service;
 
-import java.util.stream.Collectors;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-import java.util.List;
-
-import org.springframework.util.CollectionUtils;
-import org.springframework.stereotype.Service;
-
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madie.models.cql.terminology.CqlCode;
 import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
-
+import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.mapper.VsacToFhirValueSetMapper;
@@ -21,12 +12,20 @@ import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.UmlsUserRepository;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.webclient.TerminologyServiceWebClient;
-
-import org.hl7.fhir.r4.model.ValueSet;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.r4.model.ValueSet;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
 
 @Service
 @Slf4j
@@ -136,6 +135,12 @@ public class VsacService {
                     vsParam.getRelease(),
                     vsParam.getVersion()))
         .collect(Collectors.toList());
+  }
+
+  public List<QdmValueSet> getValueSetsInQdmFormat(
+      ValueSetsSearchCriteria searchCriteria, UmlsUser umlsUser) {
+    List<RetrieveMultipleValueSetsResponse> vsacValueSets = getValueSets(searchCriteria, umlsUser);
+    return convertToQdmValueSets(vsacValueSets);
   }
 
   /**
@@ -313,6 +318,42 @@ public class VsacService {
     umlsUser.setTgtExpiryTime(nowPlus8Hours);
     umlsUser.setModifiedAt(now);
     return umlsUserRepository.save(umlsUser);
+  }
+
+  private List<QdmValueSet> convertToQdmValueSets(
+      List<RetrieveMultipleValueSetsResponse> valueSetsResponses) {
+    return valueSetsResponses.stream()
+        .map(
+            response -> {
+              var describedValueSet = response.getDescribedValueSet();
+              List<QdmValueSet.Concept> concepts = getValueSetConcepts(describedValueSet);
+              return QdmValueSet.builder()
+                  .oid(describedValueSet.getID())
+                  .displayName(describedValueSet.getDisplayName())
+                  .version(describedValueSet.getVersion())
+                  .concepts(concepts)
+                  .build();
+            })
+        .toList();
+  }
+
+  private List<QdmValueSet.Concept> getValueSetConcepts(DescribedValueSet valueSet) {
+    var conceptList = valueSet.getConceptList();
+    if (conceptList == null) {
+      log.info("Empty value set:{}", valueSet.getID());
+      return List.of();
+    }
+    return conceptList.getConcepts().stream()
+        .map(
+            concept ->
+                QdmValueSet.Concept.builder()
+                    .code(concept.getCode())
+                    .codeSystemName(concept.getCodeSystemName())
+                    .codeSystemVersion(concept.getCodeSystemVersion())
+                    .codeSystemOid(concept.getCodeSystem())
+                    .displayName(concept.getDisplayName())
+                    .build())
+        .toList();
   }
 
   public Optional<UmlsUser> findByHarpId(String harpId) {

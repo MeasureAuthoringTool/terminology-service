@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 import java.security.Principal;
 import java.util.Optional;
 
+import gov.cms.madie.terminology.dto.QdmValueSet;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -86,9 +87,26 @@ public class VsacController {
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
+  @PutMapping("/qdm/value-sets/searches")
+  public ResponseEntity<List<QdmValueSet>> getQdmValueSets(
+      Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
+    log.debug("VsacController::getQdmValueSets");
+
+    final String username = principal.getName();
+    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
+    if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
+      List<QdmValueSet> qdmValueSets =
+          vsacService.getValueSetsInQdmFormat(searchCriteria, umlsUser.get());
+
+      return ResponseEntity.ok().body(qdmValueSets);
+    }
+    return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+  }
+
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CqlCode>> validateCodes(
-      Principal principal, @RequestBody List<CqlCode> cqlCodes,
+      Principal principal,
+      @RequestBody List<CqlCode> cqlCodes,
       @RequestParam(required = false, defaultValue = "FHIR") String model) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);

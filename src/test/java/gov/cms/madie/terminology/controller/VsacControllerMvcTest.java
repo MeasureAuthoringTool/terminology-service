@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.helpers.TestHelpers;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -152,5 +155,89 @@ public class VsacControllerMvcTest {
             .andReturn();
     assertThat(
         result.getResponse().getContentAsString(), containsString("\"message\":\"404 Error\""));
+  }
+
+  @Test
+  void testSearchQdmValueSets() throws Exception {
+    String searchCriteria =
+      "{\n"
+        + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
+        + "    \"includeDraft\": true,\n"
+        + "    \"valueSetParams\": [\n"
+        + "        {\n"
+        + "            \"oid\": \"2.16.840.1.113883.3.464.1003.101.12.1001\"\n"
+        + "        }\n"
+        + "    ]\n"
+        + "}";
+    var concept = QdmValueSet.Concept.builder()
+      .code("185463005")
+      .codeSystemName("SNOMEDCT")
+      .codeSystemOid("2.16.840.1.113883.6.96")
+      .codeSystemVersion("2023-03")
+      .displayName("Visit out of hours (procedure)")
+      .build();
+    QdmValueSet vs = QdmValueSet.builder()
+      .oid("2.16.840.1.113883.3.464.1003.101.12.1001")
+      .displayName("Encounter Inpatient")
+      .concepts(List.of(concept))
+      .build();
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    UmlsUser mockUmlsUser = mock(UmlsUser.class);
+    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
+    when(mockUmlsUser.getTgt()).thenReturn(TEST);
+    when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
+
+    when(vsacService.getValueSetsInQdmFormat(any(ValueSetsSearchCriteria.class), any()))
+      .thenReturn(List.of(vs));
+
+    MvcResult result =
+      mockMvc
+        .perform(
+          MockMvcRequestBuilders.put("/vsac/qdm/value-sets/searches")
+            .with(user(TEST_USR))
+            .with(csrf())
+            .content(searchCriteria)
+            .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk())
+        .andReturn();
+    String content = result.getResponse().getContentAsString();
+    verify(vsacService, times(1))
+      .getValueSetsInQdmFormat(any(ValueSetsSearchCriteria.class), any());
+
+    assertThat(content, containsString("\"display_name\":\"Encounter Inpatient\""));
+    assertThat(content, containsString("\"code\":\"185463005\""));
+    assertThat(content, containsString("\"code_system_name\":\"SNOMEDCT\""));
+    assertThat(content, containsString("\"code_system_oid\":\"2.16.840.1.113883.6.96\""));
+    assertThat(content, containsString("\"oid\":\"2.16.840.1.113883.3.464.1003.101.12.1001\""));
+  }
+
+  @Test
+  void testSearchQdmValueSetsWhenUnauthorized() throws Exception {
+    String searchCriteria =
+      "{\n"
+        + "    \"profile\": \"eCQM Update 2030-05-05\",\n"
+        + "    \"includeDraft\": true,\n"
+        + "    \"valueSetParams\": [\n"
+        + "        {\n"
+        + "            \"oid\": \"2.16.840.1.113883.3.464.1003.101.12.1001\"\n"
+        + "        }\n"
+        + "    ]\n"
+        + "}";
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
+    MvcResult result =
+      mockMvc
+        .perform(
+          MockMvcRequestBuilders.put("/vsac/qdm/value-sets/searches")
+            .with(user(TEST_USR))
+            .with(csrf())
+            .content(searchCriteria)
+            .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isUnauthorized())
+        .andReturn();
+    assertThat(result.getResponse().getStatus(), is(equalTo(401)));
   }
 }
