@@ -24,7 +24,7 @@
     <mvn.checkstyle.version>3.1.2</mvn.checkstyle.version>
     <mvnreports.version>3.2.2</mvnreports.version>
     <mvnsite.version>3.11.0</mvnsite.version>
-    <okta.springboot.starter.version>2.1.5</okta.springboot.starter.version>
+    <okta.springboot.starter.version>3.0.4</okta.springboot.starter.version>
     <puppycrawl.checkstyle.version>10.1</puppycrawl.checkstyle.version>
     <theoryinpractise.googleformatter.version>1.7.5</theoryinpractise.googleformatter.version>
   </properties>
