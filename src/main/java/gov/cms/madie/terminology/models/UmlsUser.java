@@ -18,8 +18,6 @@ import org.springframework.stereotype.Component;
 public class UmlsUser {
   @Id private String harpId;
   private String apiKey;
-  private String tgt;
-  private Instant tgtExpiryTime;
   private Instant createdAt;
   private Instant modifiedAt;
 }
