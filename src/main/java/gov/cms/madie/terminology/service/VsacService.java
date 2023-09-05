@@ -6,7 +6,6 @@ import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
-import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.UmlsUserRepository;
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,57 +36,15 @@ public class VsacService {
   private final UmlsUserRepository umlsUserRepository;
 
   /**
-   * If serviceTicket is null, then the TGT is expired. so it fetches a new TGT and tries to
-   * generate a service ticket. Max retires is 3.
-   *
-   * @param umlsUser data from db
-   * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
-   *     unable to generate service ticket.
-   */
-  private String getServiceTicket(UmlsUser umlsUser, int retryCount) {
-    String serviceTicket = terminologyWebClient.getServiceTicket(umlsUser.getTgt());
-    if (StringUtils.isEmpty(serviceTicket) && retryCount < 3) {
-      log.debug("TGT for User {} is expired or invalid, fetching a new TGT", umlsUser.getHarpId());
-      UmlsUser umlsUserWithNewTgt = generateNewTgtForUmlsUserAndUpdateDb(umlsUser);
-      serviceTicket = getServiceTicket(umlsUserWithNewTgt, ++retryCount);
-    }
-    return serviceTicket;
-  }
-
-  /**
-   * Convenience overload. Retries 3 times.
-   *
-   * @param umlsUser data from db.
-   * @return service ticket valid for 5 minutes or for a single VSAC call or null / empty string if
-   *     unable to generate service ticket.
-   */
-  private String getServiceTicket(UmlsUser umlsUser) {
-    return getServiceTicket(umlsUser, 0);
-  }
-
-  /**
-   * If umlsUser is not available or if API-KEY is unavailable then return false. If API-KEY is
-   * available, and TGT is null, then fetch a new TGT and stores in DB. If TGT is available in DB,
-   * then verify if TGT is still valid. If serviceTicket is null, i.e TGT is invalid. Fetch the
-   * latest TGT and store it in DB.
+   * If umlsUser is not available or if API-KEY is unavailable then return false. Otherwise, return
+   * true.
    *
    * @param userName harpId
-   * @return true/false based on if user is authenticated with UMLS
+   * @return true/false based on if user's API-KEY is available in the data store.
    */
   public boolean validateUmlsInformation(String userName) {
     Optional<UmlsUser> umlsUser = findByHarpId(userName);
-    if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
-      String existingTgt = umlsUser.get().getTgt();
-      if (!StringUtils.isEmpty(existingTgt)) {
-        return !StringUtils.isEmpty(getServiceTicket(umlsUser.get()));
-      } else {
-        // API-KEY is available, so get a new TGT and store it in DB.
-        generateNewTgtForUmlsUserAndUpdateDb(umlsUser.get());
-        return true;
-      }
-    }
-    log.debug("User {} is not authenticated with UMLS", userName);
-    return false;
+    return umlsUser.isPresent() && umlsUser.get().getApiKey() != null;
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
@@ -99,14 +55,8 @@ public class VsacService {
       String release,
       String version) {
     log.debug("Fetching SVS ValueSet: " + oid);
-    String serviceTicket = getServiceTicket(umlsUser);
-    if (StringUtils.isEmpty(serviceTicket)) {
-      log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
-      throw new VsacUnauthorizedException(
-          "Error occurred while fetching service ticket. Please contact helpdesk.");
-    }
     return terminologyWebClient.getValueSet(
-        oid, serviceTicket, profile, includeDraft, release, version);
+        oid, umlsUser.getApiKey(), profile, includeDraft, release, version);
   }
 
   public ValueSet convertToFHIRValueSet(RetrieveMultipleValueSetsResponse vsacValueSetResponse) {
@@ -207,13 +157,7 @@ public class VsacService {
   }
 
   private VsacCode validateCodeAgainstVsac(String codePath, UmlsUser umlsUser) {
-    String serviceTicket = getServiceTicket(umlsUser);
-    if (StringUtils.isEmpty(serviceTicket)) {
-      log.error("Error while getting service ticket for user {}", umlsUser.getHarpId());
-      throw new VsacUnauthorizedException(
-          "Error occurred while fetching service ticket. " + "Please contact helpdesk.");
-    }
-    return terminologyWebClient.getCode(codePath, serviceTicket);
+    return terminologyWebClient.getCode(codePath, umlsUser.getApiKey());
   }
 
   /**
@@ -295,28 +239,10 @@ public class VsacService {
     return cse.getUrl().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
   }
 
-  public UmlsUser saveUmlsUser(String harpId, String apiKey, String tgt) {
+  public UmlsUser saveUmlsUser(String harpId, String apiKey) {
     Instant now = Instant.now();
-    Instant nowPlus8Hours = now.plus(8, ChronoUnit.HOURS);
     UmlsUser umlsUser =
-        UmlsUser.builder()
-            .apiKey(apiKey)
-            .harpId(harpId)
-            .tgt(tgt)
-            .tgtExpiryTime(nowPlus8Hours)
-            .createdAt(now)
-            .modifiedAt(now)
-            .build();
-    return umlsUserRepository.save(umlsUser);
-  }
-
-  private UmlsUser generateNewTgtForUmlsUserAndUpdateDb(UmlsUser umlsUser) {
-    String newTgt = getTgt(umlsUser.getApiKey());
-    Instant now = Instant.now();
-    Instant nowPlus8Hours = now.plus(8, ChronoUnit.HOURS);
-    umlsUser.setTgt(newTgt);
-    umlsUser.setTgtExpiryTime(nowPlus8Hours);
-    umlsUser.setModifiedAt(now);
+        UmlsUser.builder().apiKey(apiKey).harpId(harpId).createdAt(now).modifiedAt(now).build();
     return umlsUserRepository.save(umlsUser);
   }
 
@@ -358,14 +284,5 @@ public class VsacService {
 
   public Optional<UmlsUser> findByHarpId(String harpId) {
     return umlsUserRepository.findByHarpId(harpId);
-  }
-
-  public String getTgt(String apiKey) {
-    try {
-      return terminologyWebClient.getTgt(apiKey);
-    } catch (Exception e) {
-      log.error("Error while fetching tgt from UMLS", e);
-      throw new VsacUnauthorizedException("Error occurred while fetching tgt from UMLS.");
-    }
   }
 }
