@@ -105,7 +105,7 @@ public class VsacControllerTest {
     when(principal.getName()).thenReturn(TEST_USER);
 
     when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
-    ResponseEntity<String> response = vsacController.getValueSet(principal, "oid", "","","","");
+    ResponseEntity<String> response = vsacController.getValueSet(principal, "oid", "", "", "", "");
     assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
   }
 
