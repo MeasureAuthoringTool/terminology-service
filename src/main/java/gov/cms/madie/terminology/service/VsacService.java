@@ -130,7 +130,7 @@ public class VsacService {
                 /* if the statusCode is "error" and either CodeSystem or CodeSystem version
                  or Code is not found
                 if the statusCode is "ok" then it is a valid code */
-                if (vsacCode.getStatus().equalsIgnoreCase("error")) {
+                if (!vsacCode.getStatus().equalsIgnoreCase("ok")) {
                   buildVsacErrorMessage(cqlCode, vsacCode);
                 } else {
                   cqlCode.setValid(true);
@@ -213,15 +213,27 @@ public class VsacService {
    *     errorCode 802 indicates Code not found.
    */
   private void buildVsacErrorMessage(CqlCode cqlCode, VsacCode vsacCode) {
-    int errorCode = Integer.parseInt(vsacCode.getErrors().getResultSet().get(0).getErrCode());
-    if (errorCode == 800 || errorCode == 801) {
-      cqlCode.getCodeSystem().setValid(false);
-      cqlCode
-          .getCodeSystem()
-          .setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
-    } else if (errorCode == 802) {
+    // Validation errors appear in an Errors object
+    if (vsacCode.getErrors() != null
+        && StringUtils.isNumeric(vsacCode.getErrors().getResultSet().get(0).getErrCode())) {
+      int errorCode = Integer.parseInt(vsacCode.getErrors().getResultSet().get(0).getErrCode());
+      if (errorCode == 800 || errorCode == 801) {
+        cqlCode.getCodeSystem().setValid(false);
+        cqlCode
+            .getCodeSystem()
+            .setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
+      } else if (errorCode == 802) {
+        cqlCode.setValid(false);
+        cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
+      }
+    // API Errors appear in the status field.
+    } else if (StringUtils.isNumeric(vsacCode.getStatus())) {
+        cqlCode.setValid(false);
+        cqlCode.setErrorMessage("Communication Error with VSAC. Please retry your request. " +
+            "If this error persists, please contact the Help Desk.");
+    }
+    else {
       cqlCode.setValid(false);
-      cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
     }
   }
 
