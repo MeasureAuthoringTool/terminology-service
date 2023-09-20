@@ -68,8 +68,8 @@ public class TerminologyServiceWebClient {
   /**
    * @param codePath code path build to call VSAC services.
    * @param apiKey user's UMLS ApiKey.
-   * @return the response from VSAC is the statusCode is either 200 or 400 Status Code 200 indicates
-   *     a valid code Status Code 400 indicates either CodeSystem or CodeSystem version or Code is
+   * @return the response from VSAC is the statusCode is either 200 or 400 Status Code: 200 indicates
+   *     a valid code Status Code, 400 indicates either CodeSystem or CodeSystem version or Code is
    *     not found.
    */
   public VsacCode getCode(String codePath, String apiKey) {

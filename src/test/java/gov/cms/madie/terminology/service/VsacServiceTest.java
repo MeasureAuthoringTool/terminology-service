@@ -181,6 +181,19 @@ class VsacServiceTest {
   }
 
   @Test
+  void testVsacCommunicationError() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    VsacCode badRequest = new VsacCode();
+    badRequest.setStatus("400"); // VSAC's response to using the updated Basic Authn scheme on code validation.
+    when(terminologyServiceWebClient.getCode(
+        eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
+        .thenReturn(badRequest);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
+    assertFalse(result.get(0).isValid());
+    assertTrue(result.get(0).getErrorMessage().contains("Communication Error with VSAC"));
+  }
+
+  @Test
   void testIfCqlCodesListIsEmpty() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(new ArrayList<>(), umlsUser, FHIR_MODEL);
