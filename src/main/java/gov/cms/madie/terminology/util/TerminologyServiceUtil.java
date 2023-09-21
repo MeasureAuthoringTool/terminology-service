@@ -15,7 +15,6 @@ public class TerminologyServiceUtil {
       String baseUrl,
       String valuesetEndpoint,
       String oid,
-      String serviceTicket,
       String profile,
       String includeDraft,
       String release,
@@ -23,7 +22,6 @@ public class TerminologyServiceUtil {
     Map<String, String> params = new HashMap<>();
     String url = baseUrl + valuesetEndpoint;
     params.put("oid", oid);
-    params.put("st", serviceTicket);
     if (StringUtils.hasLength(profile)) {
       params.put("profile", profile);
     } else {
@@ -46,13 +44,12 @@ public class TerminologyServiceUtil {
     return UriComponentsBuilder.fromUriString(url).buildAndExpand(params).encode().toUri();
   }
 
-  public static URI buildRetrieveCodeUri(String baseUrl, String codePath, String serviceTicket) {
+  public static URI buildRetrieveCodeUri(String baseUrl, String codePath) {
     Map<String, String> params = new HashMap<>();
-    params.put("st", serviceTicket);
     params.put("resultFormat", "json");
     params.put("resultSet", "standard");
     return UriComponentsBuilder.fromUriString(
-            baseUrl + codePath + "?ticket={st}&resultFormat={resultFormat}&resultSet={resultSet}")
+            baseUrl + codePath + "?resultFormat={resultFormat}&resultSet={resultSet}")
         .buildAndExpand(params)
         .encode()
         .toUri();

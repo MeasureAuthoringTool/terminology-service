@@ -116,13 +116,12 @@ class VsacServiceTest {
             .valueSetParams(List.of(valueSetParams))
             .build();
 
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).tgt(TEST_TGT).build();
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
   }
 
   @Test
   void testAValidCodeFromVsac() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
         .thenReturn(vsacCode);
@@ -133,7 +132,6 @@ class VsacServiceTest {
   @Test
   void testCodeSystemNotFoundFromVsac() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -151,7 +149,6 @@ class VsacServiceTest {
   @Test
   void testCodeSystemVersionNotFoundFromVsac() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -169,7 +166,6 @@ class VsacServiceTest {
   @Test
   void testCodeNotFoundFromVsac() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -182,6 +178,19 @@ class VsacServiceTest {
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).isValid());
     assertEquals("Code not found", result.get(0).getErrorMessage());
+  }
+
+  @Test
+  void testVsacCommunicationError() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    VsacCode badRequest = new VsacCode();
+    badRequest.setStatus("400"); // VSAC's response to using the updated Basic Authn scheme on code validation.
+    when(terminologyServiceWebClient.getCode(
+        eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
+        .thenReturn(badRequest);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
+    assertFalse(result.get(0).isValid());
+    assertTrue(result.get(0).getErrorMessage().contains("Communication Error with VSAC"));
   }
 
   @Test
@@ -252,7 +261,7 @@ class VsacServiceTest {
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsProvided() {
     codeSystemEntries.get(0).setVersions(null);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
+
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertTrue(result.get(0).isValid());
@@ -260,7 +269,7 @@ class VsacServiceTest {
 
   @Test
   public void testGetValueSets() {
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("ST-fake");
+
     when(terminologyServiceWebClient.getValueSet(any(), any(), any(), any(), any(), any()))
         .thenReturn(svsValueSet);
 
@@ -274,21 +283,6 @@ class VsacServiceTest {
         is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
     assertThat(describedValueSet.getDisplayName(), is(equalTo("Office Visit")));
     assertThat(describedValueSet.getConceptList().getConcepts().size(), is(equalTo(16)));
-  }
-
-  @Test
-  public void testGetValueSetsWhenErrorOccurredWhileFetchingServiceTicket() {
-    when(terminologyServiceWebClient.getServiceTicket(any())).thenReturn(null);
-    doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));
-
-    VsacUnauthorizedException exception =
-        assertThrows(
-            VsacUnauthorizedException.class,
-            () -> vsacService.getValueSets(valueSetsSearchCriteria, umlsUser));
-
-    assertThat(
-        exception.getMessage(),
-        is(equalTo("Error occurred while fetching service ticket. Please contact helpdesk.")));
   }
 
   @Test
@@ -320,7 +314,7 @@ class VsacServiceTest {
     ObjectMapper objectMapper = new ObjectMapper();
     CodeSystemEntry snomedCsEntry = objectMapper.readValue(snomedMapping, CodeSystemEntry.class);
     when(mappingService.getCodeSystemEntries()).thenReturn(List.of(snomedCsEntry));
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
+
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
         .thenReturn(vsacCode);
@@ -332,7 +326,7 @@ class VsacServiceTest {
   public void testSaveUmlsUser() {
     ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
     doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));
-    UmlsUser saved = vsacService.saveUmlsUser(TEST_API_KEY, TEST_HARP_ID, TEST_TGT);
+    UmlsUser saved = vsacService.saveUmlsUser(TEST_API_KEY, TEST_HARP_ID);
     verify(umlsUserRepository, times(1)).save(captor.capture());
     UmlsUser captored = captor.getValue();
     assertNotNull(captored);
@@ -351,13 +345,6 @@ class VsacServiceTest {
   }
 
   @Test
-  public void testGetTGT() throws InterruptedException, ExecutionException {
-    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn(TEST_TGT);
-    String result = vsacService.getTgt(TEST_API_KEY);
-    assertEquals(TEST_TGT, result);
-  }
-
-  @Test
   public void testValidateUmlsInformationWhenUmlsApiKeyIsNotAvailable() {
     UmlsUser mockUmlsUser = mock(UmlsUser.class);
     Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
@@ -366,79 +353,6 @@ class VsacServiceTest {
 
     when(optionalUmlsUser.get().getApiKey()).thenReturn(null);
     assertFalse(vsacService.validateUmlsInformation("test_user"));
-  }
-
-  @Test
-  public void testValidateUmlsInformationWhenTgtIsNotAvailable()
-      throws ExecutionException, InterruptedException {
-    UmlsUser mockUmlsUser = mock(UmlsUser.class);
-    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
-
-    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
-    when(optionalUmlsUser.get().getTgt()).thenReturn(null);
-    when(optionalUmlsUser.get().getApiKey()).thenReturn(TEST_API_KEY);
-    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn(TEST_TGT);
-
-    ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
-    doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));
-    boolean isValidUmlsUserInfo = vsacService.validateUmlsInformation("test_user");
-    verify(umlsUserRepository, times(1)).save(captor.capture());
-    UmlsUser captored = captor.getValue();
-    assertNotNull(captored);
-
-    assertTrue(isValidUmlsUserInfo);
-  }
-
-  @Test
-  public void testValidateUmlsInformationWhenTgtIsNotExpired() {
-    Optional<UmlsUser> optionalUmlsUser = Optional.of(umlsUser);
-    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
-    when(terminologyServiceWebClient.getServiceTicket(anyString()))
-        .thenReturn("test_service_ticket");
-
-    assertTrue(vsacService.validateUmlsInformation("test_user"));
-  }
-
-  @Test
-  public void testValidateUmlsInformationWhenTgtIsExpired()
-      throws ExecutionException, InterruptedException {
-    UmlsUser mockUmlsUser = mock(UmlsUser.class);
-    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
-
-    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
-    when(optionalUmlsUser.get().getApiKey()).thenReturn(TEST_API_KEY);
-
-    when(optionalUmlsUser.get().getTgt()).thenReturn(TEST_TGT);
-    when(terminologyServiceWebClient.getServiceTicket(TEST_TGT)).thenReturn(null); // tgt expired
-
-    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn("new_tgt"); // fetching new tgt
-    when(terminologyServiceWebClient.getServiceTicket("new_tgt")).thenReturn("test_service_ticket");
-
-    ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
-    umlsUser.setTgt("new_tgt");
-    doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));
-    assertTrue(vsacService.validateUmlsInformation("test_user"));
-    verify(umlsUserRepository, times(1)).save(captor.capture());
-    UmlsUser captored = captor.getValue();
-    assertNotNull(captored);
-  }
-
-  @Test
-  public void testValidateUmlsInformationWhenTgtIsExpiredAndUnableToGenerateNewServiceTicket()
-      throws ExecutionException, InterruptedException {
-    Optional<UmlsUser> optionalUmlsUser = Optional.of(umlsUser);
-
-    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn(null);
-
-    when(terminologyServiceWebClient.getTgt(anyString())).thenReturn("new_tgt"); // fetching new tgt
-
-    ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
-    doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));
-    assertFalse(vsacService.validateUmlsInformation("test_user"));
-    verify(umlsUserRepository, times(3)).save(captor.capture());
-    UmlsUser captored = captor.getValue();
-    assertNotNull(captored);
   }
 
   @Test
@@ -470,7 +384,7 @@ class VsacServiceTest {
     ObjectMapper objectMapper = new ObjectMapper();
     CodeSystemEntry snomedCsEntry = objectMapper.readValue(snomedMapping, CodeSystemEntry.class);
     when(mappingService.getCodeSystemEntries()).thenReturn(List.of(snomedCsEntry));
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("Service-Ticket");
+
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
         .thenReturn(vsacCode);
@@ -480,33 +394,33 @@ class VsacServiceTest {
 
   @Test
   public void testGetQdmValueSets() {
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("ST-fake");
+
     when(terminologyServiceWebClient.getValueSet(any(), any(), any(), any(), any(), any()))
-      .thenReturn(svsValueSet);
+        .thenReturn(svsValueSet);
 
     List<QdmValueSet> valueSets =
-      vsacService.getValueSetsInQdmFormat(valueSetsSearchCriteria, umlsUser);
+        vsacService.getValueSetsInQdmFormat(valueSetsSearchCriteria, umlsUser);
 
     assertThat(
-      valueSets.get(0).getOid(),
-      is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
+        valueSets.get(0).getOid(),
+        is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
     assertThat(valueSets.get(0).getDisplayName(), is(equalTo("Office Visit")));
     assertThat(valueSets.get(0).getConcepts().size(), is(equalTo(16)));
   }
 
   @Test
   public void testGetEmptyQdmValueSets() {
-    when(terminologyServiceWebClient.getServiceTicket(anyString())).thenReturn("ST-fake");
+
     svsValueSet.getDescribedValueSet().setConceptList(null);
     when(terminologyServiceWebClient.getValueSet(any(), any(), any(), any(), any(), any()))
-      .thenReturn(svsValueSet);
+        .thenReturn(svsValueSet);
 
     List<QdmValueSet> valueSets =
-      vsacService.getValueSetsInQdmFormat(valueSetsSearchCriteria, umlsUser);
+        vsacService.getValueSetsInQdmFormat(valueSetsSearchCriteria, umlsUser);
 
     assertThat(
-      valueSets.get(0).getOid(),
-      is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
+        valueSets.get(0).getOid(),
+        is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
     assertThat(valueSets.get(0).getDisplayName(), is(equalTo("Office Visit")));
     assertThat(valueSets.get(0).getConcepts().size(), is(equalTo(0)));
   }
