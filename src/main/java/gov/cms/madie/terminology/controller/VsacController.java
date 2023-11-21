@@ -49,7 +49,7 @@ public class VsacController {
 
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
-    if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
+    if (umlsUser.isPresent()) {
       RetrieveMultipleValueSetsResponse valuesetResponse =
           vsacService.getValueSet(oid, umlsUser.get(), profile, includeDraft, release, version);
 
@@ -73,7 +73,7 @@ public class VsacController {
 
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
-    if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
+    if (umlsUser.isPresent()) {
 
       List<RetrieveMultipleValueSetsResponse> vsacValueSets =
           vsacService.getValueSets(searchCriteria, umlsUser.get());
@@ -94,7 +94,7 @@ public class VsacController {
 
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
-    if (umlsUser.isPresent() && umlsUser.get().getTgt() != null) {
+    if (umlsUser.isPresent()) {
       List<QdmValueSet> qdmValueSets =
           vsacService.getValueSetsInQdmFormat(searchCriteria, umlsUser.get());
 
@@ -121,8 +121,7 @@ public class VsacController {
     final String username = principal.getName();
     log.debug("Entering: umlsLogin(): username = " + username);
 
-    String tgt = vsacService.getTgt(apiKey);
-    UmlsUser umlsUser = vsacService.saveUmlsUser(username, apiKey, tgt);
+    UmlsUser umlsUser = vsacService.saveUmlsUser(username, apiKey);
     String msg = "User: " + umlsUser.getHarpId() + " is successfully logged in to UMLS.";
     log.debug("msg = ");
     return ResponseEntity.ok().body(msg);
