@@ -25,14 +25,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Unmarshaller;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -40,7 +39,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -66,7 +64,6 @@ class VsacServiceTest {
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
-  private static final String TEST_TGT = "te$tTgt";
   private static final String QDM_MODEL = "QDM";
   private static final String FHIR_MODEL = "FHIR";
 
@@ -184,9 +181,10 @@ class VsacServiceTest {
   void testVsacCommunicationError() {
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     VsacCode badRequest = new VsacCode();
-    badRequest.setStatus("400"); // VSAC's response to using the updated Basic Authn scheme on code validation.
+    badRequest.setStatus(
+        "400"); // VSAC's response to using the updated Basic Authn scheme on code validation.
     when(terminologyServiceWebClient.getCode(
-        eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
+            eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
         .thenReturn(badRequest);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).isValid());

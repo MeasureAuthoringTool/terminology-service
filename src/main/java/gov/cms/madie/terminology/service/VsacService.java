@@ -226,13 +226,13 @@ public class VsacService {
         cqlCode.setValid(false);
         cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
       }
-    // API Errors appear in the status field.
+      // API Errors appear in the status field.
     } else if (StringUtils.isNumeric(vsacCode.getStatus())) {
-        cqlCode.setValid(false);
-        cqlCode.setErrorMessage("Communication Error with VSAC. Please retry your request. " +
-            "If this error persists, please contact the Help Desk.");
-    }
-    else {
+      cqlCode.setValid(false);
+      cqlCode.setErrorMessage(
+          "Communication Error with VSAC. Please retry your request. "
+              + "If this error persists, please contact the Help Desk.");
+    } else {
       cqlCode.setValid(false);
     }
   }

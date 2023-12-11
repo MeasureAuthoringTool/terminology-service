@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -51,8 +52,8 @@ public class TerminologyServiceWebClient {
             .uri(valuesetURI)
             .headers(headers -> headers.setBasicAuth("apikey", apiKey))
             .retrieve()
-            .onStatus(HttpStatus::is5xxServerError, ClientResponse::createException)
-            .onStatus(HttpStatus::is4xxClientError, ClientResponse::createException)
+            .onStatus(HttpStatusCode::is5xxServerError, ClientResponse::createException)
+            .onStatus(HttpStatusCode::is4xxClientError, ClientResponse::createException)
             .bodyToMono(RetrieveMultipleValueSetsResponse.class);
     // temp use of block until fixing 401 issue
     return responseMono.block();
@@ -68,9 +69,9 @@ public class TerminologyServiceWebClient {
   /**
    * @param codePath code path build to call VSAC services.
    * @param apiKey user's UMLS ApiKey.
-   * @return the response from VSAC is the statusCode is either 200 or 400 Status Code: 200 indicates
-   *     a valid code Status Code, 400 indicates either CodeSystem or CodeSystem version or Code is
-   *     not found.
+   * @return the response from VSAC is the statusCode is either 200 or 400 Status Code: 200
+   *     indicates a valid code Status Code, 400 indicates either CodeSystem or CodeSystem version
+   *     or Code is not found.
    */
   public VsacCode getCode(String codePath, String apiKey) {
     URI codeUri = TerminologyServiceUtil.buildRetrieveCodeUri(baseUrl, codePath);
