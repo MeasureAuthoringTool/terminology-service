@@ -4,8 +4,8 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.6.14</version>
-    <relativePath/>
+    <version>3.2.0</version>
+    <relativePath></relativePath>
     <!-- lookup parent from repository -->
   </parent>
   <groupId>gov.cms.madie.terminologyservice</groupId>
@@ -16,9 +16,13 @@
   <properties>
     <java.version>16</java.version>
     <jxbmavenplugin.version>2.5.0</jxbmavenplugin.version>
-    <maven.compiler.source>16</maven.compiler.source>
-    <maven.compiler.target>16</maven.compiler.target>
-    <maven.pmd.plugin.version>3.16.0</maven.pmd.plugin.version>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+
+    <maven.jakarta.xml.bind-api.version>4.0.1</maven.jakarta.xml.bind-api.version>
+    <maven.jaxb.xjc.version>3.0.0</maven.jaxb.xjc.version>
+
+    <maven.pmd.plugin.version>3.21.2</maven.pmd.plugin.version>
     <maven.sortpom.plugin.version>3.0.1</maven.sortpom.plugin.version>
     <mvn.checkstyle.file>madie-checkstyle.xml</mvn.checkstyle.file>
     <mvn.checkstyle.version>3.1.2</mvn.checkstyle.version>
@@ -151,7 +155,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore/>
+                    <ignore></ignore>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
@@ -238,6 +242,12 @@
         <version>${maven.pmd.plugin.version}</version>
         <configuration>
           <targetJdk>${java.version}</targetJdk>
+          <excludes>
+            <exclude>**/vsac/nlm/nih/gov/*.java</exclude>
+          </excludes>
+          <excludeRoots>
+            <excludeRoot>${project.basedir}/src/main/java/generated</excludeRoot>
+          </excludeRoots>
         </configuration>
         <executions>
           <execution>
@@ -273,6 +283,15 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>jaxb2-maven-plugin</artifactId>
         <version>${jxbmavenplugin.version}</version>
@@ -287,6 +306,18 @@
           <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
           <clearOutputDir>false</clearOutputDir>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-xjc</artifactId>
+            <version>${maven.jaxb.xjc.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>${maven.jakarta.xml.bind-api.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <id>xjc</id>
@@ -313,6 +344,9 @@
         <configuration>
           <language>java</language>
           <targetJdk>${java.version}</targetJdk>
+          <excludes>
+            <exclude>${project.basedir}/src/main/java/generated</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>

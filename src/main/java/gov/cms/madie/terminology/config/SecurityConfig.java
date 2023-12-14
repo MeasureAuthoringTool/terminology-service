@@ -1,35 +1,32 @@
 package gov.cms.madie.terminology.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue;
 
 @Configuration
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+public class SecurityConfig {
 
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
+  @Bean
+  protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.cors()
         .and()
-        .authorizeRequests()
-        .antMatchers("/actuator/**")
-        .permitAll()
-        .and()
-        .authorizeRequests()
-        .anyRequest()
-        .authenticated()
-        .and()
-        .sessionManagement()
-        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        .and()
-        .oauth2ResourceServer()
-        .jwt()
-        .and()
-        .and()
-        .headers()
-        .xssProtection()
-        .and()
-        .contentSecurityPolicy("script-src 'self'");
+        .authorizeHttpRequests(
+            request ->
+                request.requestMatchers("/actuator/**").permitAll().anyRequest().authenticated())
+        .sessionManagement(
+            sessionMgt -> sessionMgt.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()))
+        .headers(
+            headers ->
+                headers
+                    .xssProtection(xss -> xss.headerValue(HeaderValue.ENABLED_MODE_BLOCK))
+                    .contentSecurityPolicy(csp -> csp.policyDirectives("script-src 'self' .....")));
+
+    return http.build();
   }
 }
