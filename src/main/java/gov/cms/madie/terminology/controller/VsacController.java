@@ -116,7 +116,7 @@ public class VsacController {
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
-  @PostMapping(path = "/umls-credentials")
+  @PostMapping(path = "/umls-credentials", produces = {MediaType.TEXT_PLAIN_VALUE})
   public ResponseEntity<String> umlsLogin(Principal principal, @RequestBody String apiKey) {
     final String username = principal.getName();
     log.debug("Entering: umlsLogin(): username = " + username);
