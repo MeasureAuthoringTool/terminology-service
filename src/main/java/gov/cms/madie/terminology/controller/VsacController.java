@@ -5,7 +5,11 @@ import java.util.stream.Collectors;
 import java.security.Principal;
 import java.util.Optional;
 
+import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.QdmValueSet;
+import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
+import gov.cms.madie.terminology.service.FhirTerminologyService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 public class VsacController {
 
   private final VsacService vsacService;
+  private final FhirTerminologyService fhirTerminologyService;
   private final FhirContext fhirContext;
 
   @GetMapping(path = "/valueset", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -116,7 +121,9 @@ public class VsacController {
     return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
-  @PostMapping(path = "/umls-credentials", produces = {MediaType.TEXT_PLAIN_VALUE})
+  @PostMapping(
+      path = "/umls-credentials",
+      produces = {MediaType.TEXT_PLAIN_VALUE})
   public ResponseEntity<String> umlsLogin(Principal principal, @RequestBody String apiKey) {
     final String username = principal.getName();
     log.debug("Entering: umlsLogin(): username = " + username);
@@ -132,5 +139,16 @@ public class VsacController {
     return vsacService.validateUmlsInformation(principal.getName())
         ? ResponseEntity.ok().body(Boolean.TRUE)
         : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+  }
+
+  @GetMapping("/manifest-list")
+  public ResponseEntity<List<ManifestExpansion>> getManifests(Principal principal) {
+    final String username = principal.getName();
+    log.info("Retrieving List of available manifests, requested by HARP ID : [{}}]", username);
+    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
+    if (umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey())) {
+      return ResponseEntity.ok().body(fhirTerminologyService.getManifests(umlsUser.get()));
+    }
+    throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
   }
 }

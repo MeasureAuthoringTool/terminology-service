@@ -15,13 +15,16 @@ management:
 
 okta:
   oauth2:
-    issuer: ${OKTA_ISSUER:https://dev-18092578.okta.com/oauth2/default}
+    issuer: ${OKTA_ISSUER:https://dev-53861726.okta.com/oauth2/default}
     audience: ${OKTA_AUDIENCE:api://default}
 
 client:
   vsac_base_url: https://vsac.nlm.nih.gov/vsac
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&profile={profile}&includeDraft={includeDraft}
   default_profile: ${DEFAULT_VSAC_PROFILE:Most Recent Code System Versions in VSAC}
+  fhir-terminology-service:
+    base-url: https://uat-cts.nlm.nih.gov/fhir
+    manifests-urn: /Library
 
 spring:
   session:
@@ -30,8 +33,9 @@ spring:
     max-in-memory-size: 24MB
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb://${DBUSER:root}:${DBPASS:E5press0}@localhost:27017/terminology}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+      uri: ${MONGO_URI:mongodb://localhost:27017/terminology}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
 
 mapping:
   data:
-    code-system-entry-url: ${CODE_SYSTEM_ENTRY_URL:https://madie-dev-static.s3.amazonaws.com/mappings/code-system-entry.json}
+    code-system-entry-url: file:/Users/43093/Documents/git/madie-ms/support-data/prod/madie/code-system-entry.json
+#    code-system-entry-url: ${CODE_SYSTEM_ENTRY_URL:https://madie-dev-static.s3.amazonaws.com/mappings/code-system-entry.json}
