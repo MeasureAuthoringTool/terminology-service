@@ -47,7 +47,7 @@ class FhirTerminologyServiceWebClientTest {
   void getManifestBundleSuccessfully() {
     mockBackEnd.enqueue(
         new MockResponse()
-                .setResponseCode(200)
+            .setResponseCode(200)
             .setBody(MOCK_RESPONSE_STRING)
             .addHeader("Content-Type", "application/fhir+json"));
     String actualResponse = fhirTerminologyServiceWebClient.getManifestBundle(MOCK_API_KEY);
@@ -57,9 +57,9 @@ class FhirTerminologyServiceWebClientTest {
 
   @Test
   void getManifestBundle_ReturnsException() {
-    mockBackEnd.enqueue(
-        new MockResponse()
-                .setResponseCode(HttpStatus.UNAUTHORIZED.value()));
-    assertThrows(WebClientResponseException.class, () -> fhirTerminologyServiceWebClient.getManifestBundle(MOCK_API_KEY));
+    mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
+    assertThrows(
+        WebClientResponseException.class,
+        () -> fhirTerminologyServiceWebClient.getManifestBundle(MOCK_API_KEY));
   }
 }

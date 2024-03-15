@@ -8,6 +8,7 @@ import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Bundle;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ public class FhirTerminologyService {
   FhirContext ctx = FhirContext.forR4();
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
 
+  @Cacheable("manifest-list")
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
     IParser parser = ctx.newJsonParser();
     String responseString = fhirTerminologyServiceWebClient.getManifestBundle(umlsUser.getApiKey());
