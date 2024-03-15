@@ -150,7 +150,8 @@ public class VsacController {
       return ResponseEntity.ok().body(fhirTerminologyService.getManifests(umlsUser.get()));
     }
     log.error(
-        "Unable to Retrieve List of available manifests, UMLS Authentication Key Not found for user : [{}}]",
+        "Unable to Retrieve List of available manifests, "
+            + "UMLS Authentication Key Not found for user : [{}}]",
         username);
     throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
   }

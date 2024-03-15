@@ -23,65 +23,64 @@ class FhirTerminologyServiceTest {
   private static final String TEST_API_KEY = "te$tKey";
 
   private final String responseFromServer =
-          """
-                  {
-                                "resourceType": "Bundle",
-                                "id": "library-search",
-                                "meta":
-                                {
-                                  "lastUpdated": "2024-03-14T14:04:52.456-04:00"
-                                },
-                                "type": "searchset",
-                                "total": 25,
-                                "link":
-                                [
-                                  {
-                                    "relation": "self",
-                                    "url": "https://uat-cts.nlm.nih.gov/fhir/Library"
-                                  }
-                                ],
-                                "entry":
-                                [
-                                  {
-                                    "fullUrl": "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh",
-                                    "resource":
-                                    {
-                                      "resourceType": "Library",
-                                      "id": "ecqm-update-4q2017-eh",
-                                      "meta":
-                                      {
-                                        "profile":
-                                        [
-                                          "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm",
-                                          "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm"
-                                        ]
-                                      },
-                                      "url": "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh",
-                                      "version": "2017-09-15",
-                                      "status": "active"
-                                    }
-                                  },
-                                  {
-                                    "fullUrl": "http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25",
-                                    "resource":
-                                    {
-                                      "resourceType": "Library",
-                                      "id": "mu2-update-2012-10-25",
-                                      "meta":
-                                      {
-                                        "profile":
-                                        [
-                                          "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm",
-                                          "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm"
-                                        ]
-                                      },
-                                      "url": "http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25",
-                                      "version": "2012-10-25",
-                                      "status": "active"
-                                    }
-                                  }
-                                ]
-                              }""";
+      "{\n"
+          + "              \"resourceType\": \"Bundle\",\n"
+          + "              \"id\": \"library-search\",\n"
+          + "              \"meta\":\n"
+          + "              {\n"
+          + "                \"lastUpdated\": \"2024-03-14T14:04:52.456-04:00\"\n"
+          + "              },\n"
+          + "              \"type\": \"searchset\",\n"
+          + "              \"total\": 25,\n"
+          + "              \"link\":\n"
+          + "              [\n"
+          + "                {\n"
+          + "                  \"relation\": \"self\",\n"
+          + "                  \"url\": \"https://uat-cts.nlm.nih.gov/fhir/Library\"\n"
+          + "                }\n"
+          + "              ],\n"
+          + "              \"entry\":\n"
+          + "              [\n"
+          + "                {\n"
+          + "                  \"fullUrl\": \"http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\n"
+          + "                  \"resource\":\n"
+          + "                  {\n"
+          + "                    \"resourceType\": \"Library\",\n"
+          + "                    \"id\": \"ecqm-update-4q2017-eh\",\n"
+          + "                    \"meta\":\n"
+          + "                    {\n"
+          + "                      \"profile\":\n"
+          + "                      [\n"
+          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm\",\n"
+          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm\"\n"
+          + "                      ]\n"
+          + "                    },\n"
+          + "                    \"url\": \"http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\n"
+          + "                    \"version\": \"2017-09-15\",\n"
+          + "                    \"status\": \"active\"\n"
+          + "                  }\n"
+          + "                },\n"
+          + "                {\n"
+          + "                  \"fullUrl\": \"http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\n"
+          + "                  \"resource\":\n"
+          + "                  {\n"
+          + "                    \"resourceType\": \"Library\",\n"
+          + "                    \"id\": \"mu2-update-2012-10-25\",\n"
+          + "                    \"meta\":\n"
+          + "                    {\n"
+          + "                      \"profile\":\n"
+          + "                      [\n"
+          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm\",\n"
+          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm\"\n"
+          + "                      ]\n"
+          + "                    },\n"
+          + "                    \"url\": \"http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\n"
+          + "                    \"version\": \"2012-10-25\",\n"
+          + "                    \"status\": \"active\"\n"
+          + "                  }\n"
+          + "                }\n"
+          + "              ]\n"
+          + "            }";
 
   @BeforeEach
   public void setUp() {
