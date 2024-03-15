@@ -22,8 +22,7 @@ public class FhirTerminologyService {
 
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
     IParser parser = ctx.newJsonParser();
-    String responseString =
-        fhirTerminologyServiceWebClient.getManifestBundleResources(umlsUser.getApiKey());
+    String responseString = fhirTerminologyServiceWebClient.getManifestBundle(umlsUser.getApiKey());
     Bundle manifestBundle = parser.parseResource(Bundle.class, responseString);
     var manifestOptions = new ArrayList<ManifestExpansion>();
     manifestBundle

@@ -28,7 +28,7 @@ public class FhirTerminologyServiceWebClient {
     this.manifestPath = manifestUrn;
   }
 
-  public String getManifestBundleResources(String apiKey) {
+  public String getManifestBundle(String apiKey) {
     return fhirTerminologyWebClient
         .get()
         .uri(manifestPath)
