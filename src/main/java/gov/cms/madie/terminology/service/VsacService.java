@@ -44,7 +44,7 @@ public class VsacService {
    */
   public boolean validateUmlsInformation(String userName) {
     Optional<UmlsUser> umlsUser = findByHarpId(userName);
-    return umlsUser.isPresent() && umlsUser.get().getApiKey() != null;
+    return umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey());
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
