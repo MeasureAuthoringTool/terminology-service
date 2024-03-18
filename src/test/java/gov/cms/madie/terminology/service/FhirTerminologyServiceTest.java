@@ -89,7 +89,6 @@ class FhirTerminologyServiceTest {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
   }
 
-
   @Test
   void getManifests() {
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
