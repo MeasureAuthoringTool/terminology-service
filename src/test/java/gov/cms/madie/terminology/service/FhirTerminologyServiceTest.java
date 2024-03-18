@@ -1,8 +1,10 @@
 package gov.cms.madie.terminology.service;
 
+import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import static org.mockito.Mockito.when;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class FhirTerminologyServiceTest {
 
   @Mock FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
-
+  @Mock FhirContext fhirContext;
   @InjectMocks FhirTerminologyService fhirTerminologyService;
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
@@ -87,8 +89,10 @@ class FhirTerminologyServiceTest {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
   }
 
+
   @Test
   void getManifests() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(fhirTerminologyServiceWebClient.getManifestBundle(anyString()))
         .thenReturn(responseFromServer);
     var result = fhirTerminologyService.getManifests(umlsUser);
