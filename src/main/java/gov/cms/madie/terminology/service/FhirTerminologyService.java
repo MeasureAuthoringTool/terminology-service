@@ -18,12 +18,12 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class FhirTerminologyService {
-  FhirContext ctx = FhirContext.forR4();
+  private final FhirContext fhirContext;
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
 
   @Cacheable("manifest-list")
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
-    IParser parser = ctx.newJsonParser();
+    IParser parser = fhirContext.newJsonParser();
     String responseString = fhirTerminologyServiceWebClient.getManifestBundle(umlsUser.getApiKey());
     Bundle manifestBundle = parser.parseResource(Bundle.class, responseString);
     var manifestOptions = new ArrayList<ManifestExpansion>();

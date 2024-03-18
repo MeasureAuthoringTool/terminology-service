@@ -23,7 +23,7 @@ client:
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&profile={profile}&includeDraft={includeDraft}
   default_profile: ${DEFAULT_VSAC_PROFILE:Most Recent Code System Versions in VSAC}
   fhir-terminology-service:
-    base-url: https://uat-cts.nlm.nih.gov/fhir
+    base-url: ${FHIR_TERMINOLOGY_BASE_URL:https://uat-cts.nlm.nih.gov/fhir}
     manifests-urn: /Library
 
 spring:
