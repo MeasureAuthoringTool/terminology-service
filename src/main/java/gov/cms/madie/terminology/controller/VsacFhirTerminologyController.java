@@ -22,21 +22,21 @@ import java.util.Optional;
 @Slf4j
 @RequiredArgsConstructor
 public class VsacFhirTerminologyController {
-    private final FhirTerminologyService fhirTerminologyService;
-    private final VsacService vsacService;
+  private final FhirTerminologyService fhirTerminologyService;
+  private final VsacService vsacService;
 
-    @GetMapping("/manifest-list")
-    public ResponseEntity<List<ManifestExpansion>> getManifests(Principal principal) {
-        final String username = principal.getName();
-        log.info("Retrieving List of available manifests, requested by HARP ID : [{}}]", username);
-        Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
-        if (umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey())) {
-            return ResponseEntity.ok().body(fhirTerminologyService.getManifests(umlsUser.get()));
-        }
-        log.error(
-                "Unable to Retrieve List of available manifests, "
-                        + "UMLS Authentication Key Not found for user : [{}}]",
-                username);
-        throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
+  @GetMapping("/manifest-list")
+  public ResponseEntity<List<ManifestExpansion>> getManifests(Principal principal) {
+    final String username = principal.getName();
+    log.info("Retrieving List of available manifests, requested by HARP ID : [{}}]", username);
+    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
+    if (umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey())) {
+      return ResponseEntity.ok().body(fhirTerminologyService.getManifests(umlsUser.get()));
     }
+    log.error(
+        "Unable to Retrieve List of available manifests, "
+            + "UMLS Authentication Key Not found for user : [{}}]",
+        username);
+    throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
+  }
 }

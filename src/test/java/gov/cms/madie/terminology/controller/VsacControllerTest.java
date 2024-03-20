@@ -29,8 +29,7 @@ import gov.cms.madie.terminology.service.VsacService;
 
 @ExtendWith(MockitoExtension.class)
 public class VsacControllerTest {
-  @Mock
-  private VsacService vsacService;
+  @Mock private VsacService vsacService;
 
   @InjectMocks private VsacController vsacController;
 
