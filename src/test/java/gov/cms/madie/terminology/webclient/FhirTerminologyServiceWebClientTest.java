@@ -21,6 +21,7 @@ class FhirTerminologyServiceWebClientTest {
 
   private static final String MOCK_MANIFEST_URN = "/manifestUrn";
   private static final String MOCK_API_KEY = "test-api-key";
+  private static final String DEFAULT_PROFILE = "eCQM Update 2022-05-05";
   public static MockWebServer mockBackEnd;
 
   public FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
@@ -35,7 +36,7 @@ class FhirTerminologyServiceWebClientTest {
   void initialize() {
     String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
     fhirTerminologyServiceWebClient =
-        new FhirTerminologyServiceWebClient(baseUrl, MOCK_MANIFEST_URN);
+        new FhirTerminologyServiceWebClient(baseUrl, MOCK_MANIFEST_URN, DEFAULT_PROFILE);
   }
 
   @AfterAll

@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.dto;
 
+import gov.cms.madie.models.measure.ManifestExpansion;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,6 +12,7 @@ public class ValueSetsSearchCriteria {
 
   private String profile;
   private String includeDraft;
+  private ManifestExpansion manifestExpansion;
   private List<ValueSetParams> valueSetParams;
 
   @Data
