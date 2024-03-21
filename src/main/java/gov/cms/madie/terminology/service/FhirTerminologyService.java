@@ -2,7 +2,6 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
@@ -17,14 +16,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class FhirTerminologyService {
   private final FhirContext fhirContext;
-  private final VsacService vsacService;
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
 
   @Cacheable("manifest-list")
@@ -71,14 +68,12 @@ public class FhirTerminologyService {
         .map(
             valueSet -> {
               List<QdmValueSet.Concept> concepts = getValueSetConcepts(valueSet);
-              QdmValueSet qdmValueSet =
-                  QdmValueSet.builder()
-                      .oid(valueSet.getId())
-                      .displayName(valueSet.getName())
-                      .version(valueSet.getVersion())
-                      .concepts(concepts)
-                      .build();
-              return qdmValueSet;
+              return QdmValueSet.builder()
+                  .oid(valueSet.getIdPart())
+                  .displayName(valueSet.getName())
+                  .version(valueSet.getVersion())
+                  .concepts(concepts)
+                  .build();
             })
         .toList();
   }

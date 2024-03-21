@@ -1,6 +1,8 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
+import gov.cms.madie.terminology.dto.QdmValueSet;
+import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
@@ -42,6 +44,8 @@ class VsacFhirTerminologyControllerMvcTest {
 
   private UmlsUser umlsUser;
   private final List<ManifestExpansion> mockManifests = new ArrayList<>();
+
+  private final List<QdmValueSet> mockQdmValueSets = new ArrayList<>();
   private static final String TEST_USER = "test.user";
   private static final String TEST_API_KEY = "te$tKey";
 
@@ -57,6 +61,13 @@ class VsacFhirTerminologyControllerMvcTest {
         ManifestExpansion.builder()
             .fullUrl("https://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25")
             .id("mu2-update-2012-10-25")
+            .build());
+    mockQdmValueSets.add(
+        QdmValueSet.builder()
+            .oid("test-value-set-id-1234")
+            .concepts(List.of(QdmValueSet.Concept.builder().code("test-code-052").build()))
+            .version("20240101")
+            .displayName("test-value-set-display-name")
             .build());
   }
 
@@ -95,6 +106,85 @@ class VsacFhirTerminologyControllerMvcTest {
                 MockMvcRequestBuilders.get("/terminology/fhir/manifest-list")
                     .with(user(TEST_USR))
                     .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isUnauthorized())
+            .andReturn();
+    assertThat(result.getResponse().getStatus(), is(equalTo(401)));
+  }
+
+  @Test
+  void testGetValueSetsExpansionsSuccessfullyMvc() throws Exception {
+    String valueSetsSearchCriteria =
+        "{\n"
+            + "    \"profile\": \"\",\n"
+            + "    \"includeDraft\": \"\",\n"
+            + "    \"manifestExpansion\": {\n"
+            + "        \"fullUrl\": \"https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05\",\n"
+            + "        \"id\": \"ecqm-update-2022-05-05\"\n"
+            + "    },\n"
+            + "    \"valueSetParams\": [\n"
+            + "        {\n"
+            + "            \"oid\": \"2.16.840.1.113883.3.464.1003.113.11.1090\",\n"
+            + "            \"release\": \"\",\n"
+            + "            \"version\": \"\"\n"
+            + "        }\n"
+            + "    ]\n"
+            + "}";
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    when(fhirTerminologyService.getValueSetsExpansionsForQdm(
+            any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
+        .thenReturn(mockQdmValueSets);
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/terminology/fhir/value-sets/expansion")
+                    .with(user(TEST_USR))
+                    .with(csrf())
+                    .content(valueSetsSearchCriteria)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn();
+    assertThat(result.getResponse().getStatus(), is(equalTo(200)));
+    String content = result.getResponse().getContentAsString();
+    verify(fhirTerminologyService, times(1))
+        .getValueSetsExpansionsForQdm(any(ValueSetsSearchCriteria.class), any(UmlsUser.class));
+    assertThat(
+        content,
+        containsString(
+            "[{\"oid\":\"test-value-set-id-1234\",\"version\":\"20240101\",\"concepts\":[{\"code\":\"test-code-052\",\"code_system_oid\":null,\"code_system_name\":null,\"code_system_version\":null,\"display_name\":null}],\"display_name\":\"test-value-set-display-name\"}]"));
+  }
+
+  @Test
+  void testUnAuthorizedUmlsUserWhileGetValueSetsExpansionsMvc() throws Exception {
+    String valueSetsSearchCriteria =
+        "{\n"
+            + "    \"profile\": \"\",\n"
+            + "    \"includeDraft\": \"\",\n"
+            + "    \"manifestExpansion\": {\n"
+            + "        \"fullUrl\": \"https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05\",\n"
+            + "        \"id\": \"ecqm-update-2022-05-05\"\n"
+            + "    },\n"
+            + "    \"valueSetParams\": [\n"
+            + "        {\n"
+            + "            \"oid\": \"2.16.840.1.113883.3.464.1003.113.11.1090\",\n"
+            + "            \"release\": \"\",\n"
+            + "            \"version\": \"\"\n"
+            + "        }\n"
+            + "    ]\n"
+            + "}";
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/terminology/fhir/value-sets/expansion")
+                    .with(user(TEST_USR))
+                    .with(csrf())
+                    .content(valueSetsSearchCriteria)
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(status().isUnauthorized())
             .andReturn();
