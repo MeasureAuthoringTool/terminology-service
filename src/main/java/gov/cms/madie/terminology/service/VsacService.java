@@ -258,7 +258,7 @@ public class VsacService {
     return umlsUserRepository.save(umlsUser);
   }
 
-  public List<QdmValueSet> convertToQdmValueSets(
+  private List<QdmValueSet> convertToQdmValueSets(
       List<RetrieveMultipleValueSetsResponse> valueSetsResponses) {
     return valueSetsResponses.stream()
         .map(
