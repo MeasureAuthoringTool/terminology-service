@@ -16,6 +16,7 @@ public class ValueSetsSearchCriteria {
   private List<ValueSetParams> valueSetParams;
 
   @Data
+  @Builder
   public static class ValueSetParams {
     private String oid;
     private String release;

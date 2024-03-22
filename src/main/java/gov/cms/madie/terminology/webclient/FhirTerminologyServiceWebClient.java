@@ -1,24 +1,16 @@
 package gov.cms.madie.terminology.webclient;
 
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
-import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.hl7.fhir.r4.model.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriBuilder;
-import org.springframework.web.util.UriComponents;
-import org.yaml.snakeyaml.Yaml;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
@@ -30,7 +22,6 @@ public class FhirTerminologyServiceWebClient {
 
   private final WebClient fhirTerminologyWebClient;
   private final String manifestPath;
-
   private final String defaultProfile;
 
   public FhirTerminologyServiceWebClient(

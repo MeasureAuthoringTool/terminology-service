@@ -104,13 +104,14 @@ class VsacServiceTest {
     JAXBContext jaxbContext = JAXBContext.newInstance(RetrieveMultipleValueSetsResponse.class);
     Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
     svsValueSet = (RetrieveMultipleValueSetsResponse) jaxbUnmarshaller.unmarshal(file);
-    ValueSetsSearchCriteria.ValueSetParams valueSetParams =
-        new ValueSetsSearchCriteria.ValueSetParams();
-    valueSetParams.setOid("2.16.840.1.113883.3.464.1003.101.12.1001");
     valueSetsSearchCriteria =
         ValueSetsSearchCriteria.builder()
             .profile("eCQM Update 2030-05-05")
-            .valueSetParams(List.of(valueSetParams))
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("2.16.840.1.113883.3.464.1003.101.12.1001")
+                        .build()))
             .build();
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();

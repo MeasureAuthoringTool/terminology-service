@@ -45,7 +45,7 @@ public class VsacFhirTerminologyController {
       Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     final String username = principal.getName();
     log.info(
-        "User {} is attempting to fetch value sets expansions from VSAC FHIR Terminology Service.",
+        "User [{}] is attempting to fetch value sets expansions from VSAC FHIR Terminology Server.",
         username);
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey())) {

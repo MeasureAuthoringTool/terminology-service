@@ -77,7 +77,8 @@ public class TerminologyServiceUtil {
     return input.replaceAll("'", "");
   }
 
-  // Todo need to consider pagination, find a valueSet with lot of codes
+  // Future stories will add ability to call new FHIR Terminology service
+  // with additional parameters
   public static URI buildValueSetResourceUri(
       ValueSetsSearchCriteria.ValueSetParams valueSetParams,
       String profile,

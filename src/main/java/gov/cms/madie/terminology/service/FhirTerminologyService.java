@@ -43,35 +43,25 @@ public class FhirTerminologyService {
   }
 
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
-      ValueSetsSearchCriteria searchCriteria, UmlsUser umlsUser) {
-    List<ValueSet> fetchedValuesSets = new ArrayList<>();
-    searchCriteria
-        .getValueSetParams()
-        .forEach(
+      ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
+    return valueSetsSearchCriteria.getValueSetParams().stream()
+        .map(
             vsParam -> {
-              var resource =
+              String resource =
                   fhirTerminologyServiceWebClient.getValueSetResource(
                       umlsUser.getApiKey(),
                       vsParam,
-                      searchCriteria.getProfile(),
-                      searchCriteria.getIncludeDraft(),
-                      searchCriteria.getManifestExpansion());
+                      valueSetsSearchCriteria.getProfile(),
+                      valueSetsSearchCriteria.getIncludeDraft(),
+                      valueSetsSearchCriteria.getManifestExpansion());
               IParser parser = fhirContext.newJsonParser();
               ValueSet ValueSetResource = parser.parseResource(ValueSet.class, resource);
-              fetchedValuesSets.add(ValueSetResource);
-            });
-    return convertToQdmValueSets(fetchedValuesSets);
-  }
-
-  private List<QdmValueSet> convertToQdmValueSets(List<ValueSet> fetchedValuesSets) {
-    return fetchedValuesSets.stream()
-        .map(
-            valueSet -> {
-              List<QdmValueSet.Concept> concepts = getValueSetConcepts(valueSet);
+              // Converting a ValueSet FHIR Resource into QDM Value Set DTO
+              List<QdmValueSet.Concept> concepts = getValueSetConcepts(ValueSetResource);
               return QdmValueSet.builder()
-                  .oid(valueSet.getIdPart())
-                  .displayName(valueSet.getName())
-                  .version(valueSet.getVersion())
+                  .oid(ValueSetResource.getIdPart())
+                  .displayName(ValueSetResource.getName())
+                  .version(ValueSetResource.getVersion())
                   .concepts(concepts)
                   .build();
             })
