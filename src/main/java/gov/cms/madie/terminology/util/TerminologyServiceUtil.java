@@ -4,7 +4,9 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import org.apache.commons.lang3.StringUtils;
@@ -73,8 +75,29 @@ public class TerminologyServiceUtil {
         + "/Info";
   }
 
+  public static Optional<CodeSystemEntry> getCodeSystemEntry(
+      List<CodeSystemEntry> codeSystemEntries, String cqlCodeSystemOid, String model) {
+    return codeSystemEntries.stream()
+        .filter(cse -> isCodeSystemMatch(cse, cqlCodeSystemOid, model))
+        .findFirst();
+  }
+
+  private static boolean isCodeSystemMatch(CodeSystemEntry cse, String oid, String model) {
+    if ("QDM".equals(model)) {
+      return cse.getOid().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
+    }
+    return cse.getUrl().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
+  }
+
   public static String sanitizeInput(String input) {
     return input.replaceAll("'", "");
+  }
+
+  public static String removeUrnOidSubString(String oid) {
+    if (StringUtils.isNotBlank(oid) && oid.startsWith("urn:oid:")) {
+      return oid.split("urn:oid:")[1];
+    }
+    return oid;
   }
 
   // Future stories will add ability to call new FHIR Terminology service

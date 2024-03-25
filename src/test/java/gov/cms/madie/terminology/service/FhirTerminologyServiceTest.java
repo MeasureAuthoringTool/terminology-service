@@ -1,6 +1,8 @@
 package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
+import com.okta.commons.lang.Collections;
+import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -31,7 +34,9 @@ class FhirTerminologyServiceTest {
 
   @Mock FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   @Mock FhirContext fhirContext;
+  @Mock MappingService mappingService;
   @InjectMocks FhirTerminologyService fhirTerminologyService;
+  List<CodeSystemEntry> codeSystemEntries;
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
@@ -110,6 +115,18 @@ class FhirTerminologyServiceTest {
     mockValueSetResourceWithNoCodes =
         FileUtils.readFileToString(
             Objects.requireNonNull(fileWithNoCodes), Charset.defaultCharset());
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2024");
+    version.setFhir("2024");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("Icd10CM")
+            .oid("urn:oid:2.16.840.1.113883.6.90")
+            .url("http://hl7.org/fhir/sid/icd-10-cm")
+            .versions(Collections.toList(version))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
   }
 
   @Test
@@ -148,6 +165,7 @@ class FhirTerminologyServiceTest {
             anyString(), any(), anyString(), anyString(), any()))
         .thenReturn(mockValueSetResourceWithCodes);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result =
         fhirTerminologyService.getValueSetsExpansionsForQdm(valueSetsSearchCriteria, umlsUser);
     assertEquals(1, result.size());
@@ -156,7 +174,9 @@ class FhirTerminologyServiceTest {
     assertEquals("AnkylosingSpondylitis", result.get(0).getDisplayName());
     assertEquals(10, result.get(0).getConcepts().size());
     assertEquals("M45.0", result.get(0).getConcepts().get(0).getCode());
+    assertEquals("2.16.840.1.113883.6.90", result.get(0).getConcepts().get(0).getCodeSystemOid());
     assertEquals("M45.1", result.get(0).getConcepts().get(1).getCode());
+    assertEquals("2.16.840.1.113883.6.90", result.get(0).getConcepts().get(1).getCodeSystemOid());
   }
 
   @Test
@@ -184,6 +204,7 @@ class FhirTerminologyServiceTest {
             anyString(),
             any(ManifestExpansion.class)))
         .thenReturn(mockValueSetResourceWithNoCodes);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result =
         fhirTerminologyService.getValueSetsExpansionsForQdm(valueSetsSearchCriteria, umlsUser);
     assertEquals(1, result.size());
