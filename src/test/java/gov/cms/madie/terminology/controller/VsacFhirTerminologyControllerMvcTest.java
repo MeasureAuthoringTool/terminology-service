@@ -140,7 +140,7 @@ class VsacFhirTerminologyControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/terminology/fhir/value-sets/expansion")
+                MockMvcRequestBuilders.put("/terminology/fhir/value-sets/expansion")
                     .with(user(TEST_USR))
                     .with(csrf())
                     .content(valueSetsSearchCriteria)
@@ -181,7 +181,7 @@ class VsacFhirTerminologyControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/terminology/fhir/value-sets/expansion")
+                MockMvcRequestBuilders.put("/terminology/fhir/value-sets/expansion")
                     .with(user(TEST_USR))
                     .with(csrf())
                     .content(valueSetsSearchCriteria)

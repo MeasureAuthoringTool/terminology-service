@@ -40,7 +40,7 @@ public class VsacFhirTerminologyController {
     throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
   }
 
-  @GetMapping("/value-sets/expansion")
+  @PutMapping("/value-sets/expansion")
   public ResponseEntity<List<QdmValueSet>> getValueSetsExpansions(
       Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     final String username = principal.getName();
