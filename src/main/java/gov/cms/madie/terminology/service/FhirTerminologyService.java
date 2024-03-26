@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.QdmValueSet;
@@ -108,4 +109,30 @@ public class FhirTerminologyService {
     log.info("No Expansion codes are found for the valueSet oid : [{}]", valueSet.getId());
     return List.of();
   }
+
+//  call individual
+  public List<ManifestExpansion> retrieveCodeSystemsPage(UmlsUser umlsUser){
+    IParser parser = fhirContext.newJsonParser();
+    String responseString = fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 100, umlsUser.getApiKey());
+    Bundle CodeSystemsBundle = parser.parseResource(Bundle.class, responseString);
+    var CodeSystemsOptions = new ArrayList<ManifestExpansion>();
+    CodeSystemsBundle
+            .getEntry()
+            .forEach(
+                    entry ->
+                            CodeSystemsOptions.add(
+                                    ManifestExpansion.builder()
+                                            .id(entry.getResource().getIdPart())
+                                            .fullUrl(entry.getFullUrl())
+                                            .build()));
+    return CodeSystemsOptions;
+  }
+
+  public List<ManifestExpansion> retrieveAllCodeSystems(UmlsUser umlsUser) {
+    //    starting at count 100, offset zero, we want to keep requesting information until we can't.
+      return retrieveCodeSystemsPage(umlsUser);
+//    String codeSystem = FhirTerminologyServiceWebClient.getCodeSystem(0, 0, umlsUser.getApiKey());
+//    return codeSystem;
+  }
+
 }

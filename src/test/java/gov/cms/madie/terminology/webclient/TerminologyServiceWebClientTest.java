@@ -46,7 +46,6 @@ public class TerminologyServiceWebClientTest {
       "/valueset?id={oid}&profile={profile}&includeDraft={includeDraft}";
   private static final String DEFAULT_PROFILE = "eCQM Update 2022-05-05";
   private static final String API_KEY = UUID.randomUUID().toString();
-
   @BeforeEach
   void setUp() {
     when(webClientBuilderMock.baseUrl(anyString())).thenReturn(webClientBuilderMock);

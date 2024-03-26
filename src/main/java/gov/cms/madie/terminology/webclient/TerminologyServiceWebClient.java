@@ -25,10 +25,10 @@ public class TerminologyServiceWebClient {
   private final String defaultProfile;
 
   public TerminologyServiceWebClient(
-      WebClient.Builder webClientBuilder,
-      @Value("${client.vsac_base_url}") String baseUrl,
-      @Value("${client.valueset_endpoint}") String valueSetEndpoint,
-      @Value("${client.default_profile}") String defaultProfile) {
+          WebClient.Builder webClientBuilder,
+          @Value("${client.vsac_base_url}") String baseUrl,
+          @Value("${client.valueset_endpoint}") String valueSetEndpoint,
+          @Value("${client.default_profile}") String defaultProfile) {
 
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
@@ -38,58 +38,58 @@ public class TerminologyServiceWebClient {
   }
 
   public RetrieveMultipleValueSetsResponse getValueSet(
-      String oid,
-      String apiKey,
-      String profile,
-      String includeDraft,
-      String release,
-      String version) {
+          String oid,
+          String apiKey,
+          String profile,
+          String includeDraft,
+          String release,
+          String version) {
     URI valuesetURI = getValueSetURI(oid, profile, includeDraft, release, version);
     log.debug("valuesetURI = " + valuesetURI.getQuery());
     Mono<RetrieveMultipleValueSetsResponse> responseMono =
-        terminologyClient
-            .get()
-            .uri(valuesetURI)
-            .headers(headers -> headers.setBasicAuth("apikey", apiKey))
-            .retrieve()
-            .onStatus(HttpStatusCode::is5xxServerError, ClientResponse::createException)
-            .onStatus(HttpStatusCode::is4xxClientError, ClientResponse::createException)
-            .bodyToMono(RetrieveMultipleValueSetsResponse.class);
+            terminologyClient
+                    .get()
+                    .uri(valuesetURI)
+                    .headers(headers -> headers.setBasicAuth("apikey", apiKey))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is5xxServerError, ClientResponse::createException)
+                    .onStatus(HttpStatusCode::is4xxClientError, ClientResponse::createException)
+                    .bodyToMono(RetrieveMultipleValueSetsResponse.class);
     // temp use of block until fixing 401 issue
     return responseMono.block();
   }
 
   protected URI getValueSetURI(
-      String oid, String profile, String includeDraft, String release, String version) {
+          String oid, String profile, String includeDraft, String release, String version) {
     profile = StringUtils.isBlank(profile) ? defaultProfile : profile;
     return TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
-        baseUrl, valueSetEndpoint, oid, profile, includeDraft, release, version);
+            baseUrl, valueSetEndpoint, oid, profile, includeDraft, release, version);
   }
 
   /**
    * @param codePath code path build to call VSAC services.
-   * @param apiKey user's UMLS ApiKey.
+   * @param apiKey   user's UMLS ApiKey.
    * @return the response from VSAC is the statusCode is either 200 or 400 Status Code: 200
-   *     indicates a valid code Status Code, 400 indicates either CodeSystem or CodeSystem version
-   *     or Code is not found.
+   * indicates a valid code Status Code, 400 indicates either CodeSystem or CodeSystem version
+   * or Code is not found.
    */
   public VsacCode getCode(String codePath, String apiKey) {
     URI codeUri = TerminologyServiceUtil.buildRetrieveCodeUri(baseUrl, codePath);
     log.debug("Retrieving vsacCode for codePath {}", codePath);
     return terminologyClient
-        .get()
-        .uri(codeUri)
-        .headers(headers -> headers.setBasicAuth("apikey", apiKey))
-        .exchangeToMono(
-            clientResponse -> {
-              if (clientResponse.statusCode().equals(HttpStatus.BAD_REQUEST)
-                  || clientResponse.statusCode().equals(HttpStatus.OK)) {
-                return clientResponse.bodyToMono(VsacCode.class);
-              } else {
-                log.debug("Received NON-OK response while retrieving codePath {}", codePath);
-                return clientResponse.createException().flatMap(Mono::error);
-              }
-            })
-        .block();
+            .get()
+            .uri(codeUri)
+            .headers(headers -> headers.setBasicAuth("apikey", apiKey))
+            .exchangeToMono(
+                    clientResponse -> {
+                      if (clientResponse.statusCode().equals(HttpStatus.BAD_REQUEST)
+                              || clientResponse.statusCode().equals(HttpStatus.OK)) {
+                        return clientResponse.bodyToMono(VsacCode.class);
+                      } else {
+                        log.debug("Received NON-OK response while retrieving codePath {}", codePath);
+                        return clientResponse.createException().flatMap(Mono::error);
+                      }
+                    })
+            .block();
   }
 }

@@ -21,6 +21,7 @@ class FhirTerminologyServiceWebClientTest {
   private static final String MOCK_RESPONSE_STRING = "test-response";
 
   private static final String MOCK_MANIFEST_URN = "/manifestUrn";
+  private static final String MOCK_CODE_SYSTEM_URN = "/codeSystemUrn";
   private static final String MOCK_API_KEY = "test-api-key";
   private static final String DEFAULT_PROFILE = "Most Recent Code System Versions in VSAC";
   public static MockWebServer mockBackEnd;
