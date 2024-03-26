@@ -135,7 +135,7 @@ public class VsacController {
             : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 
-  @PostMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<ManifestExpansion>>  retrieveAndUpdateCodeSystems(Principal principal) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);

@@ -36,6 +36,7 @@ public class FhirTerminologyServiceWebClient {
         WebClient.builder()
             .baseUrl(fhirTerminologyServiceBaseUrl)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .codecs(clientCodecConfigurer -> clientCodecConfigurer.defaultCodecs().maxInMemorySize(-1))
             .build();
     this.manifestPath = manifestUrn;
     this.codeSystemPath = codeSystemUrn;
@@ -65,7 +66,7 @@ public class FhirTerminologyServiceWebClient {
         log.debug("Retrieving codeSystems at {}, offset {}, count {}", codeSystemPath, offset, count);
         return fhirTerminologyWebClient
                 .get()
-                .uri(codeUri)
+                .uri(codeUri.toString())
                 .headers(headers -> headers.setBasicAuth("apikey", apiKey))
                 .exchangeToMono(
                         clientResponse -> {

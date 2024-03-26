@@ -129,10 +129,9 @@ public class FhirTerminologyService {
   }
 
   public List<ManifestExpansion> retrieveAllCodeSystems(UmlsUser umlsUser) {
-    //    starting at count 100, offset zero, we want to keep requesting information until we can't.
+
       return retrieveCodeSystemsPage(umlsUser);
-//    String codeSystem = FhirTerminologyServiceWebClient.getCodeSystem(0, 0, umlsUser.getApiKey());
-//    return codeSystem;
+    // save
   }
 
 }

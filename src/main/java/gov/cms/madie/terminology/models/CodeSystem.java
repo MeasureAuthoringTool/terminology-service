@@ -17,7 +17,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document
 
 public class CodeSystem {
-    @Id private String id;
+    @Id private String id; //version ID
     private String name;
     private String version;
     private Identifier identifier; // identifier[0] of identifier List
