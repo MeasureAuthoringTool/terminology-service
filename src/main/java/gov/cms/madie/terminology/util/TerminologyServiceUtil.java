@@ -2,8 +2,16 @@ package gov.cms.madie.terminology.util;
 
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import org.springframework.util.StringUtils;
+import java.util.Optional;
+
+import gov.cms.madie.models.mapping.CodeSystemEntry;
+import gov.cms.madie.models.measure.ManifestExpansion;
+import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,21 +30,21 @@ public class TerminologyServiceUtil {
     Map<String, String> params = new HashMap<>();
     String url = baseUrl + valuesetEndpoint;
     params.put("oid", oid);
-    if (StringUtils.hasLength(profile)) {
+    if (StringUtils.isNotBlank(profile)) {
       params.put("profile", profile);
     } else {
       params.put("profile", "Most Recent Code System Versions in VSAC");
     }
-    if (StringUtils.hasLength(includeDraft)) {
+    if (StringUtils.isNotBlank(includeDraft)) {
       params.put("includeDraft", includeDraft);
     } else {
       params.put("includeDraft", "yes");
     }
-    if (StringUtils.hasLength(release)) {
+    if (StringUtils.isNotBlank(release)) {
       params.put("release", release);
       url += "&release={release}";
     }
-    if (StringUtils.hasLength(version)) {
+    if (StringUtils.isNotBlank(version)) {
       params.put("version", version);
       url += "&version={version}";
     }
@@ -67,7 +75,46 @@ public class TerminologyServiceUtil {
         + "/Info";
   }
 
+  public static Optional<CodeSystemEntry> getCodeSystemEntry(
+      List<CodeSystemEntry> codeSystemEntries, String cqlCodeSystemOid, String model) {
+    return codeSystemEntries.stream()
+        .filter(cse -> isCodeSystemMatch(cse, cqlCodeSystemOid, model))
+        .findFirst();
+  }
+
+  private static boolean isCodeSystemMatch(CodeSystemEntry cse, String oid, String model) {
+    if ("QDM".equals(model)) {
+      return cse.getOid().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
+    }
+    return cse.getUrl().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
+  }
+
   public static String sanitizeInput(String input) {
     return input.replaceAll("'", "");
+  }
+
+  public static String removeUrnOidSubString(String oid) {
+    if (StringUtils.isNotBlank(oid) && oid.startsWith("urn:oid:")) {
+      return oid.split("urn:oid:")[1];
+    }
+    return oid;
+  }
+
+  // Future stories will add ability to call new FHIR Terminology service
+  // with additional parameters
+  public static URI buildValueSetResourceUri(
+      ValueSetsSearchCriteria.ValueSetParams valueSetParams,
+      String profile,
+      String includeDraft,
+      ManifestExpansion manifestExpansion) {
+    MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+    String expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
+    if (StringUtils.isNotBlank(valueSetParams.getVersion())) {
+      params.put("valueSetVersion", List.of(valueSetParams.getVersion()));
+    } else if (manifestExpansion != null
+        && StringUtils.isNotBlank(manifestExpansion.getFullUrl())) {
+      params.put("manifest", List.of(manifestExpansion.getFullUrl()));
+    }
+    return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
   }
 }

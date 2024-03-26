@@ -109,7 +109,7 @@ public class VsacService {
         String cqlCodeSystemOid = cqlCode.getCodeSystem().getOid();
         if (!StringUtils.isBlank(cqlCodeSystemOid)) {
           Optional<CodeSystemEntry> codeSystemEntry =
-              getCodeSystemEntry(codeSystemEntries, cqlCodeSystemOid, model);
+              TerminologyServiceUtil.getCodeSystemEntry(codeSystemEntries, cqlCodeSystemOid, model);
           if (codeSystemEntry.isPresent()) {
             // if codeSystemEntry is available in mapping json, but listed as NOT IN VSAC, then it
             // is a valid FHIR code system.
@@ -235,20 +235,6 @@ public class VsacService {
     } else {
       cqlCode.setValid(false);
     }
-  }
-
-  private Optional<CodeSystemEntry> getCodeSystemEntry(
-      List<CodeSystemEntry> codeSystemEntries, String cqlCodeSystemOid, String model) {
-    return codeSystemEntries.stream()
-        .filter(cse -> isCodeSystemMatch(cse, cqlCodeSystemOid, model))
-        .findFirst();
-  }
-
-  private boolean isCodeSystemMatch(CodeSystemEntry cse, String oid, String model) {
-    if ("QDM".equals(model)) {
-      return cse.getOid().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
-    }
-    return cse.getUrl().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
   }
 
   public UmlsUser saveUmlsUser(String harpId, String apiKey) {

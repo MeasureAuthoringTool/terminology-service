@@ -1,0 +1,59 @@
+{
+  "resourceType": "ValueSet",
+  "id": "2.16.840.1.113883.3.464.1003.113.11.1090",
+  "meta": {
+    "versionId": "5",
+    "lastUpdated": "2023-12-28T22:01:32.000-05:00",
+    "profile": [
+      "http://hl7.org/fhir/StructureDefinition/shareablevalueset",
+      "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/computable-valueset-cqfm",
+      "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/executable-valueset-cqfm",
+      "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-valueset-cqfm"
+    ]
+  },
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/valueset-warning",
+      "valueMarkdown": "This value set contains a point-in-time expansion enumerating the codes that meet the value set intent. As new versions of the code systems used by the value set are released, the contents of this expansion will need to be updated to incorporate newly defined codes that meet the value set intent. Before, and periodically during production use, the value set expansion contents SHOULD be updated."
+    },
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/valueset-effectiveDate",
+      "valueDate": "2018-03-10"
+    }
+  ],
+  "url": "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.113.11.1090",
+  "identifier": [
+    {
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:2.16.840.1.113883.3.464.1003.113.11.1090"
+    }
+  ],
+  "version": "20180310",
+  "name": "AnkylosingSpondylitis",
+  "title": "Ankylosing Spondylitis",
+  "status": "active",
+  "experimental": false,
+  "date": "2018-03-10T01:00:08-05:00",
+  "publisher": "NCQA PHEMUR",
+  "expansion": {
+    "identifier": "urn:uuid:be8f2916-47bd-4aac-9d76-32145a67bbae",
+    "timestamp": "2024-03-21T14:53:46-04:00",
+    "total": 0,
+    "offset": 0,
+    "parameter": [
+      {
+        "name": "count",
+        "valueInteger": 1000
+      },
+      {
+        "name": "offset",
+        "valueInteger": 0
+      },
+      {
+        "name": "manifest",
+        "valueString": "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05"
+      }
+    ],
+    "contains": []
+  }
+}
