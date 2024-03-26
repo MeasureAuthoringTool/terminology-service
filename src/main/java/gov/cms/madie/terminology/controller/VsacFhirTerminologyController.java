@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping(path = "/terminology/fhir")
+@RequestMapping(path = "/terminology")
 @Slf4j
 @RequiredArgsConstructor
 public class VsacFhirTerminologyController {
@@ -40,7 +40,7 @@ public class VsacFhirTerminologyController {
     throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
   }
 
-  @PutMapping("/value-sets/expansion")
+  @PutMapping("/value-sets/expansion/qdm")
   public ResponseEntity<List<QdmValueSet>> getValueSetsExpansions(
       Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     final String username = principal.getName();

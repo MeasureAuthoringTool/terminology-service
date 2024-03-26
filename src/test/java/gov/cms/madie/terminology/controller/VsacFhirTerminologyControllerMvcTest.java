@@ -80,7 +80,7 @@ class VsacFhirTerminologyControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/terminology/fhir/manifest-list")
+                MockMvcRequestBuilders.get("/terminology/manifest-list")
                     .with(user(TEST_USR))
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -103,7 +103,7 @@ class VsacFhirTerminologyControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/terminology/fhir/manifest-list")
+                MockMvcRequestBuilders.get("/terminology/manifest-list")
                     .with(user(TEST_USR))
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -140,7 +140,7 @@ class VsacFhirTerminologyControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.put("/terminology/fhir/value-sets/expansion")
+                MockMvcRequestBuilders.put("/terminology/value-sets/expansion/qdm")
                     .with(user(TEST_USR))
                     .with(csrf())
                     .content(valueSetsSearchCriteria)
@@ -181,7 +181,7 @@ class VsacFhirTerminologyControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.put("/terminology/fhir/value-sets/expansion")
+                MockMvcRequestBuilders.put("/terminology/value-sets/expansion/qdm")
                     .with(user(TEST_USR))
                     .with(csrf())
                     .content(valueSetsSearchCriteria)
