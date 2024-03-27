@@ -29,14 +29,14 @@ public class FhirTerminologyServiceWebClient {
   public FhirTerminologyServiceWebClient(
       @Value("${client.fhir-terminology-service.base-url}") String fhirTerminologyServiceBaseUrl,
       @Value("${client.fhir-terminology-service.manifests-urn}") String manifestUrn,
-      @Value("${client.fhir-terminology-service.code-system-urn}") String codeSystemUrn) {
-      @Value("${client.fhir-terminology-service.manifests-urn}") String manifestUrn,
+      @Value("${client.fhir-terminology-service.code-system-urn}") String codeSystemUrn,
       @Value("${client.default_profile}") String defaultProfile) {
     fhirTerminologyWebClient =
         WebClient.builder()
             .baseUrl(fhirTerminologyServiceBaseUrl)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .codecs(clientCodecConfigurer -> clientCodecConfigurer.defaultCodecs().maxInMemorySize(-1))
+            .codecs(
+                clientCodecConfigurer -> clientCodecConfigurer.defaultCodecs().maxInMemorySize(-1))
             .build();
     this.manifestPath = manifestUrn;
     this.codeSystemPath = codeSystemUrn;
@@ -60,26 +60,27 @@ public class FhirTerminologyServiceWebClient {
             })
         .block();
   }
-    public String getCodeSystemsPage(Integer offset, Integer count, String apiKey) {
-        //  https://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=100
-        URI codeUri = TerminologyServiceUtil.buildRetrieveCodeSystemsUri(codeSystemPath, offset, count);
-        log.debug("Retrieving codeSystems at {}, offset {}, count {}", codeSystemPath, offset, count);
-        return fhirTerminologyWebClient
-                .get()
-                .uri(codeUri.toString())
-                .headers(headers -> headers.setBasicAuth("apikey", apiKey))
-                .exchangeToMono(
-                        clientResponse -> {
-                            if (clientResponse.statusCode().equals(HttpStatus.BAD_REQUEST)
-                                    || clientResponse.statusCode().equals(HttpStatus.OK)) {
-                                return clientResponse.bodyToMono(String.class);
-                            } else {
-                                log.debug("Received NON-OK response while retrieving codePath");
-                                return clientResponse.createException().flatMap(Mono::error);
-                            }
-                        })
-                .block();
-    }
+
+  public String getCodeSystemsPage(Integer offset, Integer count, String apiKey) {
+    //  https://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=100
+    URI codeUri = TerminologyServiceUtil.buildRetrieveCodeSystemsUri(codeSystemPath, offset, count);
+    log.debug("Retrieving codeSystems at {}, offset {}, count {}", codeSystemPath, offset, count);
+    return fhirTerminologyWebClient
+        .get()
+        .uri(codeUri.toString())
+        .headers(headers -> headers.setBasicAuth("apikey", apiKey))
+        .exchangeToMono(
+            clientResponse -> {
+              if (clientResponse.statusCode().equals(HttpStatus.BAD_REQUEST)
+                  || clientResponse.statusCode().equals(HttpStatus.OK)) {
+                return clientResponse.bodyToMono(String.class);
+              } else {
+                log.debug("Received NON-OK response while retrieving codePath");
+                return clientResponse.createException().flatMap(Mono::error);
+              }
+            })
+        .block();
+  }
 
   public String getValueSetResource(
       String apiKey,
@@ -108,4 +109,3 @@ public class FhirTerminologyServiceWebClient {
         .block();
   }
 }
-

@@ -15,12 +15,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @Document
-
 public class CodeSystem {
-    @Id private String id; //version ID
-    private String name;
-    private String version;
-    private Identifier identifier; // identifier[0] of identifier List
-    private Meta meta;
-    private Instant lastUpdated;
+  @Id private String versionId; // meta().versionId
+  private String name;
+  private String version;
+  private String value; // identifier[0].value oid of identifier List
+  private Instant lastUpdated; // when we got it
 }

@@ -64,12 +64,15 @@ public class TerminologyServiceUtil {
   }
 
   public static URI buildRetrieveCodeSystemsUri(String baseUrl, Integer offset, Integer count) {
-  //    http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=100&_count=100
+    //    http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=100&_count=100
     return UriComponentsBuilder.fromUriString(baseUrl)
-            .queryParam("_offset", Integer.toString(offset))
-            .queryParam("_count", Integer.toString(count))
-            .buildAndExpand().encode().toUri();
+        .queryParam("_offset", Integer.toString(offset))
+        .queryParam("_count", Integer.toString(count))
+        .buildAndExpand()
+        .encode()
+        .toUri();
   }
+
   public static String buildCodePath(
       String codeSystemName, String codeSystemVersion, String codeId) {
     // "/CodeSystem/LOINC22/Version/2.67/Code/21112-8/Info";

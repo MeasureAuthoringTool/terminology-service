@@ -41,7 +41,8 @@ class FhirTerminologyServiceWebClientTest {
     testValueSetParams = ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build();
     String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
     fhirTerminologyServiceWebClient =
-        new FhirTerminologyServiceWebClient(baseUrl, MOCK_MANIFEST_URN, DEFAULT_PROFILE);
+        new FhirTerminologyServiceWebClient(
+            baseUrl, MOCK_MANIFEST_URN, MOCK_CODE_SYSTEM_URN, DEFAULT_PROFILE);
   }
 
   @AfterAll

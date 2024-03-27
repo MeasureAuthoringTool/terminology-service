@@ -38,19 +38,19 @@ public class VsacController {
 
   @GetMapping(path = "/valueset", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getValueSet(
-          Principal principal,
-          @RequestParam String oid,
-          @RequestParam(required = false, name = "profile") String profile,
-          @RequestParam(required = false, name = "includeDraft") String includeDraft,
-          @RequestParam(required = false, name = "release") String release,
-          @RequestParam(required = false, name = "version") String version) {
+      Principal principal,
+      @RequestParam String oid,
+      @RequestParam(required = false, name = "profile") String profile,
+      @RequestParam(required = false, name = "includeDraft") String includeDraft,
+      @RequestParam(required = false, name = "release") String release,
+      @RequestParam(required = false, name = "version") String version) {
     log.debug("Entering: getValueSet()");
 
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent()) {
       RetrieveMultipleValueSetsResponse valuesetResponse =
-              vsacService.getValueSet(oid, umlsUser.get(), profile, includeDraft, release, version);
+          vsacService.getValueSet(oid, umlsUser.get(), profile, includeDraft, release, version);
 
       ValueSet fhirValueSet = vsacService.convertToFHIRValueSet(valuesetResponse);
       log.debug("valueset id = " + fhirValueSet.getId());
@@ -67,7 +67,7 @@ public class VsacController {
 
   @PutMapping(path = "/value-sets/searches", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> searchValueSets(
-          Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
+      Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     log.debug("VsacController::getValueSets");
 
     final String username = principal.getName();
@@ -75,11 +75,11 @@ public class VsacController {
     if (umlsUser.isPresent()) {
 
       List<RetrieveMultipleValueSetsResponse> vsacValueSets =
-              vsacService.getValueSets(searchCriteria, umlsUser.get());
+          vsacService.getValueSets(searchCriteria, umlsUser.get());
 
       List<ValueSet> fhirValueSets = vsacService.convertToFHIRValueSets(vsacValueSets);
       String serializedValueSets =
-              fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));
+          fhirValueSets.stream().map(this::serializeFhirValueset).collect(Collectors.joining(", "));
 
       return ResponseEntity.ok().body("[" + serializedValueSets + "]");
     }
@@ -88,14 +88,14 @@ public class VsacController {
 
   @PutMapping("/qdm/value-sets/searches")
   public ResponseEntity<List<QdmValueSet>> getQdmValueSets(
-          Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
+      Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     log.debug("VsacController::getQdmValueSets");
 
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent()) {
       List<QdmValueSet> qdmValueSets =
-              vsacService.getValueSetsInQdmFormat(searchCriteria, umlsUser.get());
+          vsacService.getValueSetsInQdmFormat(searchCriteria, umlsUser.get());
 
       return ResponseEntity.ok().body(qdmValueSets);
     }
@@ -104,9 +104,9 @@ public class VsacController {
 
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CqlCode>> validateCodes(
-          Principal principal,
-          @RequestBody List<CqlCode> cqlCodes,
-          @RequestParam(required = false, defaultValue = "FHIR") String model) {
+      Principal principal,
+      @RequestBody List<CqlCode> cqlCodes,
+      @RequestParam(required = false, defaultValue = "FHIR") String model) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
     if (umlsUser.isPresent() && umlsUser.get().getApiKey() != null) {
@@ -131,23 +131,7 @@ public class VsacController {
   @GetMapping("/umls-credentials/status")
   public ResponseEntity<Boolean> checkUserLogin(Principal principal) {
     return vsacService.validateUmlsInformation(principal.getName())
-            ? ResponseEntity.ok().body(Boolean.TRUE)
-            : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-  }
-
-  @GetMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<ManifestExpansion>>  retrieveAndUpdateCodeSystems(Principal principal) {
-    final String username = principal.getName();
-    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
-
-    if (umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey())) {
-      return ResponseEntity.ok().body(fhirTerminologyService.retrieveAllCodeSystems(umlsUser.get()));
-    }
-    else{
-      log.error(
-              "Unable to Retrieve List of code systems, "
-                      + "UMLS Authentication Key Not found for user : [{}}]",
-              username);
-      throw new VsacUnauthorizedException("Please login to UMLS before proceeding");    }
+        ? ResponseEntity.ok().body(Boolean.TRUE)
+        : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }
 }

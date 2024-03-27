@@ -4,12 +4,14 @@ import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
+import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,5 +60,22 @@ public class VsacFhirTerminologyController {
             + "UMLS Authentication Key Not found for user : [{}}]",
         username);
     throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
+  }
+
+  @GetMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<CodeSystem>> retrieveAndUpdateCodeSystems(Principal principal) {
+    final String username = principal.getName();
+    Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
+
+    if (umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey())) {
+      return ResponseEntity.ok()
+          .body(fhirTerminologyService.retrieveAllCodeSystems(umlsUser.get()));
+    } else {
+      log.error(
+          "Unable to Retrieve List of code systems, "
+              + "UMLS Authentication Key Not found for user : [{}}]",
+          username);
+      throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
+    }
   }
 }
