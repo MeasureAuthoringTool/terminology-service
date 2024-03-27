@@ -25,7 +25,7 @@ client:
   fhir-terminology-service:
     base-url: ${FHIR_TERMINOLOGY_BASE_URL:https://uat-cts.nlm.nih.gov/fhir}
     manifests-urn: /Library
-    code-system-urn: /res/codeSystem
+    code-system-urn: /res/CodeSystem
 
 spring:
   session:
