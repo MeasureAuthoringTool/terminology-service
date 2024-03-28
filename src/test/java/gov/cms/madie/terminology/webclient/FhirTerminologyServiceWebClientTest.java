@@ -149,4 +149,35 @@ class FhirTerminologyServiceWebClientTest {
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertEquals("/ValueSet/test-vs-id/$expand", recordedRequest.getPath());
   }
+
+  @Test
+  void getCodeSystemsPageSuccessfully_when_ValueSetVersionIsProvided()
+          throws InterruptedException {
+    mockBackEnd.enqueue(
+            new MockResponse()
+                    .setResponseCode(200)
+                    .setBody(MOCK_RESPONSE_STRING)
+                    .addHeader("Content-Type", "application/fhir+json"));
+    testValueSetParams.setVersion("test-value-set-version-2024");
+    String actualResponse =
+            fhirTerminologyServiceWebClient.getCodeSystemsPage(
+                    0, 50, MOCK_API_KEY);
+    assertNotNull(actualResponse);
+    assertEquals(MOCK_RESPONSE_STRING, actualResponse);
+    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
+    assertEquals(
+            "/codeSystemUrn?_offset=0&_count=50",
+            recordedRequest.getPath());
+  }
+  @Test
+  void getCodeSystemsPage_ReturnsException() throws InterruptedException {
+    mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
+    assertThrows(
+            WebClientResponseException.class,
+            () ->
+                    fhirTerminologyServiceWebClient.getCodeSystemsPage(
+                            0, 50, MOCK_API_KEY));
+    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
+    assertEquals("/codeSystemUrn?_offset=0&_count=50", recordedRequest.getPath());
+  }
 }

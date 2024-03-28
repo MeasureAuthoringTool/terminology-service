@@ -114,7 +114,7 @@ public class FhirTerminologyService {
   }
 
   // one to call only, one to mutate and build
-  public Bundle retrieveCodeSystemsPage(UmlsUser umlsUser, Integer offset, Integer count) {
+  private Bundle retrieveCodeSystemsPage(UmlsUser umlsUser, Integer offset, Integer count) {
     IParser parser = fhirContext.newJsonParser();
     String responseString =
         fhirTerminologyServiceWebClient.getCodeSystemsPage(offset, count, umlsUser.getApiKey());
@@ -131,10 +131,11 @@ public class FhirTerminologyService {
               CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
 
               existingCodeSystem.setTitle(codeSystem.getTitle());
+              existingCodeSystem.setName(codeSystem.getName());
               existingCodeSystem.setVersion(codeSystem.getVersion());
               existingCodeSystem.setValue(codeSystem.getValue());
               existingCodeSystem.setLastUpdated(Instant.now());
-
+              existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
               codeSystemRepository.save(existingCodeSystem);
               log.info("CodeSystem updated: {}", existingCodeSystem);
           } else {
@@ -158,10 +159,12 @@ public class FhirTerminologyService {
                   CodeSystem.builder()
                           .id(codeSystem.getTitle() + codeSystem.getVersion())
                           .title(codeSystem.getTitle())
+                          .name(codeSystem.getName())
                           .version(codeSystem.getVersion())
                           .versionId(codeSystem.getMeta().getVersionId())
                           .value(codeSystemValue)
                           .lastUpdated(Instant.now())
+                          .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
                           .build());
       });
       allCodeSystems.addAll(codeSystemsPage); // update big list
