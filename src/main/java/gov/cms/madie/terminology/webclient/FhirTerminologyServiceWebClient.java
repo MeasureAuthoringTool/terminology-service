@@ -3,7 +3,6 @@ package gov.cms.madie.terminology.webclient;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
-import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
