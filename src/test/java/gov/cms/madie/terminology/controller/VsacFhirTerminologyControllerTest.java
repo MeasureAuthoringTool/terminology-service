@@ -4,6 +4,7 @@ import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
+import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -105,6 +107,31 @@ class VsacFhirTerminologyControllerTest {
   }
 
   @Test
+  void retrieveAndUpdateCodeSystemsSuccessfully() {
+    List<CodeSystem> mockCodeSystemsPage = new ArrayList<>();
+    mockCodeSystemsPage.add(
+            CodeSystem.builder()
+                    .id("titleversion")
+                    .title("title")
+                    .name("name")
+                    .version("version")
+                    .versionId("vid")
+                    .value("urlval")
+                    .lastUpdated(Instant.now())
+                    .build());
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+
+    when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(mockCodeSystemsPage);
+
+    ResponseEntity<List<CodeSystem>> response =
+            vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal);
+    assertEquals(response.getStatusCode(), HttpStatus.OK);
+    assertEquals(response.getBody(), mockCodeSystemsPage);
+  }
+
+  @Test
   void testUnAuthorizedUmlsUserWhileFetchingValueSetsExpansions() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
@@ -113,5 +140,15 @@ class VsacFhirTerminologyControllerTest {
     assertThrows(
         VsacUnauthorizedException.class,
         () -> vsacFhirTerminologyController.getManifests(principal));
+  }
+  @Test
+  void testUnAuthorizedUmlsUserWhileretrievingAndUpdatingCodeSystems() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString()))
+            .thenReturn(Optional.ofNullable(UmlsUser.builder().build()));
+    assertThrows(
+            VsacUnauthorizedException.class,
+            () -> vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal));
   }
 }
