@@ -124,13 +124,17 @@ public class FhirTerminologyService {
 
   private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList){
       for (CodeSystem codeSystem : codeSystemList) {
-          Optional<CodeSystem> existingCodeSystemOptional = codeSystemRepository.findByVersionId(codeSystem.getVersionId());
+          var id = codeSystem.getTitle() + codeSystem.getVersion();
+          Optional<CodeSystem> existingCodeSystemOptional = codeSystemRepository.findById(id);
           if (existingCodeSystemOptional.isPresent()) {
               // Update existing CodeSystem
               CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
-              existingCodeSystem.setName(codeSystem.getName());
+
+              existingCodeSystem.setTitle(codeSystem.getTitle());
+              existingCodeSystem.setVersion(codeSystem.getVersion());
               existingCodeSystem.setValue(codeSystem.getValue());
               existingCodeSystem.setLastUpdated(Instant.now());
+
               codeSystemRepository.save(existingCodeSystem);
               log.info("CodeSystem updated: {}", existingCodeSystem);
           } else {
@@ -152,9 +156,10 @@ public class FhirTerminologyService {
           }
               codeSystemsPage.add(
                   CodeSystem.builder()
-                          .versionId(codeSystem.getMeta().getVersionId())
+                          .id(codeSystem.getTitle() + codeSystem.getVersion())
+                          .title(codeSystem.getTitle())
                           .version(codeSystem.getVersion())
-                          .name(codeSystem.getName())
+                          .versionId(codeSystem.getMeta().getVersionId())
                           .value(codeSystemValue)
                           .lastUpdated(Instant.now())
                           .build());

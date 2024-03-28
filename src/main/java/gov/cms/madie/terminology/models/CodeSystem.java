@@ -16,9 +16,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @NoArgsConstructor
 @Document
 public class CodeSystem {
-  @Id private String versionId; // meta().versionId
-  private String name;
+  @Id String id; // title + version (both required fields)
+  private String title;
   private String version;
+  private String versionId;
   private String value; // identifier[0].value oid of identifier List
-  private Instant lastUpdated; // when we got it
+  private Instant lastUpdated; // when queried
 }

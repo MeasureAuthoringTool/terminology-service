@@ -5,6 +5,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface CodeSystemRepository extends MongoRepository<CodeSystem, String> {
-    Optional<CodeSystem> findByVersionId(String versionId);
+    Optional<CodeSystem> findById(String id);
 
 }
