@@ -21,6 +21,7 @@ class FhirTerminologyServiceWebClientTest {
   private static final String MOCK_RESPONSE_STRING = "test-response";
 
   private static final String MOCK_MANIFEST_URN = "/manifestUrn";
+  private static final String MOCK_CODE_SYSTEM_URN = "/codeSystemUrn";
   private static final String MOCK_API_KEY = "test-api-key";
   private static final String DEFAULT_PROFILE = "Most Recent Code System Versions in VSAC";
   public static MockWebServer mockBackEnd;
@@ -40,7 +41,8 @@ class FhirTerminologyServiceWebClientTest {
     testValueSetParams = ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build();
     String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
     fhirTerminologyServiceWebClient =
-        new FhirTerminologyServiceWebClient(baseUrl, MOCK_MANIFEST_URN, DEFAULT_PROFILE);
+        new FhirTerminologyServiceWebClient(
+            baseUrl, MOCK_MANIFEST_URN, MOCK_CODE_SYSTEM_URN, DEFAULT_PROFILE);
   }
 
   @AfterAll
@@ -146,5 +148,36 @@ class FhirTerminologyServiceWebClientTest {
                 MOCK_API_KEY, testValueSetParams, null, null, new ManifestExpansion()));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertEquals("/ValueSet/test-vs-id/$expand", recordedRequest.getPath());
+  }
+
+  @Test
+  void getCodeSystemsPageSuccessfully_when_ValueSetVersionIsProvided()
+          throws InterruptedException {
+    mockBackEnd.enqueue(
+            new MockResponse()
+                    .setResponseCode(200)
+                    .setBody(MOCK_RESPONSE_STRING)
+                    .addHeader("Content-Type", "application/fhir+json"));
+    testValueSetParams.setVersion("test-value-set-version-2024");
+    String actualResponse =
+            fhirTerminologyServiceWebClient.getCodeSystemsPage(
+                    0, 50, MOCK_API_KEY);
+    assertNotNull(actualResponse);
+    assertEquals(MOCK_RESPONSE_STRING, actualResponse);
+    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
+    assertEquals(
+            "/codeSystemUrn?_offset=0&_count=50",
+            recordedRequest.getPath());
+  }
+  @Test
+  void getCodeSystemsPage_ReturnsException() throws InterruptedException {
+    mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
+    assertThrows(
+            WebClientResponseException.class,
+            () ->
+                    fhirTerminologyServiceWebClient.getCodeSystemsPage(
+                            0, 50, MOCK_API_KEY));
+    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
+    assertEquals("/codeSystemUrn?_offset=0&_count=50", recordedRequest.getPath());
   }
 }

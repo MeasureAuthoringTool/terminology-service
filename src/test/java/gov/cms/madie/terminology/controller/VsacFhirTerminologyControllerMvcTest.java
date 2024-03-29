@@ -1,8 +1,10 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
+import gov.cms.madie.models.measure.Measure;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
@@ -23,12 +25,14 @@ import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(VsacFhirTerminologyController.class)
@@ -48,6 +52,8 @@ class VsacFhirTerminologyControllerMvcTest {
   private final List<QdmValueSet> mockQdmValueSets = new ArrayList<>();
   private static final String TEST_USER = "test.user";
   private static final String TEST_API_KEY = "te$tKey";
+  private static final String ADMIN_TEST_API_KEY_HEADER = "api-key";
+  private static final String ADMIN_TEST_API_KEY_HEADER_VALUE = "0a51991c";
 
   @BeforeEach
   public void setup() {
@@ -189,5 +195,36 @@ class VsacFhirTerminologyControllerMvcTest {
             .andExpect(status().isUnauthorized())
             .andReturn();
     assertThat(result.getResponse().getStatus(), is(equalTo(401)));
+  }
+  @Test
+  public void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
+    MvcResult result =
+            mockMvc
+            .perform(
+                    MockMvcRequestBuilders.get("/terminology/update-code-systems")
+                            .with(csrf())
+                            .with(user(TEST_USR))
+                            .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
+                            .header("Authorization", "test-okta"))
+            .andExpect(status().isUnauthorized())
+            .andReturn();
+    assertThat(result.getResponse().getStatus(), is(equalTo(401)));
+  }
+  @Test
+  public void testRetrieveAndUpdateCodeSystemsUnauthorized() throws Exception {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    mockMvc
+            .perform(
+                    MockMvcRequestBuilders.get("/terminology/update-code-systems")
+                            .with(csrf())
+                            .with(user(TEST_USR))
+                            .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
+                            .header("Authorization", "test-okta"))
+            .andExpect(status().isOk());
   }
 }
