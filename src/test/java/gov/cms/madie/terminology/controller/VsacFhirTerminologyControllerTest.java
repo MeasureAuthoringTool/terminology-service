@@ -120,7 +120,7 @@ class VsacFhirTerminologyControllerTest {
                     .name("name")
                     .version("version")
                     .versionId("vid")
-                    .value("urlval")
+                    .oid("urlval")
                     .lastUpdated(Instant.now())
                     .build());
     Principal principal = mock(Principal.class);

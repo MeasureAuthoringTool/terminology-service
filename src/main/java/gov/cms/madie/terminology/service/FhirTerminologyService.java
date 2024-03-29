@@ -32,6 +32,7 @@ public class FhirTerminologyService {
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   private final MappingService mappingService;
   private final CodeSystemRepository codeSystemRepository;
+
   @Cacheable("manifest-list")
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
     IParser parser = fhirContext.newJsonParser();
@@ -113,74 +114,7 @@ public class FhirTerminologyService {
     return List.of();
   }
 
-  // one to call only, one to mutate and build
-  private Bundle retrieveCodeSystemsPage(UmlsUser umlsUser, Integer offset, Integer count) {
-    IParser parser = fhirContext.newJsonParser();
-    String responseString =
-        fhirTerminologyServiceWebClient.getCodeSystemsPage(offset, count, umlsUser.getApiKey());
-      return parser.parseResource(
-            Bundle.class, responseString);
-  }
 
-  private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList){
-      for (CodeSystem codeSystem : codeSystemList) {
-          var id = codeSystem.getTitle() + codeSystem.getVersion();
-          Optional<CodeSystem> existingCodeSystemOptional = codeSystemRepository.findById(id);
-          if (existingCodeSystemOptional.isPresent()) {
-              // Update existing CodeSystem
-              CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
-
-              existingCodeSystem.setTitle(codeSystem.getTitle());
-              existingCodeSystem.setName(codeSystem.getName());
-              existingCodeSystem.setVersion(codeSystem.getVersion());
-              existingCodeSystem.setValue(codeSystem.getValue());
-              existingCodeSystem.setLastUpdated(Instant.now());
-              existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
-              codeSystemRepository.save(existingCodeSystem);
-              log.info("CodeSystem updated: {}", existingCodeSystem);
-          } else {
-              // Insert new CodeSystem
-              codeSystemRepository.save(codeSystem);
-              log.info("New CodeSystem inserted: {}", codeSystem);
-          }
-      }
-  }
-  private void recursiveRetrieveCodeSystems(UmlsUser umlsUser, Integer offset, Integer count, List<CodeSystem> allCodeSystems) {
-      log.info("requesting page offset: {} count: {}", offset, count);
-      Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, offset, count);
-      List<CodeSystem> codeSystemsPage = new ArrayList<>(); // build small list
-      codeSystemBundle.getEntry().forEach(entry -> {
-          var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
-          String codeSystemValue = "";
-          if (!codeSystem.getIdentifier().isEmpty()) {
-              codeSystemValue = codeSystem.getIdentifier().get(0).getValue();
-          }
-              codeSystemsPage.add(
-                  CodeSystem.builder()
-                          .id(codeSystem.getTitle() + codeSystem.getVersion())
-                          .title(codeSystem.getTitle())
-                          .name(codeSystem.getName())
-                          .version(codeSystem.getVersion())
-                          .versionId(codeSystem.getMeta().getVersionId())
-                          .value(codeSystemValue)
-                          .lastUpdated(Instant.now())
-                          .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
-                          .build());
-      });
-      allCodeSystems.addAll(codeSystemsPage); // update big list
-      var links = codeSystemBundle.getLink();
-      links.forEach((l) -> {
-          if (l.getRelation().equals("next")){
-              // if next, call self and continue until fail.
-              UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(l.getUrl());
-              String newOffset = builder.build().getQueryParams().getFirst("_offset");
-              String newCount = builder.build().getQueryParams().getFirst("_count");
-              assert newOffset != null;
-              assert newCount != null;
-              recursiveRetrieveCodeSystems(umlsUser, Integer.parseInt(newOffset), Integer.parseInt(newCount), allCodeSystems);
-          }
-      });
-  }
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
       List<CodeSystem> allCodeSystems = new ArrayList<>();
 
@@ -189,4 +123,64 @@ public class FhirTerminologyService {
       updateOrInsertAllCodeSystems(allCodeSystems);
       return allCodeSystems;
   }
+    private void recursiveRetrieveCodeSystems(UmlsUser umlsUser, Integer offset, Integer count, List<CodeSystem> allCodeSystems) {
+        log.info("requesting page offset: {} count: {}", offset, count);
+        Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, offset, count);
+        List<CodeSystem> codeSystemsPage = new ArrayList<>(); // build small list
+        codeSystemBundle.getEntry().forEach(entry -> {
+            var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
+            String codeSystemValue = "";
+            for (org.hl7.fhir.r4.model.Identifier identifier : codeSystem.getIdentifier()) {
+                if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
+                    codeSystemValue = identifier.getValue();
+                    break;
+                }
+            }
+            codeSystemsPage.add(
+                    CodeSystem.builder()
+                            .id(codeSystem.getTitle() + codeSystem.getVersion())
+                            .title(codeSystem.getTitle())
+                            .name(codeSystem.getName())
+                            .version(codeSystem.getVersion())
+                            .versionId(codeSystem.getMeta().getVersionId())
+                            .oid(codeSystemValue)
+                            .lastUpdated(Instant.now())
+                            .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
+                            .build());
+        });
+        allCodeSystems.addAll(codeSystemsPage); // update big list
+        var links = codeSystemBundle.getLink();
+        links.forEach((l) -> {
+            if (l.getRelation().equals("next")){
+                // if next, call self and continue until fail.
+                UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(l.getUrl());
+                String newOffset = builder.build().getQueryParams().getFirst("_offset");
+                String newCount = builder.build().getQueryParams().getFirst("_count");
+                assert newOffset != null;
+                assert newCount != null;
+                recursiveRetrieveCodeSystems(umlsUser, Integer.parseInt(newOffset), Integer.parseInt(newCount), allCodeSystems);
+            }
+        });
+    }
+    // one to call only, one to mutate and build
+    private Bundle retrieveCodeSystemsPage(UmlsUser umlsUser, Integer offset, Integer count) {
+        IParser parser = fhirContext.newJsonParser();
+        String responseString =
+                fhirTerminologyServiceWebClient.getCodeSystemsPage(offset, count, umlsUser.getApiKey());
+        return parser.parseResource(
+                Bundle.class, responseString);
+    }
+
+    private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList){
+        for (CodeSystem codeSystem : codeSystemList) {
+            var id = codeSystem.getTitle() + codeSystem.getVersion();
+            Optional<CodeSystem> existingCodeSystemOptional = codeSystemRepository.findById(id);
+            if (existingCodeSystemOptional.isEmpty()) {
+                // Insert new CodeSystem
+                codeSystemRepository.save(codeSystem);
+                log.info("New CodeSystem inserted: {}", codeSystem);
+            }
+        }
+    }
+
 }

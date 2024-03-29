@@ -22,7 +22,7 @@ public class CodeSystem {
   private String name;
   private String version;
   private String versionId;
-  private String value; // identifier[0].value oid of identifier List
+  private String oid; // identifier[0].value oid of identifier List
   private Instant lastUpdated; // when queried
   private Date lastUpdatedUpstream; // when was resource last updated on vsac end
 }
