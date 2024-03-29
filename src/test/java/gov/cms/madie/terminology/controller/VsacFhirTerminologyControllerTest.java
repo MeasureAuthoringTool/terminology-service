@@ -6,6 +6,7 @@ import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
+import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.security.Principal;
 import java.time.Instant;
@@ -26,25 +28,26 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class VsacFhirTerminologyControllerTest {
+  private CodeSystemRepository codeSystemRepository;
 
   @Mock private VsacService vsacService;
-  @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock FhirTerminologyService fhirTerminologyService;
 
   @InjectMocks private VsacFhirTerminologyController vsacFhirTerminologyController;
   private UmlsUser umlsUser;
   private static final String TEST_USER = "test.user";
-
+  private static final String ADMIN_TEST_API_KEY_HEADER = "api-key";
+  private static final String ADMIN_TEST_API_KEY_HEADER_VALUE = "0a51991c";
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
-
+  MockHttpServletRequest request;
   private final List<ManifestExpansion> mockManifests = new ArrayList<>();
-
   private final List<QdmValueSet> mockQdmValueSets = new ArrayList<>();
+
 
   @BeforeEach
   public void setUp() {
@@ -66,6 +69,7 @@ class VsacFhirTerminologyControllerTest {
             .version("20240101")
             .displayName("test-value-set-display-name")
             .build());
+    request = new MockHttpServletRequest();
   }
 
   @Test
@@ -122,15 +126,13 @@ class VsacFhirTerminologyControllerTest {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
-
     when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(mockCodeSystemsPage);
 
     ResponseEntity<List<CodeSystem>> response =
-            vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal);
+            vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal, request, TEST_API_KEY, TEST_USER);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
     assertEquals(response.getBody(), mockCodeSystemsPage);
   }
-
   @Test
   void testUnAuthorizedUmlsUserWhileFetchingValueSetsExpansions() {
     Principal principal = mock(Principal.class);
@@ -149,6 +151,6 @@ class VsacFhirTerminologyControllerTest {
             .thenReturn(Optional.ofNullable(UmlsUser.builder().build()));
     assertThrows(
             VsacUnauthorizedException.class,
-            () -> vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal));
+            () -> vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal, request, TEST_API_KEY, TEST_USER));
   }
 }
