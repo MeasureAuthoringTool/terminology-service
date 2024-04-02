@@ -260,4 +260,20 @@ class FhirTerminologyServiceTest {
     verify(codeSystemRepository, times(2)).save(any(gov.cms.madie.terminology.models.CodeSystem.class));
   }
 
+  @Test
+  void testGetAllCodeSystems(){
+    var c1 = new gov.cms.madie.terminology.models.CodeSystem();
+    c1.setTitle("t1");
+    var c2 = new gov.cms.madie.terminology.models.CodeSystem();
+    c2.setTitle("t2");
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2);
+    when(codeSystemRepository.findAll()).thenAnswer(invocation -> codeSystems);
+    List<gov.cms.madie.terminology.models.CodeSystem> result = fhirTerminologyService.getAllCodeSystems();
+
+    verify(codeSystemRepository).findAll();
+    assertEquals(2, result.size());
+    assertEquals("t1", result.get(0).getTitle());
+    assertEquals("t2", result.get(1).getTitle());
+  }
+
 }

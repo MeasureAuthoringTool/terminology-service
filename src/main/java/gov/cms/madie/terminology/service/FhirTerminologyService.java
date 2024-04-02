@@ -115,6 +115,9 @@ public class FhirTerminologyService {
   }
 
 
+  public List<CodeSystem> getAllCodeSystems(){
+        return codeSystemRepository.findAll();
+  }
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
       List<CodeSystem> allCodeSystems = new ArrayList<>();
 
