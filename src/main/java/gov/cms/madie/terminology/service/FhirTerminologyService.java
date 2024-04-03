@@ -182,7 +182,17 @@ public class FhirTerminologyService {
                 // Insert new CodeSystem
                 codeSystemRepository.save(codeSystem);
                 log.info("New CodeSystem inserted: {}", codeSystem);
-            }
+            } else {
+                CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
+                existingCodeSystem.setTitle(codeSystem.getTitle());
+                existingCodeSystem.setName(codeSystem.getName());
+                existingCodeSystem.setVersion(codeSystem.getVersion());
+                existingCodeSystem.setVersionId(codeSystem.getVersionId());
+                existingCodeSystem.setOid(codeSystem.getOid());
+                existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
+                existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
+                codeSystemRepository.save(existingCodeSystem);
+                log.info("CodeSystem updated: {}", existingCodeSystem);            }
         }
     }
 
