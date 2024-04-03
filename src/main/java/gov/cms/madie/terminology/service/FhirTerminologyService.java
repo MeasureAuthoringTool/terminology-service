@@ -192,7 +192,8 @@ public class FhirTerminologyService {
                 existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
                 existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
                 codeSystemRepository.save(existingCodeSystem);
-                log.info("CodeSystem updated: {}", existingCodeSystem);            }
+                log.info("CodeSystem updated: {}", existingCodeSystem);
+            }
         }
     }
 
