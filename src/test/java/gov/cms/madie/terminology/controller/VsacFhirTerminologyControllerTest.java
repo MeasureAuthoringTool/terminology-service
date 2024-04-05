@@ -22,6 +22,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -122,6 +123,7 @@ class VsacFhirTerminologyControllerTest {
                     .versionId("vid")
                     .oid("urlval")
                     .lastUpdated(Instant.now())
+                    .lastUpdatedUpstream(new Date())
                     .build());
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
@@ -153,4 +155,29 @@ class VsacFhirTerminologyControllerTest {
             VsacUnauthorizedException.class,
             () -> vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal, request, TEST_API_KEY, TEST_USER));
   }
+
+  @Test
+  void testGetAllCodeSystemsSuccessfully() {
+    List<CodeSystem> mockCodeSystemsPage = new ArrayList<>();
+    mockCodeSystemsPage.add(
+            CodeSystem.builder()
+                    .id("titleversion")
+                    .title("title")
+                    .name("name")
+                    .version("version")
+                    .versionId("vid")
+                    .oid("urlval")
+                    .lastUpdated(Instant.now())
+                    .lastUpdatedUpstream(new Date())
+                    .build());
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(fhirTerminologyService.getAllCodeSystems()).thenReturn(mockCodeSystemsPage);
+
+    ResponseEntity<List<CodeSystem>> response =
+            vsacFhirTerminologyController.getAllCodeSystems(principal);
+    assertEquals(response.getStatusCode(), HttpStatus.OK);
+    assertEquals(response.getBody(), mockCodeSystemsPage);
+  }
+
 }
