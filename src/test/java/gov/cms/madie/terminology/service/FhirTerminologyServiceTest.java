@@ -231,9 +231,12 @@ class FhirTerminologyServiceTest {
     var identifierList = new ArrayList<Identifier>();
     var i1 = new Identifier().setValue("codeUrl");
     identifierList.add(i1);
-    var m1 = new Meta().setLastUpdated(new Date()).setVersionId("vid");
+    var m1 = new Meta();
+    m1.setVersionId("vid");
+    m1.setLastUpdated(new Date());
     c1.setId("titleversion");
     c1.setTitle("title");
+    c1.setName("name1");
     c1.setVersion("version");
     c1.setMeta(m1);
     c1.setIdentifier(identifierList);
@@ -241,9 +244,12 @@ class FhirTerminologyServiceTest {
     var identifierList2 = new ArrayList<Identifier>();
     var i2 = new Identifier().setValue("codeUrl");
     identifierList2.add(i2);
-    var m2 = new Meta().setLastUpdated(new Date()).setVersionId("vid");
+    var m2 = new Meta();
+    m2.setVersionId("vid");
+    m2.setLastUpdated(new Date());
     c2.setId("titleversion");
     c2.setTitle("title");
+    c2.setName("name2");
     c2.setVersion("version");
     c2.setMeta(m2);
     c2.setIdentifier(identifierList2);
