@@ -54,6 +54,7 @@ class VsacFhirTerminologyControllerMvcTest {
   private static final String TEST_API_KEY = "te$tKey";
   private static final String ADMIN_TEST_API_KEY_HEADER = "api-key";
   private static final String ADMIN_TEST_API_KEY_HEADER_VALUE = "0a51991c";
+  private static final String TEST_TOKEN = "test-okta";
 
   @BeforeEach
   public void setup() {
@@ -196,35 +197,37 @@ class VsacFhirTerminologyControllerMvcTest {
             .andReturn();
     assertThat(result.getResponse().getStatus(), is(equalTo(401)));
   }
+
   @Test
   public void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
     MvcResult result =
-            mockMvc
+        mockMvc
             .perform(
-                    MockMvcRequestBuilders.get("/terminology/update-code-systems")
-                            .with(csrf())
-                            .with(user(TEST_USR))
-                            .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
-                            .header("Authorization", "test-okta"))
+                MockMvcRequestBuilders.get("/terminology/update-code-systems")
+                    .with(csrf())
+                    .with(user(TEST_USR))
+                    .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
+                    .header("Authorization", TEST_TOKEN))
             .andExpect(status().isUnauthorized())
             .andReturn();
     assertThat(result.getResponse().getStatus(), is(equalTo(401)));
   }
+
   @Test
   public void testRetrieveAndUpdateCodeSystemsUnauthorized() throws Exception {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
     mockMvc
-            .perform(
-                    MockMvcRequestBuilders.get("/terminology/update-code-systems")
-                            .with(csrf())
-                            .with(user(TEST_USR))
-                            .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
-                            .header("Authorization", "test-okta"))
-            .andExpect(status().isOk());
+        .perform(
+            MockMvcRequestBuilders.get("/terminology/update-code-systems")
+                .with(csrf())
+                .with(user(TEST_USR))
+                .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
+                .header("Authorization", TEST_TOKEN))
+        .andExpect(status().isOk());
   }
 }
