@@ -17,7 +17,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @NoArgsConstructor
 @Document
 public class CodeSystem {
-  @Id String id; // title + version (both required fields)
+  @Id private String id;
+  private String fullUrl;
   private String title;
   private String name;
   private String version;

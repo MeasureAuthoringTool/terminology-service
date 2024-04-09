@@ -149,6 +149,7 @@ public class FhirTerminologyService {
               codeSystemsPage.add(
                   CodeSystem.builder()
                       .id(codeSystem.getTitle() + codeSystem.getVersion())
+                      .fullUrl(entry.getFullUrl())
                       .title(codeSystem.getTitle())
                       .name(codeSystem.getName())
                       .version(codeSystem.getVersion())
@@ -193,6 +194,7 @@ public class FhirTerminologyService {
       } else {
         CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
         existingCodeSystem.setTitle(codeSystem.getTitle());
+        existingCodeSystem.setFullUrl(codeSystem.getFullUrl());
         existingCodeSystem.setName(codeSystem.getName());
         existingCodeSystem.setVersion(codeSystem.getVersion());
         existingCodeSystem.setVersionId(codeSystem.getVersionId());
