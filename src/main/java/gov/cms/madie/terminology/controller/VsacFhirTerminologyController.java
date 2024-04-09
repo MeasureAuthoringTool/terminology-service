@@ -68,10 +68,10 @@ public class VsacFhirTerminologyController {
   @GetMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("#request.getHeader('api-key') == #apiKey")
   public ResponseEntity<List<CodeSystem>> retrieveAndUpdateCodeSystems(
-          Principal principal,
-          HttpServletRequest request,
-          @Value("${admin-api-key}") String apiKey,
-          @RequestHeader("Authorization") String accessToken) {
+      Principal principal,
+      HttpServletRequest request,
+      @Value("${admin-api-key}") String apiKey,
+      @RequestHeader("Authorization") String accessToken) {
     final String username = principal.getName();
     Optional<UmlsUser> umlsUser = vsacService.findByHarpId(username);
 
@@ -86,10 +86,11 @@ public class VsacFhirTerminologyController {
       throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
     }
   }
+
   @GetMapping(path = "/get-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CodeSystem>> getAllCodeSystems(Principal principal) {
     final String username = principal.getName();
     log.info("Retrieving list of codeSystems for user: {}", username);
-      return ResponseEntity.ok().body(fhirTerminologyService.getAllCodeSystems());
+    return ResponseEntity.ok().body(fhirTerminologyService.getAllCodeSystems());
   }
 }

@@ -49,7 +49,6 @@ class VsacFhirTerminologyControllerTest {
   private final List<ManifestExpansion> mockManifests = new ArrayList<>();
   private final List<QdmValueSet> mockQdmValueSets = new ArrayList<>();
 
-
   @BeforeEach
   public void setUp() {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
@@ -115,26 +114,28 @@ class VsacFhirTerminologyControllerTest {
   void retrieveAndUpdateCodeSystemsSuccessfully() {
     List<CodeSystem> mockCodeSystemsPage = new ArrayList<>();
     mockCodeSystemsPage.add(
-            CodeSystem.builder()
-                    .id("titleversion")
-                    .title("title")
-                    .name("name")
-                    .version("version")
-                    .versionId("vid")
-                    .oid("urlval")
-                    .lastUpdated(Instant.now())
-                    .lastUpdatedUpstream(new Date())
-                    .build());
+        CodeSystem.builder()
+            .id("titleversion")
+            .title("title")
+            .name("name")
+            .version("version")
+            .versionId("vid")
+            .oid("urlval")
+            .lastUpdated(Instant.now())
+            .lastUpdatedUpstream(new Date())
+            .build());
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
     when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(mockCodeSystemsPage);
 
     ResponseEntity<List<CodeSystem>> response =
-            vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal, request, TEST_API_KEY, TEST_USER);
+        vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(
+            principal, request, TEST_API_KEY, TEST_USER);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
     assertEquals(response.getBody(), mockCodeSystemsPage);
   }
+
   @Test
   void testUnAuthorizedUmlsUserWhileFetchingValueSetsExpansions() {
     Principal principal = mock(Principal.class);
@@ -145,39 +146,41 @@ class VsacFhirTerminologyControllerTest {
         VsacUnauthorizedException.class,
         () -> vsacFhirTerminologyController.getManifests(principal));
   }
+
   @Test
   void testUnAuthorizedUmlsUserWhileretrievingAndUpdatingCodeSystems() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.findByHarpId(anyString()))
-            .thenReturn(Optional.ofNullable(UmlsUser.builder().build()));
+        .thenReturn(Optional.ofNullable(UmlsUser.builder().build()));
     assertThrows(
-            VsacUnauthorizedException.class,
-            () -> vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(principal, request, TEST_API_KEY, TEST_USER));
+        VsacUnauthorizedException.class,
+        () ->
+            vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(
+                principal, request, TEST_API_KEY, TEST_USER));
   }
 
   @Test
   void testGetAllCodeSystemsSuccessfully() {
     List<CodeSystem> mockCodeSystemsPage = new ArrayList<>();
     mockCodeSystemsPage.add(
-            CodeSystem.builder()
-                    .id("titleversion")
-                    .title("title")
-                    .name("name")
-                    .version("version")
-                    .versionId("vid")
-                    .oid("urlval")
-                    .lastUpdated(Instant.now())
-                    .lastUpdatedUpstream(new Date())
-                    .build());
+        CodeSystem.builder()
+            .id("titleversion")
+            .title("title")
+            .name("name")
+            .version("version")
+            .versionId("vid")
+            .oid("urlval")
+            .lastUpdated(Instant.now())
+            .lastUpdatedUpstream(new Date())
+            .build());
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(fhirTerminologyService.getAllCodeSystems()).thenReturn(mockCodeSystemsPage);
 
     ResponseEntity<List<CodeSystem>> response =
-            vsacFhirTerminologyController.getAllCodeSystems(principal);
+        vsacFhirTerminologyController.getAllCodeSystems(principal);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
     assertEquals(response.getBody(), mockCodeSystemsPage);
   }
-
 }
