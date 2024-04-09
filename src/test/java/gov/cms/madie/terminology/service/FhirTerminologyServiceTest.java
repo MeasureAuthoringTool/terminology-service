@@ -230,34 +230,41 @@ class FhirTerminologyServiceTest {
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     Bundle bundle = new Bundle();
-    var c1 = new CodeSystem();
     var identifierList = new ArrayList<Identifier>();
     var i1 = new Identifier().setValue("codeUrl");
     identifierList.add(i1);
     var m1 = new Meta();
     m1.setVersionId("vid");
     m1.setLastUpdated(new Date());
-    c1.setId("titleversion");
-    c1.setTitle("title");
-    c1.setName("name1");
-    c1.setVersion("version");
-    c1.setMeta(m1);
-    c1.setIdentifier(identifierList);
-    var c2 = new CodeSystem();
+    var c1 =
+        new CodeSystem()
+            .setTitle("title")
+            .setName("name1")
+            .setVersion("version")
+            .setIdentifier(identifierList)
+            .setMeta(m1)
+            .setId("titleversion");
+
     var identifierList2 = new ArrayList<Identifier>();
     var i2 = new Identifier().setValue("codeUrl");
     identifierList2.add(i2);
     var m2 = new Meta();
     m2.setVersionId("vid");
     m2.setLastUpdated(new Date());
-    c2.setId("titleversion");
-    c2.setTitle("title");
-    c2.setName("name2");
-    c2.setVersion("version");
-    c2.setMeta(m2);
-    c2.setIdentifier(identifierList2);
+    var c2 =
+        new CodeSystem()
+            .setTitle("title")
+            .setName("name2")
+            .setVersion("version")
+            .setIdentifier(identifierList2)
+            .setMeta(m2)
+            .setId("titleversion");
     bundle.addEntry().setResource(c1);
-    bundle.addEntry().setResource(c2);
+    Bundle.BundleEntryComponent t =
+        new Bundle.BundleEntryComponent()
+            .setFullUrl("http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation")
+            .setResource(c2);
+    bundle.addEntry(t);
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(mockCodeSystemsResource);
     when(codeSystemRepository.findById(anyString())).thenReturn(Optional.empty());
@@ -265,6 +272,7 @@ class FhirTerminologyServiceTest {
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
     assertEquals(2, result.size());
+    assertEquals(result.get(1).getFullUrl(), t.getFullUrl());
     verify(codeSystemRepository, times(2))
         .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
   }
