@@ -54,6 +54,7 @@ class VsacFhirTerminologyControllerMvcTest {
   private static final String TEST_API_KEY = "te$tKey";
   private static final String ADMIN_TEST_API_KEY_HEADER = "api-key";
   private static final String ADMIN_TEST_API_KEY_HEADER_VALUE = "0a51991c";
+  private static final String TEST_TOKEN = "test-okta";
 
   @BeforeEach
   public void setup() {
@@ -209,7 +210,7 @@ class VsacFhirTerminologyControllerMvcTest {
                     .with(csrf())
                     .with(user(TEST_USR))
                     .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
-                    .header("Authorization", "test-okta"))
+                    .header("Authorization", TEST_TOKEN))
             .andExpect(status().isUnauthorized())
             .andReturn();
     assertThat(result.getResponse().getStatus(), is(equalTo(401)));
@@ -226,7 +227,7 @@ class VsacFhirTerminologyControllerMvcTest {
                 .with(csrf())
                 .with(user(TEST_USR))
                 .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", "test-okta"))
+                .header("Authorization", TEST_TOKEN))
         .andExpect(status().isOk());
   }
 }
