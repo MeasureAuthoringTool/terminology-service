@@ -49,7 +49,7 @@ public class FhirTerminologyServiceWebClient {
   }
 
   public String getManifestBundle(String apiKey) {
-    return fetchResourceFromVsac(manifestPath, apiKey, "Manifests");
+    return fetchResourceFromVsac(manifestPath, apiKey, "Manifest");
   }
 
   public String getCodeSystemsPage(Integer offset, Integer count, String apiKey) {
