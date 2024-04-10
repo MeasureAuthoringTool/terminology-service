@@ -39,6 +39,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -422,5 +423,28 @@ class VsacServiceTest {
         is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
     assertThat(valueSets.get(0).getDisplayName(), is(equalTo("Office Visit")));
     assertThat(valueSets.get(0).getConcepts().size(), is(equalTo(0)));
+  }
+
+  @Test
+  void testVerifyUmlsAccessUmlsUserNotFound() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.empty());
+    Exception exception = assertThrows(VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
+    assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
+  }
+
+  @Test
+  void testVerifyUmlsAccessUmlsUserApiKeyIsMissing() {
+    UmlsUser umlsUserCopy = umlsUser.toBuilder().apiKey(null).build();
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUserCopy));
+    Exception exception = assertThrows(VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
+    assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
+  }
+
+  @Test
+  void testVerifyUmlsAccess() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUser));
+    UmlsUser user = vsacService.verifyUmlsAccess(TEST_API_KEY);
+    assertThat(user.getHarpId(), is(equalTo(TEST_HARP_ID)));
+    assertThat(user.getApiKey(), is(equalTo(TEST_API_KEY)));
   }
 }
