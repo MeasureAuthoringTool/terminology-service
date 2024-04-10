@@ -6,6 +6,7 @@ import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.UmlsUserRepository;
@@ -154,6 +155,21 @@ public class VsacService {
       }
     }
     return cqlCodes;
+  }
+
+  /**
+   * Verify if the user with given harp id has valid UMLS user
+   *
+   * @param harpId
+   * @return Instance of UmlsUser
+   */
+  public UmlsUser verifyUmlsAccess(String harpId) {
+    UmlsUser user = findByHarpId(harpId).orElse(null);
+    if (user == null || StringUtils.isBlank(user.getApiKey())) {
+      log.error("UMLS API Key Not found for user : [{}}]", harpId);
+      throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
+    }
+    return user;
   }
 
   private VsacCode validateCodeAgainstVsac(String codePath, UmlsUser umlsUser) {
