@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
+import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
@@ -76,7 +77,7 @@ class VsacFhirTerminologyControllerTest {
   void testGetManifestsSuccessfully() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getManifests(any(UmlsUser.class))).thenReturn(mockManifests);
     ResponseEntity<List<ManifestExpansion>> response =
         vsacFhirTerminologyController.getManifests(principal);
@@ -88,8 +89,9 @@ class VsacFhirTerminologyControllerTest {
   void testUnAuthorizedUmlsUserWhileFetchingManifests() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString()))
-        .thenReturn(Optional.ofNullable(UmlsUser.builder().build()));
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
     assertThrows(
         VsacUnauthorizedException.class,
         () -> vsacFhirTerminologyController.getManifests(principal));
@@ -100,7 +102,7 @@ class VsacFhirTerminologyControllerTest {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     ValueSetsSearchCriteria valueSetsSearchCriteria = ValueSetsSearchCriteria.builder().build();
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getValueSetsExpansionsForQdm(
             any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
         .thenReturn(mockQdmValueSets);
@@ -126,7 +128,7 @@ class VsacFhirTerminologyControllerTest {
             .build());
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(mockCodeSystemsPage);
 
     ResponseEntity<List<CodeSystem>> response =
@@ -140,8 +142,9 @@ class VsacFhirTerminologyControllerTest {
   void testUnAuthorizedUmlsUserWhileFetchingValueSetsExpansions() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString()))
-        .thenReturn(Optional.ofNullable(UmlsUser.builder().build()));
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
     assertThrows(
         VsacUnauthorizedException.class,
         () -> vsacFhirTerminologyController.getManifests(principal));
@@ -151,8 +154,9 @@ class VsacFhirTerminologyControllerTest {
   void testUnAuthorizedUmlsUserWhileretrievingAndUpdatingCodeSystems() {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString()))
-        .thenReturn(Optional.ofNullable(UmlsUser.builder().build()));
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
     assertThrows(
         VsacUnauthorizedException.class,
         () ->
@@ -182,5 +186,48 @@ class VsacFhirTerminologyControllerTest {
         vsacFhirTerminologyController.getAllCodeSystems(principal);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
     assertEquals(response.getBody(), mockCodeSystemsPage);
+  }
+
+  @Test
+  void testGetCode() {
+    String codeName = "1963-8";
+    String codeSystem = "LOINC";
+    String version = "2.40";
+    Principal principal = mock(Principal.class);
+    Code code =
+        Code.builder()
+            .name(codeName)
+            .codeSystem(codeSystem)
+            .version(version)
+            .display("Bicarbonate [Moles/volume] in Serum")
+            .codeSystemOid("2.16.840.1.113883.6.1")
+            .build();
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.retrieveCode(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(code);
+
+    ResponseEntity<Code> response =
+        vsacFhirTerminologyController.getCode(codeName, codeSystem, version, principal);
+    assertEquals(response.getStatusCode(), HttpStatus.OK);
+    assertEquals(response.getBody(), code);
+  }
+
+  @Test
+  void testGetCodeIfNoUmlsUserFound() {
+    String codeName = "1963-8";
+    String codeSystem = "LOINC";
+    String version = "2.40";
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
+
+    Exception ex =
+        assertThrows(
+            VsacUnauthorizedException.class,
+            () -> vsacFhirTerminologyController.getCode(codeName, codeSystem, version, principal));
+    assertEquals(ex.getMessage(), "Please login to UMLS before proceeding");
   }
 }

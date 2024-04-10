@@ -4,6 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
+import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -13,7 +14,9 @@ import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -127,6 +130,28 @@ public class FhirTerminologyService {
     // Once we have all codeSystems, update DB using mongo
     updateOrInsertAllCodeSystems(allCodeSystems);
     return allCodeSystems;
+  }
+
+  public Code retrieveCode(String code, String codeSystemName, String version, String apiKey) {
+    if (StringUtils.isEmpty(code)
+        || StringUtils.isEmpty(codeSystemName)
+        || StringUtils.isEmpty(version)) {
+      return null;
+    }
+    CodeSystem codeSystem =
+        codeSystemRepository.findByNameAndVersion(codeSystemName, version).orElse(null);
+    if (codeSystem == null) {
+      return null;
+    }
+    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(code, codeSystem, apiKey);
+    Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
+    return Code.builder()
+        .name(code)
+        .codeSystem(codeSystemName)
+        .version(version)
+        .display(parameters.getParameter("display").getValue().toString())
+        .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
+        .build();
   }
 
   private void recursiveRetrieveCodeSystems(

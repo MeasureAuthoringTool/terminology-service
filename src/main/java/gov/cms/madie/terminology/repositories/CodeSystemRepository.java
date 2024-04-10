@@ -6,4 +6,6 @@ import java.util.Optional;
 
 public interface CodeSystemRepository extends MongoRepository<CodeSystem, String> {
   Optional<CodeSystem> findById(String id);
+
+  Optional<CodeSystem> findByNameAndVersion(String name, String version);
 }
