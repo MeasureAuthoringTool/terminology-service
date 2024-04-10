@@ -56,7 +56,7 @@ public class FhirTerminologyServiceWebClient {
     //  https://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=100
     URI codeUri = TerminologyServiceUtil.buildRetrieveCodeSystemsUri(codeSystemPath, offset, count);
     log.debug("Retrieving codeSystems at {}, offset {}, count {}", codeSystemPath, offset, count);
-    return fetchResourceFromVsac(codeUri.toString(), apiKey, "Manifests");
+    return fetchResourceFromVsac(codeUri.toString(), apiKey, "CodeSystem");
   }
 
   public String getValueSetResource(
@@ -70,7 +70,7 @@ public class FhirTerminologyServiceWebClient {
         TerminologyServiceUtil.buildValueSetResourceUri(
             valueSetParams, profile, includeDraft, manifestExpansion);
 
-    return fetchResourceFromVsac(uri.toString(), apiKey, "Value set");
+    return fetchResourceFromVsac(uri.toString(), apiKey, "ValueSet");
   }
 
   public String getCodeResource(String code, CodeSystem codeSystem, String apiKey) {

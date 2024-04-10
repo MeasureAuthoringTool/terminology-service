@@ -428,7 +428,9 @@ class VsacServiceTest {
   @Test
   void testVerifyUmlsAccessUmlsUserNotFound() {
     when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.empty());
-    Exception exception = assertThrows(VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
+    Exception exception =
+        assertThrows(
+            VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
     assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
   }
 
@@ -436,7 +438,9 @@ class VsacServiceTest {
   void testVerifyUmlsAccessUmlsUserApiKeyIsMissing() {
     UmlsUser umlsUserCopy = umlsUser.toBuilder().apiKey(null).build();
     when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUserCopy));
-    Exception exception = assertThrows(VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
+    Exception exception =
+        assertThrows(
+            VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
     assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
   }
 
