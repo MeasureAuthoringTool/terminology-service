@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import com.okta.commons.lang.Collections;
+import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
@@ -11,6 +12,7 @@ import gov.cms.madie.terminology.helpers.TestHelpers;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
+import gov.cms.madie.terminology.webclient.TerminologyServiceWebClient;
 import org.apache.commons.io.FileUtils;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
@@ -48,8 +50,10 @@ class FhirTerminologyServiceTest {
   @Mock FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   @Mock FhirContext fhirContext;
   @Mock MappingService mappingService;
-  @InjectMocks FhirTerminologyService fhirTerminologyService;
   @Mock CodeSystemRepository codeSystemRepository;
+  @Mock TerminologyServiceWebClient terminologyServiceWebClient;
+  @InjectMocks FhirTerminologyService fhirTerminologyService;
+
   List<CodeSystemEntry> codeSystemEntries;
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
@@ -407,12 +411,20 @@ class FhirTerminologyServiceTest {
             + "}";
 
     var codeSystem = gov.cms.madie.terminology.models.CodeSystem.builder().build();
+    var codeResultSet = new VsacCode.VsacDataResultSet();
+    codeResultSet.setActive("Yes");
+    var codeData = new VsacCode.VsacData();
+    codeData.setResultSet(List.of(codeResultSet));
+    VsacCode vsacCode = new VsacCode();
+    vsacCode.setStatus("ok");
+    vsacCode.setData(codeData);
 
     when(codeSystemRepository.findByNameAndVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
     when(fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, TEST_API_KEY))
         .thenReturn(codeJson);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     Code code =
         fhirTerminologyService.retrieveCode(codeName, codeSystemName, version, TEST_API_KEY);
     assertThat(code.getName(), is(equalTo(codeName)));

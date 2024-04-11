@@ -11,4 +11,5 @@ public class Code {
   private String version;
   private String codeSystem;
   private String codeSystemOid;
+  private boolean active;
 }

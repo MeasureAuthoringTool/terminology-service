@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
@@ -12,6 +13,7 @@ import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
+import gov.cms.madie.terminology.webclient.TerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -35,6 +37,7 @@ public class FhirTerminologyService {
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   private final MappingService mappingService;
   private final CodeSystemRepository codeSystemRepository;
+  private final TerminologyServiceWebClient terminologyServiceWebClient;
 
   @Cacheable("manifest-list")
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
@@ -132,8 +135,8 @@ public class FhirTerminologyService {
     return allCodeSystems;
   }
 
-  public Code retrieveCode(String code, String codeSystemName, String version, String apiKey) {
-    if (StringUtils.isEmpty(code)
+  public Code retrieveCode(String codeName, String codeSystemName, String version, String apiKey) {
+    if (StringUtils.isEmpty(codeName)
         || StringUtils.isEmpty(codeSystemName)
         || StringUtils.isEmpty(version)) {
       return null;
@@ -143,15 +146,25 @@ public class FhirTerminologyService {
     if (codeSystem == null) {
       return null;
     }
-    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(code, codeSystem, apiKey);
+    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
     Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
-    return Code.builder()
-        .name(code)
-        .codeSystem(codeSystemName)
-        .version(version)
-        .display(parameters.getParameter("display").getValue().toString())
-        .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
-        .build();
+    Code code =
+        Code.builder()
+            .name(codeName)
+            .codeSystem(codeSystemName)
+            .version(version)
+            .display(parameters.getParameter("display").getValue().toString())
+            .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
+            .build();
+    String codePath =
+        TerminologyServiceUtil.buildCodePath(
+            code.getCodeSystem(), code.getVersion(), code.getName());
+    // TODO: this is ridiculous
+    VsacCode svsCode = terminologyServiceWebClient.getCode(codePath, apiKey);
+    if (svsCode.getStatus().equalsIgnoreCase("ok")) {
+      code.setActive("Yes".equals(svsCode.getData().getResultSet().get(0).getActive()));
+    }
+    return code;
   }
 
   private void recursiveRetrieveCodeSystems(
