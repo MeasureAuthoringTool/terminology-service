@@ -388,7 +388,7 @@ class FhirTerminologyServiceTest {
   }
 
   @Test
-  void testRetrieveCodeSuccessfully() {
+  void testRetrieveActiveCodeSuccessfully() {
     String codeName = "1963-8";
     String codeSystemName = "LOINC";
     String version = "2.40";
@@ -431,5 +431,53 @@ class FhirTerminologyServiceTest {
     assertThat(code.getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
     assertThat(code.getCodeSystem(), is(equalTo(codeSystemName)));
     assertThat(code.getVersion(), is(equalTo(version)));
+    assertThat(code.isActive(), is(equalTo(true)));
+  }
+
+  @Test
+  void testRetrieveInactiveCodeSuccessfully() {
+    String codeName = "1963-8";
+    String codeSystemName = "LOINC";
+    String version = "2.40";
+    String codeJson =
+        "{\n"
+            + "  \"resourceType\": \"Parameters\",\n"
+            + "  \"parameter\": [ {\n"
+            + "    \"name\": \"name\",\n"
+            + "    \"valueString\": \"LOINC\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"version\",\n"
+            + "    \"valueString\": \"2.40\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"display\",\n"
+            + "    \"valueString\": \"Bicarbonate [Moles/volume] in Serum\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"Oid\",\n"
+            + "    \"valueString\": \"2.16.840.1.113883.6.1\"\n"
+            + "  } ]\n"
+            + "}";
+
+    var codeSystem = gov.cms.madie.terminology.models.CodeSystem.builder().build();
+    var codeResultSet = new VsacCode.VsacDataResultSet();
+    codeResultSet.setActive("No");
+    var codeData = new VsacCode.VsacData();
+    codeData.setResultSet(List.of(codeResultSet));
+    VsacCode vsacCode = new VsacCode();
+    vsacCode.setStatus("ok");
+    vsacCode.setData(codeData);
+
+    when(codeSystemRepository.findByNameAndVersion(anyString(), anyString()))
+        .thenReturn(Optional.of(codeSystem));
+    when(fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, TEST_API_KEY))
+        .thenReturn(codeJson);
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
+    Code code =
+        fhirTerminologyService.retrieveCode(codeName, codeSystemName, version, TEST_API_KEY);
+    assertThat(code.getName(), is(equalTo(codeName)));
+    assertThat(code.getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
+    assertThat(code.getCodeSystem(), is(equalTo(codeSystemName)));
+    assertThat(code.getVersion(), is(equalTo(version)));
+    assertThat(code.isActive(), is(equalTo(false)));
   }
 }
