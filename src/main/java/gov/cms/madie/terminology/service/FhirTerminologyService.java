@@ -2,10 +2,10 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -13,7 +13,6 @@ import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
-import gov.cms.madie.terminology.webclient.TerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -37,7 +36,7 @@ public class FhirTerminologyService {
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   private final MappingService mappingService;
   private final CodeSystemRepository codeSystemRepository;
-  private final TerminologyServiceWebClient terminologyServiceWebClient;
+  private final VsacService vsacService;
 
   @Cacheable("manifest-list")
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
@@ -156,14 +155,10 @@ public class FhirTerminologyService {
             .display(parameters.getParameter("display").getValue().toString())
             .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
             .build();
-    String codePath =
-        TerminologyServiceUtil.buildCodePath(
-            code.getCodeSystem(), code.getVersion(), code.getName());
-    // TODO: this is ridiculous
-    VsacCode svsCode = terminologyServiceWebClient.getCode(codePath, apiKey);
-    if (svsCode.getStatus().equalsIgnoreCase("ok")) {
-      code.setActive("Yes".equals(svsCode.getData().getResultSet().get(0).getActive()));
-    }
+    // FHIR terminology API doesn't support code status yet. workaround is to get it from SVS.
+    // TODO: remove once it is supported by fhir terminology service
+    CodeStatus status = vsacService.getCodeStatus(code, apiKey);
+    code.setStatus(status);
     return code;
   }
 
