@@ -5,6 +5,7 @@ import com.okta.commons.lang.Collections;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.helpers.TestHelpers;
@@ -48,8 +49,10 @@ class FhirTerminologyServiceTest {
   @Mock FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   @Mock FhirContext fhirContext;
   @Mock MappingService mappingService;
-  @InjectMocks FhirTerminologyService fhirTerminologyService;
   @Mock CodeSystemRepository codeSystemRepository;
+  @Mock VsacService vsacService;
+  @InjectMocks FhirTerminologyService fhirTerminologyService;
+
   List<CodeSystemEntry> codeSystemEntries;
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
@@ -407,17 +410,18 @@ class FhirTerminologyServiceTest {
             + "}";
 
     var codeSystem = gov.cms.madie.terminology.models.CodeSystem.builder().build();
-
     when(codeSystemRepository.findByNameAndVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
     when(fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, TEST_API_KEY))
         .thenReturn(codeJson);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(vsacService.getCodeStatus(any(Code.class), anyString())).thenReturn(CodeStatus.ACTIVE);
     Code code =
         fhirTerminologyService.retrieveCode(codeName, codeSystemName, version, TEST_API_KEY);
     assertThat(code.getName(), is(equalTo(codeName)));
     assertThat(code.getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
     assertThat(code.getCodeSystem(), is(equalTo(codeSystemName)));
     assertThat(code.getVersion(), is(equalTo(version)));
+    assertThat(code.getStatus(), is(equalTo(CodeStatus.ACTIVE)));
   }
 }

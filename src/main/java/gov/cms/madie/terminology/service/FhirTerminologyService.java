@@ -5,6 +5,7 @@ import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -35,6 +36,7 @@ public class FhirTerminologyService {
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   private final MappingService mappingService;
   private final CodeSystemRepository codeSystemRepository;
+  private final VsacService vsacService;
 
   @Cacheable("manifest-list")
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
@@ -132,8 +134,8 @@ public class FhirTerminologyService {
     return allCodeSystems;
   }
 
-  public Code retrieveCode(String code, String codeSystemName, String version, String apiKey) {
-    if (StringUtils.isEmpty(code)
+  public Code retrieveCode(String codeName, String codeSystemName, String version, String apiKey) {
+    if (StringUtils.isEmpty(codeName)
         || StringUtils.isEmpty(codeSystemName)
         || StringUtils.isEmpty(version)) {
       return null;
@@ -143,15 +145,21 @@ public class FhirTerminologyService {
     if (codeSystem == null) {
       return null;
     }
-    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(code, codeSystem, apiKey);
+    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
     Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
-    return Code.builder()
-        .name(code)
-        .codeSystem(codeSystemName)
-        .version(version)
-        .display(parameters.getParameter("display").getValue().toString())
-        .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
-        .build();
+    Code code =
+        Code.builder()
+            .name(codeName)
+            .codeSystem(codeSystemName)
+            .version(version)
+            .display(parameters.getParameter("display").getValue().toString())
+            .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
+            .build();
+    // FHIR terminology API doesn't support code status yet. workaround is to get it from SVS.
+    // TODO: remove once it is supported by fhir terminology service
+    CodeStatus status = vsacService.getCodeStatus(code, apiKey);
+    code.setStatus(status);
+    return code;
   }
 
   private void recursiveRetrieveCodeSystems(
