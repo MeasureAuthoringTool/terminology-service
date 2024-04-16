@@ -4,6 +4,8 @@ import ca.uhn.fhir.context.FhirContext;
 import com.okta.commons.lang.Collections;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
+import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.helpers.TestHelpers;
@@ -21,6 +23,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 
@@ -42,8 +49,10 @@ class FhirTerminologyServiceTest {
   @Mock FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   @Mock FhirContext fhirContext;
   @Mock MappingService mappingService;
-  @InjectMocks FhirTerminologyService fhirTerminologyService;
   @Mock CodeSystemRepository codeSystemRepository;
+  @Mock VsacService vsacService;
+  @InjectMocks FhirTerminologyService fhirTerminologyService;
+
   List<CodeSystemEntry> codeSystemEntries;
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
@@ -336,5 +345,83 @@ class FhirTerminologyServiceTest {
     assertEquals(2, result.size());
     assertEquals("t1", result.get(0).getTitle());
     assertEquals("t2", result.get(1).getTitle());
+  }
+
+  @Test
+  void testRetrieveCodeWhenCodeIsNull() {
+    String codeSystem = "LOINC";
+    String version = "2.40";
+    assertThat(
+        fhirTerminologyService.retrieveCode(null, codeSystem, version, TEST_API_KEY),
+        is(equalTo(null)));
+  }
+
+  @Test
+  void testRetrieveCodeWhenCodeSystemIsNull() {
+    String codeName = "1963-8";
+    String version = "2.40";
+    assertThat(
+        fhirTerminologyService.retrieveCode(codeName, null, version, TEST_API_KEY),
+        is(equalTo(null)));
+  }
+
+  @Test
+  void testRetrieveCodeWhenCodeSystemVersionIsNull() {
+    String codeName = "1963-8";
+    String codeSystem = "LOINC";
+    assertThat(
+        fhirTerminologyService.retrieveCode(codeName, codeSystem, null, TEST_API_KEY),
+        is(equalTo(null)));
+  }
+
+  @Test
+  void testRetrieveCodeWhenCodeSystemNotFound() {
+    String codeName = "1963-8";
+    String codeSystem = "LOINC";
+    String version = "2.40";
+    when(codeSystemRepository.findByNameAndVersion(codeSystem, version))
+        .thenReturn(Optional.empty());
+    assertThat(
+        fhirTerminologyService.retrieveCode(codeName, codeSystem, version, TEST_API_KEY),
+        is(equalTo(null)));
+  }
+
+  @Test
+  void testRetrieveCodeSuccessfully() {
+    String codeName = "1963-8";
+    String codeSystemName = "LOINC";
+    String version = "2.40";
+    String codeJson =
+        "{\n"
+            + "  \"resourceType\": \"Parameters\",\n"
+            + "  \"parameter\": [ {\n"
+            + "    \"name\": \"name\",\n"
+            + "    \"valueString\": \"LOINC\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"version\",\n"
+            + "    \"valueString\": \"2.40\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"display\",\n"
+            + "    \"valueString\": \"Bicarbonate [Moles/volume] in Serum\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"Oid\",\n"
+            + "    \"valueString\": \"2.16.840.1.113883.6.1\"\n"
+            + "  } ]\n"
+            + "}";
+
+    var codeSystem = gov.cms.madie.terminology.models.CodeSystem.builder().build();
+    when(codeSystemRepository.findByNameAndVersion(anyString(), anyString()))
+        .thenReturn(Optional.of(codeSystem));
+    when(fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, TEST_API_KEY))
+        .thenReturn(codeJson);
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(vsacService.getCodeStatus(any(Code.class), anyString())).thenReturn(CodeStatus.ACTIVE);
+    Code code =
+        fhirTerminologyService.retrieveCode(codeName, codeSystemName, version, TEST_API_KEY);
+    assertThat(code.getName(), is(equalTo(codeName)));
+    assertThat(code.getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
+    assertThat(code.getCodeSystem(), is(equalTo(codeSystemName)));
+    assertThat(code.getVersion(), is(equalTo(version)));
+    assertThat(code.getStatus(), is(equalTo(CodeStatus.ACTIVE)));
   }
 }

@@ -4,8 +4,11 @@ import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madie.models.cql.terminology.CqlCode;
 import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
+import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.mapper.VsacToFhirValueSetMapper;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.UmlsUserRepository;
@@ -20,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -154,6 +158,54 @@ public class VsacService {
       }
     }
     return cqlCodes;
+  }
+
+  public CodeStatus getCodeStatus(Code code, String apiKey) {
+    CodeSystemEntry systemEntry = mappingService.getCodeSystemEntry(code.getCodeSystem());
+    // do not call SVS API to get code status if the system is not in SVS API
+    if (systemEntry == null
+        || systemEntry.getOid().contains("NOT.IN.VSAC")
+        || CollectionUtils.isEmpty(systemEntry.getVersions())) {
+      return CodeStatus.NA;
+    }
+
+    // get corresponding SVS version for given FHIR version
+    CodeSystemEntry.Version version =
+        systemEntry.getVersions().stream()
+            .filter(v -> Objects.equals(v.getFhir(), code.getVersion()))
+            .findFirst()
+            .orElse(null);
+    if (version == null || version.getVsac() == null) {
+      return CodeStatus.NA;
+    }
+    // prepare code path e.g. CODE:/CodeSystem/ActCode/Version/9.0.0/Code/AMB/Info
+    String codePath =
+        TerminologyServiceUtil.buildCodePath(
+            code.getCodeSystem(), version.getVsac(), code.getName());
+    VsacCode svsCode = terminologyWebClient.getCode(codePath, apiKey);
+    if (svsCode.getStatus().equalsIgnoreCase("ok")) {
+      if ("Yes".equals(svsCode.getData().getResultSet().get(0).getActive())) {
+        return CodeStatus.ACTIVE;
+      } else {
+        return CodeStatus.INACTIVE;
+      }
+    }
+    return CodeStatus.NA;
+  }
+
+  /**
+   * Verify if the user with given harp id has valid UMLS user
+   *
+   * @param harpId
+   * @return Instance of UmlsUser
+   */
+  public UmlsUser verifyUmlsAccess(String harpId) {
+    UmlsUser user = findByHarpId(harpId).orElse(null);
+    if (user == null || StringUtils.isBlank(user.getApiKey())) {
+      log.error("UMLS API Key Not found for user : [{}}]", harpId);
+      throw new VsacUnauthorizedException("Please login to UMLS before proceeding");
+    }
+    return user;
   }
 
   private VsacCode validateCodeAgainstVsac(String codePath, UmlsUser umlsUser) {

@@ -28,6 +28,7 @@ client:
     base-url: ${FHIR_TERMINOLOGY_BASE_URL:https://cts.nlm.nih.gov/fhir}
     manifests-urn: /Library
     code-system-urn: /CodeSystem
+    code-lookups: /CodeSystem/$lookup?system={fullUrl}&code={code}&version={version}
 
 spring:
   session:

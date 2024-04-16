@@ -1,10 +1,10 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
-import gov.cms.madie.models.measure.Measure;
+import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
-import gov.cms.madie.terminology.models.CodeSystem;
+import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
@@ -21,7 +21,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -32,7 +31,6 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(VsacFhirTerminologyController.class)
@@ -82,7 +80,7 @@ class VsacFhirTerminologyControllerMvcTest {
   void testGetManifestsSuccessfullyMvc() throws Exception {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getManifests(any(UmlsUser.class))).thenReturn(mockManifests);
     MvcResult result =
         mockMvc
@@ -106,7 +104,9 @@ class VsacFhirTerminologyControllerMvcTest {
   void testUnAuthorizedUmlsUserWhileFetchingManifestsMvc() throws Exception {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
     MvcResult result =
         mockMvc
             .perform(
@@ -140,7 +140,7 @@ class VsacFhirTerminologyControllerMvcTest {
 
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getValueSetsExpansionsForQdm(
             any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
         .thenReturn(mockQdmValueSets);
@@ -184,7 +184,9 @@ class VsacFhirTerminologyControllerMvcTest {
             + "}";
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
     MvcResult result =
         mockMvc
             .perform(
@@ -199,10 +201,12 @@ class VsacFhirTerminologyControllerMvcTest {
   }
 
   @Test
-  public void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
+  public void testRetrieveAndUpdateCodeSystemsUnauthorized() throws Exception {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
     MvcResult result =
         mockMvc
             .perform(
@@ -217,10 +221,10 @@ class VsacFhirTerminologyControllerMvcTest {
   }
 
   @Test
-  public void testRetrieveAndUpdateCodeSystemsUnauthorized() throws Exception {
+  public void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.ofNullable(umlsUser));
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     mockMvc
         .perform(
             MockMvcRequestBuilders.get("/terminology/update-code-systems")
@@ -229,5 +233,40 @@ class VsacFhirTerminologyControllerMvcTest {
                 .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
                 .header("Authorization", TEST_TOKEN))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  public void testGetCodeSuccessfully() throws Exception {
+    String codeName = "1963-8";
+    String codeSystem = "LOINC";
+    String version = "2.40";
+    Code code =
+        Code.builder()
+            .name(codeName)
+            .codeSystem(codeSystem)
+            .version(version)
+            .display("Bicarbonate [Moles/volume] in Serum")
+            .codeSystemOid("2.16.840.1.113883.6.1")
+            .build();
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.retrieveCode(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(code);
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/terminology/code")
+                    .with(csrf())
+                    .with(user(TEST_USR))
+                    .param("code", codeName)
+                    .param("codeSystem", codeSystem)
+                    .param("version", version)
+                    .header("Authorization", TEST_TOKEN))
+            .andExpect(status().isOk())
+            .andReturn();
+    assertThat(result.getResponse().getStatus(), is(equalTo(200)));
+    assertThat(result.getResponse().getContentAsString(), containsString(code.getName()));
+    assertThat(result.getResponse().getContentAsString(), containsString(code.getDisplay()));
   }
 }

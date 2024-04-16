@@ -9,6 +9,8 @@ import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.cql.terminology.VsacCode.VsacError;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 
+import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
@@ -39,6 +41,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -422,5 +425,169 @@ class VsacServiceTest {
         is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
     assertThat(valueSets.get(0).getDisplayName(), is(equalTo("Office Visit")));
     assertThat(valueSets.get(0).getConcepts().size(), is(equalTo(0)));
+  }
+
+  @Test
+  void testVerifyUmlsAccessUmlsUserNotFound() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.empty());
+    Exception exception =
+        assertThrows(
+            VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
+    assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
+  }
+
+  @Test
+  void testVerifyUmlsAccessUmlsUserApiKeyIsMissing() {
+    UmlsUser umlsUserCopy = umlsUser.toBuilder().apiKey(null).build();
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUserCopy));
+    Exception exception =
+        assertThrows(
+            VsacUnauthorizedException.class, () -> vsacService.verifyUmlsAccess(TEST_API_KEY));
+    assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
+  }
+
+  @Test
+  void testVerifyUmlsAccess() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUser));
+    UmlsUser user = vsacService.verifyUmlsAccess(TEST_API_KEY);
+    assertThat(user.getHarpId(), is(equalTo(TEST_HARP_ID)));
+    assertThat(user.getApiKey(), is(equalTo(TEST_API_KEY)));
+  }
+
+  @Test
+  void testGetCodeStatusIfCodeSystemMappingAbsent() {
+    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(null);
+    assertThat(
+        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        is(equalTo(CodeStatus.NA)));
+  }
+
+  @Test
+  void testGetCodeStatusIfCodeSystemNotInSvs() {
+    var cse = CodeSystemEntry.builder().oid("NOT.IN.VSAC1").build();
+    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(cse);
+    assertThat(
+        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        is(equalTo(CodeStatus.NA)));
+  }
+
+  @Test
+  void testGetCodeStatusIfCodeSystemVersionEmpty() {
+    var cse = CodeSystemEntry.builder().oid("1.1.1.1").versions(List.of()).build();
+    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(cse);
+    assertThat(
+        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        is(equalTo(CodeStatus.NA)));
+  }
+
+  @Test
+  void testGetCodeStatusIfCodeSystemVersionForVsacIsNull() {
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac(null);
+    version.setFhir("https://fhir-version");
+    var cse = CodeSystemEntry.builder().oid("1.1.1.1").versions(List.of(version)).build();
+    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(cse);
+    assertThat(
+        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        is(equalTo(CodeStatus.NA)));
+  }
+
+  @Test
+  void testGetCodeStatusActive() {
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2023-09");
+    version.setFhir("abc.info/20230901");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("ABC")
+            .oid("urn:oid:1.2.3.4.96")
+            .url("abc.info")
+            .versions(Collections.toList(version))
+            .build();
+    Code code =
+        Code.builder()
+            .name("1222766008")
+            .codeSystem("ABC")
+            .version("abc.info/20230901")
+            .display("American Joint Committee on Cancer stage IIA")
+            .codeSystemOid("1.2.3.4.96")
+            .build();
+    var codeResultSet = new VsacCode.VsacDataResultSet();
+    codeResultSet.setActive("Yes");
+    var codeData = new VsacCode.VsacData();
+    codeData.setResultSet(List.of(codeResultSet));
+    VsacCode vsacCode = new VsacCode();
+    vsacCode.setStatus("ok");
+    vsacCode.setData(codeData);
+    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(codeSystemEntry);
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
+    CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
+    assertThat(status, is(equalTo(CodeStatus.ACTIVE)));
+  }
+
+  @Test
+  void testGetCodeStatusInactive() {
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2023-09");
+    version.setFhir("abc.info/20230901");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("ABC")
+            .oid("urn:oid:1.2.3.4.96")
+            .url("abc.info")
+            .versions(Collections.toList(version))
+            .build();
+    Code code =
+        Code.builder()
+            .name("1222766008")
+            .codeSystem("ABC")
+            .version("abc.info/20230901")
+            .display("American Joint Committee on Cancer stage IIA")
+            .codeSystemOid("1.2.3.4.96")
+            .build();
+    var codeResultSet = new VsacCode.VsacDataResultSet();
+    codeResultSet.setActive("No");
+    var codeData = new VsacCode.VsacData();
+    codeData.setResultSet(List.of(codeResultSet));
+    VsacCode vsacCode = new VsacCode();
+    vsacCode.setStatus("ok");
+    vsacCode.setData(codeData);
+    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(codeSystemEntry);
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
+    CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
+    assertThat(status, is(equalTo(CodeStatus.INACTIVE)));
+  }
+
+  @Test
+  void testGetCodeStatusIfCOdeNotFoundInSvs() {
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2023-09");
+    version.setFhir("abc.info/20230901");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("ABC")
+            .oid("urn:oid:1.2.3.4.96")
+            .url("abc.info")
+            .versions(Collections.toList(version))
+            .build();
+    Code code =
+        Code.builder()
+            .name("1222766008")
+            .codeSystem("ABC")
+            .version("abc.info/20230901")
+            .display("American Joint Committee on Cancer stage IIA")
+            .codeSystemOid("1.2.3.4.96")
+            .build();
+    var codeResultSet = new VsacCode.VsacDataResultSet();
+    codeResultSet.setActive("No");
+    var codeData = new VsacCode.VsacData();
+    codeData.setResultSet(List.of(codeResultSet));
+    VsacCode vsacCode = new VsacCode();
+    vsacCode.setStatus("non-ok");
+    vsacCode.setData(codeData);
+    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(codeSystemEntry);
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
+    CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
+    assertThat(status, is(equalTo(CodeStatus.NA)));
   }
 }
