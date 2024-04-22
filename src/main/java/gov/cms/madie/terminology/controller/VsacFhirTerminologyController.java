@@ -54,7 +54,7 @@ public class VsacFhirTerminologyController {
   public ResponseEntity<List<CodeSystem>> retrieveAndUpdateCodeSystems(
       Principal principal,
       HttpServletRequest request,
-      @Value("${admin-api-key}") String apiKey,
+      @Value("${code-system-refresh-task.admin-api-key}") String apiKey,
       @RequestHeader("Authorization") String accessToken) {
     final String username = principal.getName();
     UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);

@@ -19,14 +19,14 @@ public class UpdateCodeSystemTask {
     private final FhirTerminologyService fhirTerminologyService;
 
 
-    @Value("${admin-api-key}")
-    private String adminApiKey;
-    @Scheduled(cron = "@midnight") // every midnight
+    @Value("${code-system-refresh-task.terminology-key}")
+    private String apiKey;
+    @Scheduled(cron = "${code-system-refresh-task.code-system-cron-date-time}") // every midnight
     public void updateCodeSystems() {
         log.info("Starting scheduled task to update code systems.");
 
         UmlsUser user = new UmlsUser();
-        user.setApiKey(adminApiKey);
+        user.setApiKey(apiKey);
         ResponseEntity<List<CodeSystem>> response = ResponseEntity.ok()
                 .body(fhirTerminologyService.retrieveAllCodeSystems(user));
         log.info("Successfully retrieved and updated code systems for user: {}", response);
