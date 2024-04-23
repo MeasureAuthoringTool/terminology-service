@@ -1,4 +1,5 @@
 package gov.cms.madie.terminology.task;
+
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
@@ -12,19 +13,15 @@ import java.util.*;
 
 import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
-
 public class UpdateCodeSystemTaskTest {
-    @Mock
-    private FhirTerminologyService fhirTerminologyService;
-
-    @InjectMocks UpdateCodeSystemTask updateCodeSystemTask;
-    @Test
-    void updateCodeSystemTaskTest() {
-        UmlsUser umlsUser = new UmlsUser();
-        List<CodeSystem> codeSystems = Arrays.asList(new CodeSystem(), new CodeSystem());
-        when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(codeSystems);
-        updateCodeSystemTask.updateCodeSystems();
-        verify(fhirTerminologyService).retrieveAllCodeSystems(umlsUser);
-    }
-
+  @Mock private FhirTerminologyService fhirTerminologyService;
+  @InjectMocks UpdateCodeSystemTask updateCodeSystemTask;
+  @Test
+  void updateCodeSystemTaskTest() {
+    UmlsUser umlsUser = new UmlsUser();
+    List<CodeSystem> codeSystems = Arrays.asList(new CodeSystem(), new CodeSystem());
+    when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(codeSystems);
+    updateCodeSystemTask.updateCodeSystems();
+    verify(fhirTerminologyService).retrieveAllCodeSystems(umlsUser);
+  }
 }

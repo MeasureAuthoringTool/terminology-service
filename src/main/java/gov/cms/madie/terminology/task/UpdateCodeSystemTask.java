@@ -16,19 +16,19 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class UpdateCodeSystemTask {
-    private final FhirTerminologyService fhirTerminologyService;
+  private final FhirTerminologyService fhirTerminologyService;
 
+  @Value("${code-system-refresh-task.terminology-key}")
+  private String apiKey;
 
-    @Value("${code-system-refresh-task.terminology-key}")
-    private String apiKey;
-    @Scheduled(cron = "${code-system-refresh-task.code-system-cron-date-time}") // every midnight
-    public void updateCodeSystems() {
-        log.info("Starting scheduled task to update code systems.");
+  @Scheduled(cron = "${code-system-refresh-task.code-system-cron-date-time}") // every midnight
+  public void updateCodeSystems() {
+    log.info("Starting scheduled task to update code systems.");
 
-        UmlsUser user = new UmlsUser();
-        user.setApiKey(apiKey);
-        ResponseEntity<List<CodeSystem>> response = ResponseEntity.ok()
-                .body(fhirTerminologyService.retrieveAllCodeSystems(user));
-        log.info("Successfully retrieved and updated code systems for user: {}", response);
-    }
+    UmlsUser user = new UmlsUser();
+    user.setApiKey(apiKey);
+    ResponseEntity<List<CodeSystem>> response =
+        ResponseEntity.ok().body(fhirTerminologyService.retrieveAllCodeSystems(user));
+    log.info("Successfully retrieved and updated code systems for user: {}", response);
+  }
 }
