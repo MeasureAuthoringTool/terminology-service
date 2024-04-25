@@ -27,8 +27,7 @@ public class UpdateCodeSystemTask {
 
     UmlsUser user = new UmlsUser();
     user.setApiKey(apiKey);
-    ResponseEntity<List<CodeSystem>> response =
-        ResponseEntity.ok().body(fhirTerminologyService.retrieveAllCodeSystems(user));
+    List<CodeSystem> response = fhirTerminologyService.retrieveAllCodeSystems(user);
     log.info("Successfully retrieved and updated code systems for user: {}", response);
   }
 }
