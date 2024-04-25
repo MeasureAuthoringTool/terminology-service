@@ -21,7 +21,6 @@ public class UpdateCodeSystemTaskTest {
   void updateCodeSystemTaskTest() {
     UmlsUser umlsUser = new UmlsUser();
     List<CodeSystem> codeSystems = Arrays.asList(new CodeSystem(), new CodeSystem());
-    when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(codeSystems);
     updateCodeSystemTask.updateCodeSystems();
     verify(fhirTerminologyService).retrieveAllCodeSystems(umlsUser);
   }
