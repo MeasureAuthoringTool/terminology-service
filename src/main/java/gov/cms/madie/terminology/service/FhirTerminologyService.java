@@ -25,8 +25,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @Slf4j
@@ -122,7 +124,49 @@ public class FhirTerminologyService {
   }
 
   public List<CodeSystem> getAllCodeSystems() {
-    return codeSystemRepository.findAll();
+    // remove items that are marked as not present in vsac to cut expense
+    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries().stream().filter(codeSystemEntry -> !codeSystemEntry.getOid().contains("NOT.IN.VSAC")).toList();
+    List<CodeSystem> codeSystems = codeSystemRepository.findAll();
+    List<CodeSystem> transformedResults = new ArrayList<>(Collections.emptyList());
+    codeSystems.forEach(codeSystem -> {
+      // if the oid shows up at all
+      int index = -1;
+      for (int i = 0; i < codeSystems.size(); i++) {
+        if (codeSystems.get(i).getOid().equals(codeSystem.getOid())) {
+          index = i;
+          break;
+        }
+      }
+      if(index != -1) {
+        CodeSystemEntry matchingEntry = null;
+        for (CodeSystemEntry entry : codeSystemEntries) {
+          if (entry.getOid().equals(codeSystem.getOid())) {
+            matchingEntry = entry;
+            break;
+          }
+        }
+        if (matchingEntry != null) {
+          AtomicBoolean usableVersionFound = new AtomicBoolean(false);
+          matchingEntry.getVersions().forEach(version -> {
+            // we use fhir csv to interact with api. goal here is to look for fhir version, then give users a display version
+            // that looks like vsac because that's what they understand.
+            if (version.getFhir().equals(codeSystem.getVersion()) && version.getVsac() != null) {
+              codeSystem.setDisplayVersion(version.getVsac());
+              transformedResults.add(codeSystem);
+              usableVersionFound.set(true);
+            }
+          });
+          if (usableVersionFound.get()){
+            log.info("CodeSystem title {} , version: {} was not found in mapping document", codeSystem.getTitle(), codeSystem.getVersion());
+          }
+        }
+      }
+      else {
+        // it was not found, we log that it's not located within vsac.
+        log.info("CodeSystem title {} , version: {} was not found in mapping document", codeSystem.getTitle(), codeSystem.getName());
+      }
+    });
+    return transformedResults;
   }
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
