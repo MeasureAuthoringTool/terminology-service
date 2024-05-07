@@ -24,9 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -276,6 +275,104 @@ public class FhirTerminologyService {
         codeSystemRepository.save(existingCodeSystem);
         log.info("CodeSystem updated: {}", existingCodeSystem);
       }
+    }
+  }
+
+  public List<Code> retrieveCodesList(List<Map<String, String>> codeList, String apiKey) {
+    return codeList.stream()
+        .map(
+            code -> {
+              List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+              String codeName = code.get("code");
+              String codeSystemName = code.get("codeSystem");
+              String oid = code.get("oid") != null ? code.get("oid").replaceAll("'|'", "") : null;
+
+              Optional<Map.Entry<String, String>> mappedVersion =
+                  oid != null
+                      ? mapToFhirVersion(code.get("version"), oid, codeSystemEntries)
+                      : null;
+
+              if (mappedVersion != null) {
+                String vsacVersion = mappedVersion.get().getKey();
+                String fhirVersion = mappedVersion.get().getValue();
+
+                return retrieveCodes(
+                    codeName, codeSystemName, vsacVersion, fhirVersion, oid, apiKey);
+              }
+
+              return retrieveCodes(codeName, codeSystemName, null, null, oid, apiKey);
+            })
+        .collect(Collectors.toList());
+  }
+
+  private Optional<Map.Entry<String, String>> mapToFhirVersion(
+      String version, String oid, List<CodeSystemEntry> codeSystemEntries) {
+
+    Optional<Map.Entry<String, String>> result;
+    if (version == null) {
+      result =
+          codeSystemEntries.stream()
+              .filter(codeSystemEntry -> codeSystemEntry.getOid().toString().equals(oid))
+              .findFirst()
+              .map(
+                  codeSystemVersion ->
+                      Map.entry(
+                          codeSystemVersion.getVersions().get(0).getVsac(),
+                          codeSystemVersion.getVersions().get(0).getFhir()));
+    } else {
+      result =
+          codeSystemEntries.stream()
+              .filter(codeSystemEntry -> codeSystemEntry.getOid().toString().equals(oid))
+              .flatMap(codeSystemEntry -> codeSystemEntry.getVersions().stream())
+              .filter(codeSystemVersion -> codeSystemVersion.getVsac().equals(version))
+              .map(
+                  codeSystemVersion ->
+                      Map.entry(codeSystemVersion.getVsac(), codeSystemVersion.getFhir()))
+              .findFirst();
+    }
+
+    if (result.isPresent()) {
+      return result;
+    }
+    return null;
+  }
+
+  private Code retrieveCodes(
+      String codeName,
+      String codeSystemName,
+      String vsacVersion,
+      String fhirVersion,
+      String oid,
+      String apiKey) {
+    try {
+      if (StringUtils.isEmpty(codeName)
+          || StringUtils.isEmpty(codeSystemName)
+          || StringUtils.isEmpty(fhirVersion)) {
+        return null;
+      }
+      CodeSystem codeSystem =
+          codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
+      if (codeSystem == null) {
+        return null;
+      }
+      String codeJson =
+          fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
+
+      Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
+      Code code =
+          Code.builder()
+              .name(codeName)
+              .codeSystem(codeSystemName)
+              .version(vsacVersion)
+              .display(parameters.getParameter("display").getValue().toString())
+              .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
+              .build();
+
+      CodeStatus status = vsacService.getCodeStatus(code, apiKey);
+      code.setStatus(status);
+      return code;
+    } catch (Exception ex) {
+      return null;
     }
   }
 }

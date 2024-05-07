@@ -8,4 +8,6 @@ public interface CodeSystemRepository extends MongoRepository<CodeSystem, String
   Optional<CodeSystem> findById(String id);
 
   Optional<CodeSystem> findByNameAndVersion(String name, String version);
+
+  Optional<CodeSystem> findByOidAndVersion(String oid, String version);
 }

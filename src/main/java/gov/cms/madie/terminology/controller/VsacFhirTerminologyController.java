@@ -19,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(path = "/terminology")
@@ -84,5 +85,14 @@ public class VsacFhirTerminologyController {
     UmlsUser user = vsacService.verifyUmlsAccess(username);
     return ResponseEntity.ok()
         .body(fhirTerminologyService.retrieveCode(code, codeSystem, version, user.getApiKey()));
+  }
+
+  @PostMapping(path = "/codesList", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<Code>> getCodesList(
+      @RequestBody() List<Map<String, String>> codeList, Principal principal) {
+    final String username = principal.getName();
+    UmlsUser user = vsacService.verifyUmlsAccess(username);
+    return ResponseEntity.ok()
+        .body(fhirTerminologyService.retrieveCodesList(codeList, user.getApiKey()));
   }
 }
