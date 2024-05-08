@@ -451,4 +451,70 @@ class FhirTerminologyServiceTest {
     assertThat(code.getVersion(), is(equalTo(version)));
     assertThat(code.getStatus(), is(equalTo(CodeStatus.ACTIVE)));
   }
+
+  @Test
+  void testRetrieveCodesListSuccessfully() {
+    List<Map<String, String>> codeList =
+        List.of(
+            Map.of(
+                "code", "1963-8", "codeSystem", "LOINC", "oid", "'urn:oid:2.16.840.1.113883.6.1'"));
+
+    String codeJson =
+        "{\n"
+            + "  \"resourceType\": \"Parameters\",\n"
+            + "  \"parameter\": [ {\n"
+            + "    \"name\": \"name\",\n"
+            + "    \"valueString\": \"LOINC\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"version\",\n"
+            + "    \"valueString\": \"2.40\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"display\",\n"
+            + "    \"valueString\": \"Bicarbonate [Moles/volume] in Serum\"\n"
+            + "  }, {\n"
+            + "    \"name\": \"Oid\",\n"
+            + "    \"valueString\": \"2.16.840.1.113883.6.1\"\n"
+            + "  } ]\n"
+            + "}";
+
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2.40");
+    version.setFhir("2.40");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("8462-4")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .url("http://loinc.org")
+            .versions(Collections.toList(version))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
+
+    gov.cms.madie.terminology.models.CodeSystem codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id("LOINC2.40")
+            .fullUrl("http://loinc.org")
+            .title("LOINC")
+            .name("LOINC")
+            .version("2.40")
+            .versionId("404676818")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .lastUpdated(Instant.parse("2024-04-30T20:18:48.706Z"))
+            .lastUpdatedUpstream(new Date("Fri Apr 01 00:00:00 EDT 2022"))
+            .build();
+
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findByOidAndVersion(anyString(), anyString()))
+        .thenReturn(Optional.ofNullable(codeSystem));
+    when(fhirTerminologyServiceWebClient.getCodeResource(anyString(), any(), any()))
+        .thenReturn(codeJson);
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(vsacService.getCodeStatus(any(), anyString())).thenReturn(CodeStatus.ACTIVE);
+    List<Code> code = fhirTerminologyService.retrieveCodesList(codeList, TEST_API_KEY);
+    assertThat(code.get(0).getName(), is(equalTo("1963-8")));
+    assertThat(code.get(0).getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
+    assertThat(code.get(0).getCodeSystem(), is(equalTo("LOINC")));
+    assertThat(code.get(0).getVersion(), is(equalTo("2.40")));
+    assertThat(code.get(0).getStatus(), is(equalTo(CodeStatus.ACTIVE)));
+  }
 }
