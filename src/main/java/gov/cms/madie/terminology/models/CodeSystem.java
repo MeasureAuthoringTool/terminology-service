@@ -22,7 +22,7 @@ public class CodeSystem {
   private String title;
   private String name;
   private String version;
-  private String displayVersion; // match version HL7V3.0_2019-12 against fhir
+  private String qdmDisplayVersion; // match version HL7V3.0_2019-12 against fhir
   private String versionId;
   private String oid; // identifier[0].value oid of identifier List
   private Instant lastUpdated; // when queried
