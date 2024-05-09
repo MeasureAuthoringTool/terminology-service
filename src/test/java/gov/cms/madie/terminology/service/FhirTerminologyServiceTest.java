@@ -35,6 +35,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.*;
@@ -334,9 +335,20 @@ class FhirTerminologyServiceTest {
   void testGetAllCodeSystems() {
     var c1 = new gov.cms.madie.terminology.models.CodeSystem();
     c1.setTitle("t1");
+    c1.setOid("fakeoid1");
+    c1.setVersion("1.0");
     var c2 = new gov.cms.madie.terminology.models.CodeSystem();
     c2.setTitle("t2");
+    c2.setOid("fakeoid2");
+    c2.setVersion("2.0");
+    CodeSystemEntry.Version cv1 = new CodeSystemEntry.Version().toBuilder().fhir("1.0").vsac("exists").build();
+    CodeSystemEntry.Version cv2 = new CodeSystemEntry.Version().toBuilder().fhir("2.0").vsac("exists").build();
+    var ce1 = new CodeSystemEntry().toBuilder().versions(java.util.Collections.singletonList(cv1)).oid("fakeoid1").build();
+    var ce2 = new CodeSystemEntry().toBuilder().versions(java.util.Collections.singletonList(cv2)).oid("fakeoid2").build();
+
+    List<CodeSystemEntry> codeSystemEntries = Arrays.asList(ce1, ce2);
     List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2);
+    when(mappingService.getCodeSystemEntries()).thenAnswer(invocation -> codeSystemEntries);
     when(codeSystemRepository.findAll()).thenAnswer(invocation -> codeSystems);
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.getAllCodeSystems();
