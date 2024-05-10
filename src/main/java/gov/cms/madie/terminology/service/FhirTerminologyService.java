@@ -343,36 +343,32 @@ public class FhirTerminologyService {
       String fhirVersion,
       String oid,
       String apiKey) {
-    try {
-      if (StringUtils.isEmpty(codeName)
-          || StringUtils.isEmpty(codeSystemName)
-          || StringUtils.isEmpty(fhirVersion)) {
-        return null;
-      }
-      CodeSystem codeSystem =
-          codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
-      if (codeSystem == null) {
-        return null;
-      }
-      String codeJson =
-          fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
-
-      Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
-      Code code =
-          Code.builder()
-              .name(codeName)
-              .codeSystem(codeSystemName)
-              .version(fhirVersion)
-              .svsVersion(vsacVersion)
-              .display(parameters.getParameter("display").getValue().toString())
-              .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
-              .build();
-
-      CodeStatus status = vsacService.getCodeStatus(code, apiKey);
-      code.setStatus(status);
-      return code;
-    } catch (Exception ex) {
+    if (StringUtils.isEmpty(codeName)
+        || StringUtils.isEmpty(codeSystemName)
+        || StringUtils.isEmpty(fhirVersion)) {
       return null;
     }
+    CodeSystem codeSystem =
+        codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
+    if (codeSystem == null) {
+      return null;
+    }
+    String codeJson =
+        fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
+
+    Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
+    Code code =
+        Code.builder()
+            .name(codeName)
+            .codeSystem(codeSystemName)
+            .version(fhirVersion)
+            .svsVersion(vsacVersion)
+            .display(parameters.getParameter("display").getValue().toString())
+            .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
+            .build();
+
+    CodeStatus status = vsacService.getCodeStatus(code, apiKey);
+    code.setStatus(status);
+    return code;
   }
 }
