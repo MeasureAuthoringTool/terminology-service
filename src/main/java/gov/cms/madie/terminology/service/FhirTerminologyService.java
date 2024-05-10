@@ -332,9 +332,6 @@ public class FhirTerminologyService {
               .findFirst();
     }
 
-    if (result.isPresent()) {
-      return result;
-    }
     return result;
   }
 
