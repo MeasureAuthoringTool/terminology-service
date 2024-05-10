@@ -183,7 +183,6 @@ public class VsacService {
     if (StringUtils.isNotBlank(code.getSvsVersion())) {
       return code.getSvsVersion();
     }
-    //    CodeSystemEntry systemEntry = mappingService.getCodeSystemEntry(code.getCodeSystem());
     CodeSystemEntry systemEntry = mappingService.getCodeSystemEntryByOid(code.getCodeSystemOid());
     // do not call SVS API to get code status if the system is not in SVS API
     if (systemEntry == null
