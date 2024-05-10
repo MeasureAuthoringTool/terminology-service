@@ -287,7 +287,8 @@ public class FhirTerminologyService {
               String codeSystemName = code.get("codeSystem");
               String oid = code.get("oid") != null ? code.get("oid").replaceAll("'|'", "") : null;
 
-              Optional<Map.Entry<String, String>> mappedVersion = mapToFhirVersion(code.get("version"), oid, codeSystemEntries);
+              Optional<Map.Entry<String, String>> mappedVersion =
+                  mapToFhirVersion(code.get("version"), oid, codeSystemEntries);
 
               if (mappedVersion.isPresent()) {
                 String vsacVersion = mappedVersion.get().getKey();
@@ -305,7 +306,7 @@ public class FhirTerminologyService {
   private Optional<Map.Entry<String, String>> mapToFhirVersion(
       String version, String oid, List<CodeSystemEntry> codeSystemEntries) {
 
-    if(oid == null){
+    if (oid == null) {
       return Optional.empty();
     }
 
