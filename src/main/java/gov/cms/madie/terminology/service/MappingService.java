@@ -38,13 +38,15 @@ public class MappingService {
     return Collections.emptyList();
   }
 
-  public CodeSystemEntry getCodeSystemEntry(String codeSystemName) {
+  public CodeSystemEntry getCodeSystemEntryByOid(String oid) {
     List<CodeSystemEntry> codeSystemEntries = getCodeSystemEntries();
     if (CollectionUtils.isEmpty(codeSystemEntries)) {
       return null;
     }
     return codeSystemEntries.stream()
-        .filter(entry -> Objects.equals(entry.getName(), codeSystemName))
+        .filter(
+            entry ->
+                Objects.equals(entry.getOid(), oid.startsWith("urn:oid:") ? oid : "urn:oid:" + oid))
         .findFirst()
         .orElse(null);
   }

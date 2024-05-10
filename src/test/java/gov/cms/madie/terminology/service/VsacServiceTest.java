@@ -456,27 +456,29 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeSystemMappingAbsent() {
-    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(null);
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(null);
     assertThat(
-        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        vsacService.getCodeStatus(
+            Code.builder().codeSystemOid("oid").version("version").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
   }
 
   @Test
   void testGetCodeStatusIfCodeSystemNotInSvs() {
     var cse = CodeSystemEntry.builder().oid("NOT.IN.VSAC1").build();
-    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(cse);
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
     assertThat(
-        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        vsacService.getCodeStatus(
+            Code.builder().codeSystemOid("oid").version("version").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
   }
 
   @Test
   void testGetCodeStatusIfCodeSystemVersionEmpty() {
     var cse = CodeSystemEntry.builder().oid("1.1.1.1").versions(List.of()).build();
-    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(cse);
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
     assertThat(
-        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        vsacService.getCodeStatus(Code.builder().codeSystemOid("oid").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
   }
 
@@ -486,9 +488,9 @@ class VsacServiceTest {
     version.setVsac(null);
     version.setFhir("https://fhir-version");
     var cse = CodeSystemEntry.builder().oid("1.1.1.1").versions(List.of(version)).build();
-    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(cse);
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
     assertThat(
-        vsacService.getCodeStatus(Code.builder().codeSystem("test").build(), TEST_API_KEY),
+        vsacService.getCodeStatus(Code.builder().codeSystemOid("oid").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
   }
 
@@ -519,7 +521,7 @@ class VsacServiceTest {
     VsacCode vsacCode = new VsacCode();
     vsacCode.setStatus("ok");
     vsacCode.setData(codeData);
-    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(codeSystemEntry);
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(codeSystemEntry);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.ACTIVE)));
@@ -552,14 +554,14 @@ class VsacServiceTest {
     VsacCode vsacCode = new VsacCode();
     vsacCode.setStatus("ok");
     vsacCode.setData(codeData);
-    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(codeSystemEntry);
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(codeSystemEntry);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.INACTIVE)));
   }
 
   @Test
-  void testGetCodeStatusIfCOdeNotFoundInSvs() {
+  void testGetCodeStatusIfCodeNotFoundInSvs() {
     CodeSystemEntry.Version version = new CodeSystemEntry.Version();
     version.setVsac("2023-09");
     version.setFhir("abc.info/20230901");
@@ -585,7 +587,7 @@ class VsacServiceTest {
     VsacCode vsacCode = new VsacCode();
     vsacCode.setStatus("non-ok");
     vsacCode.setData(codeData);
-    when(mappingService.getCodeSystemEntry(anyString())).thenReturn(codeSystemEntry);
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(codeSystemEntry);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.NA)));

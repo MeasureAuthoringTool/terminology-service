@@ -161,7 +161,7 @@ public class VsacService {
   }
 
   public CodeStatus getCodeStatus(Code code, String apiKey) {
-    CodeSystemEntry systemEntry = mappingService.getCodeSystemEntry(code.getCodeSystem());
+    CodeSystemEntry systemEntry = mappingService.getCodeSystemEntryByOid(code.getCodeSystemOid());
     // do not call SVS API to get code status if the system is not in SVS API
     if (systemEntry == null
         || systemEntry.getOid().contains("NOT.IN.VSAC")

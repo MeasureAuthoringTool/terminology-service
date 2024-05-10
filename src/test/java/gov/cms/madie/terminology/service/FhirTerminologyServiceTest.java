@@ -486,7 +486,7 @@ class FhirTerminologyServiceTest {
             .name("8462-4")
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .url("http://loinc.org")
-            .versions(Collections.toList(version))
+            .versions(List.of(version))
             .build();
     codeSystemEntries.add(codeSystemEntry);
 
