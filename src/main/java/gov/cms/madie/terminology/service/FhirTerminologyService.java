@@ -348,13 +348,11 @@ public class FhirTerminologyService {
         || StringUtils.isEmpty(fhirVersion)) {
       return null;
     }
-    CodeSystem codeSystem =
-        codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
+    CodeSystem codeSystem = codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
     if (codeSystem == null) {
       return null;
     }
-    String codeJson =
-        fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
+    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
 
     Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
     Code code =
