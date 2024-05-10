@@ -297,8 +297,7 @@ public class FhirTerminologyService {
                 return retrieveCodes(
                     codeName, codeSystemName, vsacVersion, fhirVersion, oid, apiKey);
               }
-
-              return retrieveCodes(codeName, codeSystemName, null, null, oid, apiKey);
+              return null;
             })
         .collect(Collectors.toList());
   }
