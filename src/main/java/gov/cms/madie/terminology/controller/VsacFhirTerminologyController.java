@@ -87,12 +87,12 @@ public class VsacFhirTerminologyController {
         .body(fhirTerminologyService.retrieveCode(code, codeSystem, version, user.getApiKey()));
   }
 
-  @PostMapping(path = "/codesList", produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<Code>> getCodesList(
+  @PostMapping(path = "/codes", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<Code>> getCodesAndCodeSystems(
       @RequestBody() List<Map<String, String>> codeList, Principal principal) {
     final String username = principal.getName();
     UmlsUser user = vsacService.verifyUmlsAccess(username);
     return ResponseEntity.ok()
-        .body(fhirTerminologyService.retrieveCodesList(codeList, user.getApiKey()));
+        .body(fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, user.getApiKey()));
   }
 }

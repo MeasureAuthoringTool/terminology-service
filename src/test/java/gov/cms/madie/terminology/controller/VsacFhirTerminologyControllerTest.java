@@ -250,9 +250,10 @@ class VsacFhirTerminologyControllerTest {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(fhirTerminologyService.retrieveCodesList(any(), anyString())).thenReturn(List.of(code));
+    when(fhirTerminologyService.retrieveCodesAndCodeSystems(any(), anyString()))
+        .thenReturn(List.of(code));
     ResponseEntity<List<Code>> response =
-        vsacFhirTerminologyController.getCodesList(codeList, principal);
+        vsacFhirTerminologyController.getCodesAndCodeSystems(codeList, principal);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
     assertEquals(response.getBody().get(0), code);
   }

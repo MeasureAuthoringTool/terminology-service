@@ -510,7 +510,7 @@ class FhirTerminologyServiceTest {
         .thenReturn(codeJson);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(vsacService.getCodeStatus(any(), anyString())).thenReturn(CodeStatus.ACTIVE);
-    List<Code> code = fhirTerminologyService.retrieveCodesList(codeList, TEST_API_KEY);
+    List<Code> code = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
     assertThat(code.get(0).getName(), is(equalTo("1963-8")));
     assertThat(code.get(0).getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
     assertThat(code.get(0).getCodeSystem(), is(equalTo("LOINC")));
