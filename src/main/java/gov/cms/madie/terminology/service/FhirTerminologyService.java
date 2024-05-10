@@ -304,7 +304,6 @@ public class FhirTerminologyService {
 
   private Optional<Map.Entry<String, String>> mapToFhirVersion(
       String version, String oid, List<CodeSystemEntry> codeSystemEntries) {
-
     if (oid == null) {
       return Optional.empty();
     }
@@ -313,7 +312,7 @@ public class FhirTerminologyService {
     if (version == null) {
       result =
           codeSystemEntries.stream()
-              .filter(codeSystemEntry -> codeSystemEntry.getOid().toString().equals(oid))
+              .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
               .findFirst()
               .map(
                   codeSystemVersion ->
@@ -323,9 +322,9 @@ public class FhirTerminologyService {
     } else {
       result =
           codeSystemEntries.stream()
-              .filter(codeSystemEntry -> codeSystemEntry.getOid().toString().equals(oid))
+              .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
               .flatMap(codeSystemEntry -> codeSystemEntry.getVersions().stream())
-              .filter(codeSystemVersion -> codeSystemVersion.getVsac().equals(version))
+              .filter(codeSystemVersion -> StringUtils.equals(codeSystemVersion.getVsac(), version))
               .map(
                   codeSystemVersion ->
                       Map.entry(codeSystemVersion.getVsac(), codeSystemVersion.getFhir()))
