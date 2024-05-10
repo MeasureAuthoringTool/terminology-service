@@ -17,6 +17,7 @@ import static org.mockito.Mockito.*;
 public class UpdateCodeSystemTaskTest {
   @Mock private FhirTerminologyService fhirTerminologyService;
   @InjectMocks UpdateCodeSystemTask updateCodeSystemTask;
+
   @Test
   void updateCodeSystemTaskTest() {
     UmlsUser umlsUser = new UmlsUser();

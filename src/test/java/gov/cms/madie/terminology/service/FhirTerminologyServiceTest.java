@@ -1,7 +1,6 @@
 package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
-import com.okta.commons.lang.Collections;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
@@ -27,6 +26,7 @@ import org.mockito.Mock;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
@@ -39,7 +39,6 @@ import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
@@ -143,7 +142,7 @@ class FhirTerminologyServiceTest {
             .name("Icd10CM")
             .oid("urn:oid:2.16.840.1.113883.6.90")
             .url("http://hl7.org/fhir/sid/icd-10-cm")
-            .versions(Collections.toList(version))
+            .versions(List.of(version))
             .build();
     codeSystemEntries.add(codeSystemEntry);
   }
@@ -334,17 +333,45 @@ class FhirTerminologyServiceTest {
   void testGetAllCodeSystems() {
     var c1 = new gov.cms.madie.terminology.models.CodeSystem();
     c1.setTitle("t1");
+    c1.setOid("fakeoid1");
+    c1.setVersion("1.0");
     var c2 = new gov.cms.madie.terminology.models.CodeSystem();
     c2.setTitle("t2");
-    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2);
+    c2.setOid("fakeoid2");
+    c2.setVersion("2.0");
+    var c3 = new gov.cms.madie.terminology.models.CodeSystem();
+    c3.setTitle("t3");
+    c3.setOid("fakeoid3");
+    c3.setVersion("2024");
+
+    CodeSystemEntry.Version cv1 =
+        new CodeSystemEntry.Version().toBuilder().fhir("1.0").vsac("1").build();
+    CodeSystemEntry.Version cv2 =
+        new CodeSystemEntry.Version().toBuilder().fhir("2.0").vsac("2").build();
+    CodeSystemEntry.Version cv3 = new CodeSystemEntry.Version().toBuilder().fhir("latest").build();
+    var ce1 = new CodeSystemEntry().toBuilder().versions(List.of(cv1)).oid("fakeoid1").build();
+    var ce2 = new CodeSystemEntry().toBuilder().versions(List.of(cv2)).oid("fakeoid2").build();
+    var ce3 = new CodeSystemEntry().toBuilder().versions(List.of(cv3)).oid("NOT.IN.VSAC").build();
+
+    List<CodeSystemEntry> codeSystemEntries = Arrays.asList(ce1, ce2, ce3);
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3);
+    when(mappingService.getCodeSystemEntries()).thenAnswer(invocation -> codeSystemEntries);
     when(codeSystemRepository.findAll()).thenAnswer(invocation -> codeSystems);
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.getAllCodeSystems();
 
     verify(codeSystemRepository).findAll();
-    assertEquals(2, result.size());
+    assertEquals(3, result.size());
     assertEquals("t1", result.get(0).getTitle());
+    assertEquals("1", result.get(0).getQdmDisplayVersion());
+
     assertEquals("t2", result.get(1).getTitle());
+    assertEquals("2", result.get(1).getQdmDisplayVersion());
+
+    // Verify FHIR only Code Systems appear in the result set
+    assertEquals("t3", result.get(2).getTitle());
+    assertEquals("2024", result.get(2).getVersion());
+    assertNull(result.get(2).getQdmDisplayVersion());
   }
 
   @Test

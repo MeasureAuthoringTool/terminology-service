@@ -122,7 +122,46 @@ public class FhirTerminologyService {
   }
 
   public List<CodeSystem> getAllCodeSystems() {
-    return codeSystemRepository.findAll();
+    // remove items that are marked as not present in vsac to cut expense
+    List<CodeSystemEntry> codeSystemMappingEntries =
+        mappingService.getCodeSystemEntries().stream()
+            .filter(codeSystemEntry -> !codeSystemEntry.getOid().contains("NOT.IN.VSAC"))
+            .toList();
+    List<CodeSystem> codeSystems = codeSystemRepository.findAll();
+    codeSystems.forEach(
+        codeSystem -> {
+          Optional<CodeSystemEntry> matchingEntry =
+              codeSystemMappingEntries.stream()
+                  .filter(entry -> entry.getOid().equals(codeSystem.getOid()))
+                  .findFirst();
+          if (matchingEntry.isPresent()) {
+            matchingEntry
+                .get()
+                .getVersions()
+                .forEach(
+                    version -> {
+                      // We use fhir url to interact with VSAC FHIR Term Service.
+                      // Goal here is to look for fhir version, then give users
+                      // viewing QDM measures a display version that looks like
+                      // svs vsac because that's what they expect.
+                      if (version.getFhir().equals(codeSystem.getVersion())
+                          && version.getVsac() != null) {
+                        codeSystem.setQdmDisplayVersion(version.getVsac());
+                        log.debug(
+                            "CodeSystem title {} , version: {} was found in mapping document",
+                            codeSystem.getTitle(),
+                            codeSystem.getVersion());
+                      }
+                    });
+          } else {
+            // it was not found, we log that it's not located within vsac.
+            log.debug(
+                "CodeSystem title {} , version: {} was NOT found in mapping document",
+                codeSystem.getTitle(),
+                codeSystem.getName());
+          }
+        });
+    return codeSystems;
   }
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
