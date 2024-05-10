@@ -361,7 +361,8 @@ public class FhirTerminologyService {
           Code.builder()
               .name(codeName)
               .codeSystem(codeSystemName)
-              .version(vsacVersion)
+              .version(fhirVersion)
+              .svsVersion(vsacVersion)
               .display(parameters.getParameter("display").getValue().toString())
               .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
               .build();
