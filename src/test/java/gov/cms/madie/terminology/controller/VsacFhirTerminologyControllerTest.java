@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
@@ -22,10 +23,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.security.Principal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -229,5 +227,34 @@ class VsacFhirTerminologyControllerTest {
             VsacUnauthorizedException.class,
             () -> vsacFhirTerminologyController.getCode(codeName, codeSystem, version, principal));
     assertEquals(ex.getMessage(), "Please login to UMLS before proceeding");
+  }
+
+  @Test
+  void testGetCodesList() {
+    List<Map<String, String>> codeList =
+        List.of(
+            Map.of(
+                "code", "1963-8", "codeSystem", "LOINC", "oid", "'urn:oid:2.16.840.1.113883.6.1'"),
+            Map.of(
+                "code", "8462-4", "codeSystem", "LOINC", "oid", "'urn:oid:2.16.840.1.113883.6.1'"));
+    Code code =
+        Code.builder()
+            .name("1963-8")
+            .codeSystem("LOINC")
+            .version("2.72")
+            .display("Bicarbonate [Moles/volume] in Serum")
+            .codeSystemOid("2.16.840.1.113883.6.1")
+            .status(CodeStatus.valueOf("ACTIVE"))
+            .build();
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.retrieveCodesAndCodeSystems(any(), anyString()))
+        .thenReturn(List.of(code));
+    ResponseEntity<List<Code>> response =
+        vsacFhirTerminologyController.getCodesAndCodeSystems(codeList, principal);
+    assertEquals(response.getStatusCode(), HttpStatus.OK);
+    assertEquals(response.getBody().get(0), code);
   }
 }

@@ -161,27 +161,13 @@ public class VsacService {
   }
 
   public CodeStatus getCodeStatus(Code code, String apiKey) {
-    CodeSystemEntry systemEntry = mappingService.getCodeSystemEntry(code.getCodeSystem());
-    // do not call SVS API to get code status if the system is not in SVS API
-    if (systemEntry == null
-        || systemEntry.getOid().contains("NOT.IN.VSAC")
-        || CollectionUtils.isEmpty(systemEntry.getVersions())) {
-      return CodeStatus.NA;
-    }
-
-    // get corresponding SVS version for given FHIR version
-    CodeSystemEntry.Version version =
-        systemEntry.getVersions().stream()
-            .filter(v -> Objects.equals(v.getFhir(), code.getVersion()))
-            .findFirst()
-            .orElse(null);
-    if (version == null || version.getVsac() == null) {
+    String svsVersion = getSvsCodeSystemVersion(code);
+    if (svsVersion == null) {
       return CodeStatus.NA;
     }
     // prepare code path e.g. CODE:/CodeSystem/ActCode/Version/9.0.0/Code/AMB/Info
     String codePath =
-        TerminologyServiceUtil.buildCodePath(
-            code.getCodeSystem(), version.getVsac(), code.getName());
+        TerminologyServiceUtil.buildCodePath(code.getCodeSystem(), svsVersion, code.getName());
     VsacCode svsCode = terminologyWebClient.getCode(codePath, apiKey);
     if (svsCode.getStatus().equalsIgnoreCase("ok")) {
       if ("Yes".equals(svsCode.getData().getResultSet().get(0).getActive())) {
@@ -191,6 +177,30 @@ public class VsacService {
       }
     }
     return CodeStatus.NA;
+  }
+
+  private String getSvsCodeSystemVersion(Code code) {
+    if (StringUtils.isNotBlank(code.getSvsVersion())) {
+      return code.getSvsVersion();
+    }
+    CodeSystemEntry systemEntry = mappingService.getCodeSystemEntryByOid(code.getCodeSystemOid());
+    // do not call SVS API to get code status if the system is not in SVS API
+    if (systemEntry == null
+        || systemEntry.getOid().contains("NOT.IN.VSAC")
+        || CollectionUtils.isEmpty(systemEntry.getVersions())) {
+      return null;
+    }
+
+    // get corresponding SVS version for given FHIR version
+    CodeSystemEntry.Version version =
+        systemEntry.getVersions().stream()
+            .filter(v -> Objects.equals(v.getFhir(), code.getVersion()))
+            .findFirst()
+            .orElse(null);
+    if (version == null || version.getVsac() == null) {
+      return null;
+    }
+    return version.getVsac();
   }
 
   /**

@@ -24,9 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -277,5 +276,95 @@ public class FhirTerminologyService {
         log.info("CodeSystem updated: {}", existingCodeSystem);
       }
     }
+  }
+
+  public List<Code> retrieveCodesAndCodeSystems(List<Map<String, String>> codeList, String apiKey) {
+    return codeList.stream()
+        .map(
+            code -> {
+              List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+              String codeName = code.get("code");
+              String codeSystemName = code.get("codeSystem");
+              String oid = code.get("oid") != null ? code.get("oid").replaceAll("'|'", "") : null;
+
+              Optional<Map.Entry<String, String>> mappedVersion =
+                  mapToFhirVersion(code.get("version"), oid, codeSystemEntries);
+
+              if (mappedVersion.isPresent()) {
+                String vsacVersion = mappedVersion.get().getKey();
+                String fhirVersion = mappedVersion.get().getValue();
+
+                return retrieveCodes(
+                    codeName, codeSystemName, vsacVersion, fhirVersion, oid, apiKey);
+              }
+              return null;
+            })
+        .collect(Collectors.toList());
+  }
+
+  private Optional<Map.Entry<String, String>> mapToFhirVersion(
+      String version, String oid, List<CodeSystemEntry> codeSystemEntries) {
+    if (oid == null) {
+      return Optional.empty();
+    }
+
+    Optional<Map.Entry<String, String>> result;
+    if (version == null) {
+      result =
+          codeSystemEntries.stream()
+              .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
+              .findFirst()
+              .map(
+                  codeSystemVersion ->
+                      Map.entry(
+                          codeSystemVersion.getVersions().get(0).getVsac(),
+                          codeSystemVersion.getVersions().get(0).getFhir()));
+    } else {
+      result =
+          codeSystemEntries.stream()
+              .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
+              .flatMap(codeSystemEntry -> codeSystemEntry.getVersions().stream())
+              .filter(codeSystemVersion -> StringUtils.equals(codeSystemVersion.getVsac(), version))
+              .map(
+                  codeSystemVersion ->
+                      Map.entry(codeSystemVersion.getVsac(), codeSystemVersion.getFhir()))
+              .findFirst();
+    }
+
+    return result;
+  }
+
+  private Code retrieveCodes(
+      String codeName,
+      String codeSystemName,
+      String vsacVersion,
+      String fhirVersion,
+      String oid,
+      String apiKey) {
+    if (StringUtils.isEmpty(codeName)
+        || StringUtils.isEmpty(codeSystemName)
+        || StringUtils.isEmpty(fhirVersion)) {
+      return null;
+    }
+    CodeSystem codeSystem = codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
+    if (codeSystem == null) {
+      return null;
+    }
+    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
+
+    Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
+    Code code =
+        Code.builder()
+            .name(codeName)
+            .codeSystem(codeSystemName)
+            .version(fhirVersion)
+            .svsVersion(vsacVersion)
+            .display(parameters.getParameter("display").getValue().toString())
+            .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
+            .build();
+
+    CodeStatus status = vsacService.getCodeStatus(code, apiKey);
+    code.setStatus(status);
+    return code;
   }
 }
