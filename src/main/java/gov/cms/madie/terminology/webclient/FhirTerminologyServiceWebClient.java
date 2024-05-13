@@ -11,6 +11,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
@@ -28,13 +30,15 @@ public class FhirTerminologyServiceWebClient {
   private final String codeSystemPath;
   private final String codeLookupsUrl;
   private final String defaultProfile;
+  private final String searchValueSetEndpoint;
 
   public FhirTerminologyServiceWebClient(
       @Value("${client.fhir-terminology-service.base-url}") String fhirTerminologyServiceBaseUrl,
       @Value("${client.fhir-terminology-service.manifests-urn}") String manifestUrn,
       @Value("${client.fhir-terminology-service.code-system-urn}") String codeSystemUrn,
       @Value("${client.fhir-terminology-service.code-lookups}") String codeLookupsUrl,
-      @Value("${client.default_profile}") String defaultProfile) {
+      @Value("${client.default_profile}") String defaultProfile,
+      @Value("${client.search_value_set_endpoint}") String searchValueSetEndpoint) {
     fhirTerminologyWebClient =
         WebClient.builder()
             .baseUrl(fhirTerminologyServiceBaseUrl)
@@ -46,6 +50,7 @@ public class FhirTerminologyServiceWebClient {
     this.codeSystemPath = codeSystemUrn;
     this.codeLookupsUrl = codeLookupsUrl;
     this.defaultProfile = defaultProfile;
+    this.searchValueSetEndpoint = searchValueSetEndpoint;
   }
 
   public String getManifestBundle(String apiKey) {
@@ -57,6 +62,27 @@ public class FhirTerminologyServiceWebClient {
     URI codeUri = TerminologyServiceUtil.buildRetrieveCodeSystemsUri(codeSystemPath, offset, count);
     log.debug("Retrieving codeSystems at {}, offset {}, count {}", codeSystemPath, offset, count);
     return fetchResourceFromVsac(codeUri.toString(), apiKey, "CodeSystem");
+  }
+
+  public String searchValueSets(String apiKey, Map<String, String> queryParams) {
+    if (queryParams.containsKey("url")) {
+      String urlValue = queryParams.get("url");
+      // if user didnt add htpp:// we do
+      if (!urlValue.startsWith("http://")) {
+        urlValue = "http://" + urlValue;
+      }
+      queryParams.put("url", urlValue);
+    }
+    MultiValueMap<String, String> multiValueMap = new LinkedMultiValueMap<>();
+    multiValueMap.setAll(queryParams);
+    URI uri =
+        UriComponentsBuilder.fromUriString(searchValueSetEndpoint)
+            .queryParams(multiValueMap)
+            .encode()
+            .build()
+            .toUri();
+    log.info("value set search url is: {}", uri.toString());
+    return fetchResourceFromVsac(uri.toString(), apiKey, "bundle");
   }
 
   public String getValueSetResource(

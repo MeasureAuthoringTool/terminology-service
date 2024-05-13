@@ -27,6 +27,7 @@ class FhirTerminologyServiceWebClientTest {
   private static final String MOCK_CODE_LOOKUP = "/CodeSystem/$lookup";
   private static final String DEFAULT_PROFILE = "Most Recent Code System Versions in VSAC";
   public static MockWebServer mockBackEnd;
+  private static final String SEARCH_VALUE_SET_ENDPOINT = "https://cts.nlm.nih.gov/fhir/ValueSet";
 
   private ValueSetsSearchCriteria.ValueSetParams testValueSetParams;
 
@@ -44,7 +45,12 @@ class FhirTerminologyServiceWebClientTest {
     String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
     fhirTerminologyServiceWebClient =
         new FhirTerminologyServiceWebClient(
-            baseUrl, MOCK_MANIFEST_URN, MOCK_CODE_SYSTEM_URN, MOCK_CODE_LOOKUP, DEFAULT_PROFILE);
+            baseUrl,
+            MOCK_MANIFEST_URN,
+            MOCK_CODE_SYSTEM_URN,
+            MOCK_CODE_LOOKUP,
+            DEFAULT_PROFILE,
+            SEARCH_VALUE_SET_ENDPOINT);
   }
 
   @AfterAll

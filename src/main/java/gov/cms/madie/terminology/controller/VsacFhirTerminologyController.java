@@ -3,6 +3,7 @@ package gov.cms.madie.terminology.controller;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.QdmValueSet;
+import gov.cms.madie.terminology.dto.ValueSetForSearch;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -67,6 +68,16 @@ public class VsacFhirTerminologyController {
     final String username = principal.getName();
     log.info("Retrieving list of codeSystems for user: {}", username);
     return ResponseEntity.ok().body(fhirTerminologyService.getAllCodeSystems());
+  }
+
+  @GetMapping(path = "/search-value-sets", produces = MediaType.APPLICATION_JSON_VALUE)
+  @ResponseBody
+  public ResponseEntity<List<ValueSetForSearch>> searchValueSets(
+      Principal principal, @RequestParam Map<String, String> queryParams) {
+    final String username = principal.getName();
+    UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
+    var result = fhirTerminologyService.searchValueSets(umlsUser.getApiKey(), queryParams);
+    return ResponseEntity.ok().body(result);
   }
 
   @GetMapping(path = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
