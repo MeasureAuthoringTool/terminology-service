@@ -1,10 +1,7 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
-import gov.cms.madie.terminology.dto.Code;
-import gov.cms.madie.terminology.dto.CodeStatus;
-import gov.cms.madie.terminology.dto.QdmValueSet;
-import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.dto.*;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -23,10 +20,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.security.Principal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -259,5 +253,26 @@ class VsacFhirTerminologyControllerTest {
         vsacFhirTerminologyController.getCodesAndCodeSystems(codeList, principal);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
     assertEquals(response.getBody().get(0), code);
+  }
+
+  @Test
+  void testSearchValueSets() {
+    List<ValueSetForSearch> mockValueSets = new ArrayList<>();
+    ValueSetForSearch v1 = ValueSetForSearch.builder().title("title 1").name("title1").url("url").oid("oid")
+            .steward("steward").version("version").codeSystem("cs").build();
+    ValueSetForSearch v2 = ValueSetForSearch.builder().title("title 2").name("title2").url("url").oid("oid")
+            .steward("steward").version("version").codeSystem("cs").build();
+    mockValueSets.add(v1);
+    mockValueSets.add(v2);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.searchValueSets(any(), any())).thenReturn(mockValueSets);
+    Map<String, String> queryParams = new HashMap<>();
+    queryParams.put("param1", "value1");
+    queryParams.put("param2", "value2");
+    ResponseEntity<List<ValueSetForSearch>> response =
+            vsacFhirTerminologyController.searchValueSets(principal, queryParams);
+    assertEquals(response.getStatusCode(), HttpStatus.OK);
   }
 }
