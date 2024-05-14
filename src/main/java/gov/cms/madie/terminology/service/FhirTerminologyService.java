@@ -128,7 +128,8 @@ public class FhirTerminologyService {
         .forEach(
             entry -> {
               Resource resource = entry.getResource();
-              if (resource instanceof ValueSet) {
+                ValueSet vs = (ValueSet) resource;
+                if (resource instanceof ValueSet) {
                 String oid = "";
                 for (Identifier identifier : ((ValueSet) resource).getIdentifier()) {
                   if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
@@ -137,14 +138,19 @@ public class FhirTerminologyService {
                 }
                 ValueSetForSearch valueSet =
                     ValueSetForSearch.builder()
-                        .title(((ValueSet) resource).getTitle())
-                        .name(((ValueSet) resource).getName())
-                        .url(((ValueSet) resource).getUrl())
-                        .version(((ValueSet) resource).getVersion())
-                        //                                                .codeSystem(codeSystem) //
-                        // Theres a way to get this but its very complicated
-                        .status(((ValueSet) resource).getStatus())
-                        .steward(((ValueSet) resource).getPublisher())
+                        .title(vs.getTitle())
+                            .author(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/valueset-author").getValue()))
+                        .name(vs.getName())
+                            .composedOf(vs.getCompose().getInclude().stream().map(x -> x.getSystem()).collect(Collectors.joining(",")))
+                            .effectiveDate(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/valueset-effectiveDate").getValue()))
+                            .lastReviewDate(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate").getValue()))
+                            .lastUpdated(vs.getMeta().getLastUpdated().toString())
+                        .url(vs.getUrl())
+                        .version(vs.getVersion())
+                        .status(vs.getStatus())
+                            .publisher(vs.getPublisher())
+                            .purpose(vs.getPurpose())
+                        .steward(vs.getPublisher())
                         .oid(oid)
                         .build();
                 valueSetList.add(valueSet);

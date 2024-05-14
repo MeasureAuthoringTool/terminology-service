@@ -9,6 +9,13 @@ import org.hl7.fhir.r4.model.Enumerations;
 public class ValueSetForSearch {
   private String title;
   private String name;
+  private String author;
+  private String composedOf;
+  private String effectiveDate;
+  private String lastReviewDate;
+  private String lastUpdated;
+  private String publisher;
+  private String purpose;
   private String url;
   private String oid;
   private String steward;
