@@ -144,7 +144,7 @@ public class FhirTerminologyService {
                                     vs.getExtensionByUrl(
                                         "http://hl7.org/fhir/StructureDefinition/valueset-author"))
                                 .map(extension -> String.valueOf(extension.getValue()))
-                                    .orElse(""))
+                                .orElse(""))
                         .name(vs.getName())
                         .composedOf(
                             vs.getCompose().getInclude().stream()
@@ -301,6 +301,7 @@ public class FhirTerminologyService {
           }
         });
   }
+
   // one to call only, one to mutate and build
   private Bundle retrieveCodeSystemsPage(UmlsUser umlsUser, Integer offset, Integer count) {
     IParser parser = fhirContext.newJsonParser();

@@ -6,7 +6,6 @@ import org.hl7.fhir.r4.model.Resource;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.Objects;
 
