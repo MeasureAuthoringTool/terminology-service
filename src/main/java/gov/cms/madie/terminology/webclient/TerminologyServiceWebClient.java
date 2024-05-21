@@ -29,7 +29,6 @@ public class TerminologyServiceWebClient {
       @Value("${client.vsac_base_url}") String baseUrl,
       @Value("${client.valueset_endpoint}") String valueSetEndpoint,
       @Value("${client.default_profile}") String defaultProfile) {
-
     this.terminologyClient = webClientBuilder.baseUrl(baseUrl).build();
     this.baseUrl = baseUrl;
     this.valueSetEndpoint = valueSetEndpoint;

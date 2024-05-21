@@ -24,6 +24,7 @@ code-system-refresh-task:
   code-system-cron-date-time:  ${CS_REFRESH_TIME:@midnight}
 
 client:
+  search_value_set_endpoint: ${SEARCH_VALUE_SET_ENDPOINT:https://cts.nlm.nih.gov/fhir/ValueSet}
   vsac_base_url: https://vsac.nlm.nih.gov/vsac
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&profile={profile}&includeDraft={includeDraft}
   default_profile: ${DEFAULT_VSAC_PROFILE:Most Recent Code System Versions in VSAC}

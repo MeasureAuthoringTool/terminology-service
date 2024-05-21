@@ -4,10 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
-import gov.cms.madie.terminology.dto.Code;
-import gov.cms.madie.terminology.dto.CodeStatus;
-import gov.cms.madie.terminology.dto.QdmValueSet;
-import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.dto.*;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
@@ -16,16 +13,17 @@ import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.*;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
-import java.util.*;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -120,6 +118,49 @@ public class FhirTerminologyService {
     return List.of();
   }
 
+  public List<ValueSetForSearch> searchValueSets(String apiKey, Map<String, String> queryParams) {
+    IParser parser = fhirContext.newJsonParser();
+    String responseString = fhirTerminologyServiceWebClient.searchValueSets(apiKey, queryParams);
+    Bundle bundle = parser.parseResource(Bundle.class, responseString);
+    List<ValueSetForSearch> valueSetList = new ArrayList<>();
+    bundle
+        .getEntry()
+        .forEach(
+            entry -> {
+              Resource resource = entry.getResource();
+                ValueSet vs = (ValueSet) resource;
+                if (resource instanceof ValueSet) {
+                String oid = "";
+                for (Identifier identifier : ((ValueSet) resource).getIdentifier()) {
+                  if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
+                    oid = identifier.getValue();
+                  }
+                }
+                ValueSetForSearch valueSet =
+                    ValueSetForSearch.builder()
+                        .title(vs.getTitle())
+                            .author(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/valueset-author").getValue()))
+                        .name(vs.getName())
+                            .composedOf(vs.getCompose().getInclude().stream().map(x -> x.getSystem()).collect(Collectors.joining(",")))
+                            .effectiveDate(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/valueset-effectiveDate").getValue()))
+                            .lastReviewDate(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate").getValue()))
+                            .lastUpdated(vs.getMeta().getLastUpdated().toString())
+                        .url(vs.getUrl())
+                        .version(vs.getVersion())
+                        .status(vs.getStatus())
+                            .publisher(vs.getPublisher())
+                            .purpose(vs.getPurpose())
+                        .steward(vs.getPublisher())
+                        .oid(oid)
+                        .build();
+                valueSetList.add(valueSet);
+              }
+              log.info("valueSetList {}", valueSetList);
+            });
+
+    return valueSetList;
+  }
+
   public List<CodeSystem> getAllCodeSystems() {
     // remove items that are marked as not present in vsac to cut expense
     List<CodeSystemEntry> codeSystemMappingEntries =
@@ -211,7 +252,7 @@ public class FhirTerminologyService {
             entry -> {
               var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
               String codeSystemValue = "";
-              for (org.hl7.fhir.r4.model.Identifier identifier : codeSystem.getIdentifier()) {
+              for (Identifier identifier : codeSystem.getIdentifier()) {
                 if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
                   codeSystemValue = identifier.getValue();
                   break;
