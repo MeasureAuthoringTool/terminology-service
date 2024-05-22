@@ -435,8 +435,29 @@ class FhirTerminologyServiceTest {
             + "    \"valueString\": \"2.16.840.1.113883.6.1\"\n"
             + "  } ]\n"
             + "}";
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version versions = new CodeSystemEntry.Version();
+    versions.setVsac("2.40");
+    versions.setFhir("2.40");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("1963-8")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .url("http://loinc.org")
+            .versions(List.of(versions))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
 
-    var codeSystem = gov.cms.madie.terminology.models.CodeSystem.builder().build();
+    var codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .fullUrl("http://loinc.org")
+            .title("LOINC")
+            .name("LOINC")
+            .version("2.40")
+            .versionId("2084800774")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .build();
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     when(codeSystemRepository.findByNameAndVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
     when(fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, TEST_API_KEY))
@@ -448,7 +469,7 @@ class FhirTerminologyServiceTest {
     assertThat(code.getName(), is(equalTo(codeName)));
     assertThat(code.getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
     assertThat(code.getCodeSystem(), is(equalTo(codeSystemName)));
-    assertThat(code.getVersion(), is(equalTo(version)));
+    assertThat(code.getFhirVersion(), is(equalTo(version)));
     assertThat(code.getStatus(), is(equalTo(CodeStatus.ACTIVE)));
   }
 
@@ -514,7 +535,7 @@ class FhirTerminologyServiceTest {
     assertThat(code.get(0).getName(), is(equalTo("1963-8")));
     assertThat(code.get(0).getDisplay(), is(equalTo("Bicarbonate [Moles/volume] in Serum")));
     assertThat(code.get(0).getCodeSystem(), is(equalTo("LOINC")));
-    assertThat(code.get(0).getVersion(), is(equalTo("2.40")));
+    assertThat(code.get(0).getFhirVersion(), is(equalTo("2.40")));
     assertThat(code.get(0).getStatus(), is(equalTo(CodeStatus.ACTIVE)));
   }
 }

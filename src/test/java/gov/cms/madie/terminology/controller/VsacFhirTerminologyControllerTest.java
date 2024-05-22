@@ -193,7 +193,8 @@ class VsacFhirTerminologyControllerTest {
         Code.builder()
             .name(codeName)
             .codeSystem(codeSystem)
-            .version(version)
+            .svsVersion(version)
+            .fhirVersion(version)
             .display("Bicarbonate [Moles/volume] in Serum")
             .codeSystemOid("2.16.840.1.113883.6.1")
             .build();
@@ -238,7 +239,8 @@ class VsacFhirTerminologyControllerTest {
         Code.builder()
             .name("1963-8")
             .codeSystem("LOINC")
-            .version("2.72")
+            .svsVersion("2.72")
+            .fhirVersion("2.72")
             .display("Bicarbonate [Moles/volume] in Serum")
             .codeSystemOid("2.16.840.1.113883.6.1")
             .status(CodeStatus.valueOf("ACTIVE"))
@@ -258,10 +260,26 @@ class VsacFhirTerminologyControllerTest {
   @Test
   void testSearchValueSets() {
     List<ValueSetForSearch> mockValueSets = new ArrayList<>();
-    ValueSetForSearch v1 = ValueSetForSearch.builder().title("title 1").name("title1").url("url").oid("oid")
-            .steward("steward").version("version").codeSystem("cs").build();
-    ValueSetForSearch v2 = ValueSetForSearch.builder().title("title 2").name("title2").url("url").oid("oid")
-            .steward("steward").version("version").codeSystem("cs").build();
+    ValueSetForSearch v1 =
+        ValueSetForSearch.builder()
+            .title("title 1")
+            .name("title1")
+            .url("url")
+            .oid("oid")
+            .steward("steward")
+            .version("version")
+            .codeSystem("cs")
+            .build();
+    ValueSetForSearch v2 =
+        ValueSetForSearch.builder()
+            .title("title 2")
+            .name("title2")
+            .url("url")
+            .oid("oid")
+            .steward("steward")
+            .version("version")
+            .codeSystem("cs")
+            .build();
     mockValueSets.add(v1);
     mockValueSets.add(v2);
     Principal principal = mock(Principal.class);
@@ -272,7 +290,7 @@ class VsacFhirTerminologyControllerTest {
     queryParams.put("param1", "value1");
     queryParams.put("param2", "value2");
     ResponseEntity<List<ValueSetForSearch>> response =
-            vsacFhirTerminologyController.searchValueSets(principal, queryParams);
+        vsacFhirTerminologyController.searchValueSets(principal, queryParams);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
   }
 }
