@@ -46,9 +46,3 @@ spring:
 mapping:
   data:
     code-system-entry-url: ${CODE_SYSTEM_ENTRY_URL:https://madie-dev-static.s3.amazonaws.com/mappings/code-system-entry.json}
-
-logging:
-  level:
-    root: INFO
-    gov.cms.madie.terminology: DEBUG
-    org.springframework.web: ERROR
