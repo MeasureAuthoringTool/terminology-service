@@ -219,6 +219,7 @@ public class VsacService {
   }
 
   private VsacCode validateCodeAgainstVsac(String codePath, UmlsUser umlsUser) {
+    log.info("codedPath is {}", codePath);
     return terminologyWebClient.getCode(codePath, umlsUser.getApiKey());
   }
 
@@ -237,7 +238,7 @@ public class VsacService {
       String cqlCodeSystemVersion =
           TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeSystem().getVersion());
       if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
-        log.debug(
+        log.info(
             "CodeSystem {} does not have any known versions", cqlCode.getCodeSystem().getOid());
         return cqlCodeSystemVersion;
       } else {
