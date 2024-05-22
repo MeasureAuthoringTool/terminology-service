@@ -67,6 +67,10 @@ public class FhirTerminologyServiceWebClient {
   public String searchValueSets(String apiKey, Map<String, String> queryParams) {
     if (queryParams.containsKey("url")) {
       String urlValue = queryParams.get("url");
+      // if the value does not contain the vsac url we add it
+      if (!urlValue.startsWith("http://cts.nlm.nih.gov/fhir/ValueSet/")) {
+        urlValue = "http://cts.nlm.nih.gov/fhir/ValueSet/" + urlValue;
+      }
       // if user didnt add htpp:// we do
       if (!urlValue.startsWith("http://")) {
         urlValue = "http://" + urlValue;
