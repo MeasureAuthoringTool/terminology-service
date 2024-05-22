@@ -74,7 +74,7 @@ public class TerminologyServiceWebClient {
    */
   public VsacCode getCode(String codePath, String apiKey) {
     URI codeUri = TerminologyServiceUtil.buildRetrieveCodeUri(baseUrl, codePath);
-    log.debug("Retrieving vsacCode for codePath {}", codePath);
+    log.info("Retrieving vsacCode for codePath {}", codePath);
     return terminologyClient
         .get()
         .uri(codeUri)
@@ -85,7 +85,7 @@ public class TerminologyServiceWebClient {
                   || clientResponse.statusCode().equals(HttpStatus.OK)) {
                 return clientResponse.bodyToMono(VsacCode.class);
               } else {
-                log.debug("Received NON-OK response while retrieving codePath {}", codePath);
+                log.info("Received NON-OK response while retrieving codePath {}", codePath);
                 return clientResponse.createException().flatMap(Mono::error);
               }
             })
