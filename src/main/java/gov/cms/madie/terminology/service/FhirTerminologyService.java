@@ -234,6 +234,7 @@ public class FhirTerminologyService {
         || StringUtils.isEmpty(version)) {
       return null;
     }
+
     CodeSystem codeSystem =
         codeSystemRepository.findByNameAndVersion(codeSystemName, version).orElse(null);
     if (codeSystem == null) {
