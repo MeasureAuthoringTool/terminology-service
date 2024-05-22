@@ -121,7 +121,7 @@ public class VsacService {
               String codeSystemVersion = buildCodeSystemVersion(cqlCode, codeSystemEntry.get());
               String codeId = cqlCode.getCodeId();
               if (codeId == null || TerminologyServiceUtil.sanitizeInput(codeId).isBlank()) {
-                log.debug("Code id is not available for code {}", cqlCode.getName());
+                log.info("Code id is not available for code {}", cqlCode.getName());
                 cqlCode.setValid(false);
                 cqlCode.setErrorMessage("Code Id is required");
               } else if (!StringUtils.isBlank(codeSystemVersion)) {
@@ -143,15 +143,15 @@ public class VsacService {
             }
           } else {
             // unidentified code system.
-            log.debug(
-                "No associated Code system found in code system entry json for {}",
-                cqlCode.getCodeSystem().getOid());
+            log.info(
+                    "No associated Code system found in code system entry json for {}",
+                    cqlCode.getCodeSystem().getOid());
             cqlCode.getCodeSystem().setValid(false);
             cqlCode.getCodeSystem().setErrorMessage("Invalid Code system");
           }
         } else {
           // if oid/url is not provided in cql, then the code system is considered invalid.
-          log.debug("CodeSystem {} does not contain any URL", cqlCode.getCodeSystem().getName());
+          log.info("CodeSystem {} does not contain any URL", cqlCode.getCodeSystem().getName());
           cqlCode.getCodeSystem().setValid(false);
           cqlCode.getCodeSystem().setErrorMessage("Code system URL is required");
         }
@@ -280,11 +280,13 @@ public class VsacService {
         && StringUtils.isNumeric(vsacCode.getErrors().getResultSet().get(0).getErrCode())) {
       int errorCode = Integer.parseInt(vsacCode.getErrors().getResultSet().get(0).getErrCode());
       if (errorCode == 800 || errorCode == 801) {
+        log.info("Error code is 800, or 801 from VSAC. Error: {}", vsacCode.getErrors().getResultSet().get(0));
         cqlCode.getCodeSystem().setValid(false);
         cqlCode
             .getCodeSystem()
             .setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
       } else if (errorCode == 802) {
+        log.info("Error code is 802 from VSAC. Error: {}", vsacCode.getErrors().getResultSet().get(0));
         cqlCode.setValid(false);
         cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
       }
@@ -296,6 +298,7 @@ public class VsacService {
               + "If this error persists, please contact the Help Desk.");
     } else {
       cqlCode.setValid(false);
+      log.info("Error code is uncaught. General catch, Error: {} status: {}", vsacCode.getErrors().getResultSet().get(0), vsacCode.getStatus());
     }
   }
 
