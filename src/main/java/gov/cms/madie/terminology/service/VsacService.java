@@ -122,7 +122,6 @@ public class VsacService {
               String codeId = cqlCode.getCodeId();
               if (codeId == null || TerminologyServiceUtil.sanitizeInput(codeId).isBlank()) {
                 log.info("Code id is not available for code {}", cqlCode.getName());
-                log.debug("Code id is not available for code {}", cqlCode.getName());
                 cqlCode.setValid(false);
                 cqlCode.setErrorMessage("Code Id is required");
               } else if (!StringUtils.isBlank(codeSystemVersion)) {
@@ -144,9 +143,6 @@ public class VsacService {
             }
           } else {
             // unidentified code system.
-            log.debug(
-                "No associated Code system found in code system entry json for {}",
-                cqlCode.getCodeSystem().getOid());
             log.info(
                     "No associated Code system found in code system entry json for {}",
                     cqlCode.getCodeSystem().getOid());
@@ -155,7 +151,6 @@ public class VsacService {
           }
         } else {
           // if oid/url is not provided in cql, then the code system is considered invalid.
-          log.debug("CodeSystem {} does not contain any URL", cqlCode.getCodeSystem().getName());
           log.info("CodeSystem {} does not contain any URL", cqlCode.getCodeSystem().getName());
           cqlCode.getCodeSystem().setValid(false);
           cqlCode.getCodeSystem().setErrorMessage("Code system URL is required");
