@@ -128,8 +128,8 @@ public class FhirTerminologyService {
         .forEach(
             entry -> {
               Resource resource = entry.getResource();
-                ValueSet vs = (ValueSet) resource;
-                if (resource instanceof ValueSet) {
+              ValueSet vs = (ValueSet) resource;
+              if (resource instanceof ValueSet) {
                 String oid = "";
                 for (Identifier identifier : ((ValueSet) resource).getIdentifier()) {
                   if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
@@ -139,17 +139,32 @@ public class FhirTerminologyService {
                 ValueSetForSearch valueSet =
                     ValueSetForSearch.builder()
                         .title(vs.getTitle())
-                            .author(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/valueset-author").getValue()))
+                        .author(
+                            String.valueOf(
+                                vs.getExtensionByUrl(
+                                        "http://hl7.org/fhir/StructureDefinition/valueset-author")
+                                    .getValue()))
                         .name(vs.getName())
-                            .composedOf(vs.getCompose().getInclude().stream().map(x -> x.getSystem()).collect(Collectors.joining(",")))
-                            .effectiveDate(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/valueset-effectiveDate").getValue()))
-                            .lastReviewDate(String.valueOf(vs.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate").getValue()))
-                            .lastUpdated(vs.getMeta().getLastUpdated().toString())
+                        .composedOf(
+                            vs.getCompose().getInclude().stream()
+                                .map(x -> x.getSystem())
+                                .collect(Collectors.joining(",")))
+                        .effectiveDate(
+                            String.valueOf(
+                                vs.getExtensionByUrl(
+                                        "http://hl7.org/fhir/StructureDefinition/valueset-effectiveDate")
+                                    .getValue()))
+                        .lastReviewDate(
+                            String.valueOf(
+                                vs.getExtensionByUrl(
+                                        "http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate")
+                                    .getValue()))
+                        .lastUpdated(vs.getMeta().getLastUpdated().toString())
                         .url(vs.getUrl())
                         .version(vs.getVersion())
                         .status(vs.getStatus())
-                            .publisher(vs.getPublisher())
-                            .purpose(vs.getPurpose())
+                        .publisher(vs.getPublisher())
+                        .purpose(vs.getPurpose())
                         .steward(vs.getPublisher())
                         .oid(oid)
                         .build();
@@ -219,26 +234,24 @@ public class FhirTerminologyService {
         || StringUtils.isEmpty(version)) {
       return null;
     }
+
     CodeSystem codeSystem =
         codeSystemRepository.findByNameAndVersion(codeSystemName, version).orElse(null);
     if (codeSystem == null) {
       return null;
     }
-    String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
-    Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
-    Code code =
-        Code.builder()
-            .name(codeName)
-            .codeSystem(codeSystemName)
-            .version(version)
-            .display(parameters.getParameter("display").getValue().toString())
-            .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
-            .build();
-    // FHIR terminology API doesn't support code status yet. workaround is to get it from SVS.
-    // TODO: remove once it is supported by fhir terminology service
-    CodeStatus status = vsacService.getCodeStatus(code, apiKey);
-    code.setStatus(status);
-    return code;
+
+    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+    Optional<Map.Entry<String, String>> mappedVersion =
+        mapVersion(version, codeSystem.getOid(), codeSystemEntries, "fhirVersion");
+
+    if (mappedVersion.isPresent()) {
+      String vsacVersion = mappedVersion.get().getKey();
+      String fhirVersion = mappedVersion.get().getValue();
+
+      return retrieveCodes(codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
+    }
+    return null;
   }
 
   private void recursiveRetrieveCodeSystems(
@@ -329,22 +342,34 @@ public class FhirTerminologyService {
               String oid = code.get("oid") != null ? code.get("oid").replaceAll("'|'", "") : null;
 
               Optional<Map.Entry<String, String>> mappedVersion =
-                  mapToFhirVersion(code.get("version"), oid, codeSystemEntries);
+                  mapVersion(code.get("version"), oid, codeSystemEntries, "svsVersion");
 
               if (mappedVersion.isPresent()) {
                 String vsacVersion = mappedVersion.get().getKey();
                 String fhirVersion = mappedVersion.get().getValue();
 
+                if (StringUtils.isEmpty(codeName)
+                    || StringUtils.isEmpty(codeSystemName)
+                    || StringUtils.isEmpty(fhirVersion)) {
+                  return null;
+                }
+
+                CodeSystem codeSystem =
+                    codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
+                if (codeSystem == null) {
+                  return null;
+                }
+
                 return retrieveCodes(
-                    codeName, codeSystemName, vsacVersion, fhirVersion, oid, apiKey);
+                    codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
               }
               return null;
             })
         .collect(Collectors.toList());
   }
 
-  private Optional<Map.Entry<String, String>> mapToFhirVersion(
-      String version, String oid, List<CodeSystemEntry> codeSystemEntries) {
+  private Optional<Map.Entry<String, String>> mapVersion(
+      String version, String oid, List<CodeSystemEntry> codeSystemEntries, String versionType) {
     if (oid == null) {
       return Optional.empty();
     }
@@ -365,7 +390,14 @@ public class FhirTerminologyService {
           codeSystemEntries.stream()
               .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
               .flatMap(codeSystemEntry -> codeSystemEntry.getVersions().stream())
-              .filter(codeSystemVersion -> StringUtils.equals(codeSystemVersion.getVsac(), version))
+              // depending on the version type suitable mapping is done
+              .filter(
+                  codeSystemVersion ->
+                      StringUtils.equals(
+                          versionType == "svsVersion"
+                              ? codeSystemVersion.getVsac()
+                              : codeSystemVersion.getFhir(),
+                          version))
               .map(
                   codeSystemVersion ->
                       Map.entry(codeSystemVersion.getVsac(), codeSystemVersion.getFhir()))
@@ -380,17 +412,8 @@ public class FhirTerminologyService {
       String codeSystemName,
       String vsacVersion,
       String fhirVersion,
-      String oid,
+      CodeSystem codeSystem,
       String apiKey) {
-    if (StringUtils.isEmpty(codeName)
-        || StringUtils.isEmpty(codeSystemName)
-        || StringUtils.isEmpty(fhirVersion)) {
-      return null;
-    }
-    CodeSystem codeSystem = codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
-    if (codeSystem == null) {
-      return null;
-    }
     String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
 
     Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
@@ -398,7 +421,7 @@ public class FhirTerminologyService {
         Code.builder()
             .name(codeName)
             .codeSystem(codeSystemName)
-            .version(fhirVersion)
+            .fhirVersion(fhirVersion)
             .svsVersion(vsacVersion)
             .display(parameters.getParameter("display").getValue().toString())
             .codeSystemOid(parameters.getParameter("Oid").getValue().toString())

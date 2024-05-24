@@ -459,7 +459,7 @@ class VsacServiceTest {
     when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(null);
     assertThat(
         vsacService.getCodeStatus(
-            Code.builder().codeSystemOid("oid").version("version").build(), TEST_API_KEY),
+            Code.builder().codeSystemOid("oid").fhirVersion("version").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
   }
 
@@ -469,7 +469,7 @@ class VsacServiceTest {
     when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
     assertThat(
         vsacService.getCodeStatus(
-            Code.builder().codeSystemOid("oid").version("version").build(), TEST_API_KEY),
+            Code.builder().codeSystemOid("oid").fhirVersion("version").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
   }
 
@@ -510,7 +510,7 @@ class VsacServiceTest {
         Code.builder()
             .name("1222766008")
             .codeSystem("ABC")
-            .version("abc.info/20230901")
+            .fhirVersion("abc.info/20230901")
             .display("American Joint Committee on Cancer stage IIA")
             .codeSystemOid("1.2.3.4.96")
             .build();
@@ -543,7 +543,7 @@ class VsacServiceTest {
         Code.builder()
             .name("1222766008")
             .codeSystem("ABC")
-            .version("abc.info/20230901")
+            .fhirVersion("abc.info/20230901")
             .display("American Joint Committee on Cancer stage IIA")
             .codeSystemOid("1.2.3.4.96")
             .build();
@@ -576,7 +576,7 @@ class VsacServiceTest {
         Code.builder()
             .name("1222766008")
             .codeSystem("ABC")
-            .version("abc.info/20230901")
+            .fhirVersion("abc.info/20230901")
             .display("American Joint Committee on Cancer stage IIA")
             .codeSystemOid("1.2.3.4.96")
             .build();

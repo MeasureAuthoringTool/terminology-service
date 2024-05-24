@@ -8,7 +8,7 @@ import lombok.Data;
 public class Code {
   private String name;
   private String display;
-  private String version; // 'fhir' in the code-system-entry.json
+  private String fhirVersion; // 'fhir' in the code-system-entry.json
   private String svsVersion; // 'vsac' in the code-system-entry.json
   private String codeSystem;
   private String codeSystemOid;

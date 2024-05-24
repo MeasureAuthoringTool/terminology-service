@@ -244,7 +244,8 @@ class VsacFhirTerminologyControllerMvcTest {
         Code.builder()
             .name(codeName)
             .codeSystem(codeSystem)
-            .version(version)
+            .fhirVersion(version)
+            .svsVersion(version)
             .display("Bicarbonate [Moles/volume] in Serum")
             .codeSystemOid("2.16.840.1.113883.6.1")
             .build();

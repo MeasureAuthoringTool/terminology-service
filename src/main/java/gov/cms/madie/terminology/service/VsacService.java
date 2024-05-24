@@ -194,7 +194,7 @@ public class VsacService {
     // get corresponding SVS version for given FHIR version
     CodeSystemEntry.Version version =
         systemEntry.getVersions().stream()
-            .filter(v -> Objects.equals(v.getFhir(), code.getVersion()))
+            .filter(v -> Objects.equals(v.getFhir(), code.getFhirVersion()))
             .findFirst()
             .orElse(null);
     if (version == null || version.getVsac() == null) {
