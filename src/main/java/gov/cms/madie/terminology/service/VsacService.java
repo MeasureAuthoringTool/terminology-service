@@ -144,8 +144,8 @@ public class VsacService {
           } else {
             // unidentified code system.
             log.info(
-                    "No associated Code system found in code system entry json for {}",
-                    cqlCode.getCodeSystem().getOid());
+                "No associated Code system found in code system entry json for {}",
+                cqlCode.getCodeSystem().getOid());
             cqlCode.getCodeSystem().setValid(false);
             cqlCode.getCodeSystem().setErrorMessage("Invalid Code system");
           }
@@ -281,13 +281,16 @@ public class VsacService {
         && StringUtils.isNumeric(vsacCode.getErrors().getResultSet().get(0).getErrCode())) {
       int errorCode = Integer.parseInt(vsacCode.getErrors().getResultSet().get(0).getErrCode());
       if (errorCode == 800 || errorCode == 801) {
-        log.info("Error code is 800, or 801 from VSAC. Error: {}", vsacCode.getErrors().getResultSet().get(0));
+        log.info(
+            "Error code is 800, or 801 from VSAC. Error: {}",
+            vsacCode.getErrors().getResultSet().get(0));
         cqlCode.getCodeSystem().setValid(false);
         cqlCode
             .getCodeSystem()
             .setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
       } else if (errorCode == 802) {
-        log.info("Error code is 802 from VSAC. Error: {}", vsacCode.getErrors().getResultSet().get(0));
+        log.info(
+            "Error code is 802 from VSAC. Error: {}", vsacCode.getErrors().getResultSet().get(0));
         cqlCode.setValid(false);
         cqlCode.setErrorMessage(vsacCode.getErrors().getResultSet().get(0).getErrDesc());
       }
@@ -299,7 +302,10 @@ public class VsacService {
               + "If this error persists, please contact the Help Desk.");
     } else {
       cqlCode.setValid(false);
-      log.info("Error code is uncaught. General catch, Error: {} status: {}", vsacCode.getErrors().getResultSet().get(0), vsacCode.getStatus());
+      log.info(
+          "Error code is uncaught. General catch, Error: {} status: {}",
+          vsacCode.getErrors().getResultSet().get(0),
+          vsacCode.getStatus());
     }
   }
 
