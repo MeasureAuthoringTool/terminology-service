@@ -142,7 +142,7 @@ public class FhirTerminologyService {
                         .author(
                             Optional.ofNullable(
                                     vs.getExtensionByUrl(
-                                        "http://hl7.org/fhir/StructureDefinition/valueset   -author"))
+                                        "http://hl7.org/fhir/StructureDefinition/valueset-author"))
                                 .map(extension -> String.valueOf(extension.getValue()))
                                     .orElse(""))
                         .name(vs.getName())
