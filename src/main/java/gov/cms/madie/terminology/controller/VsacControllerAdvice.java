@@ -1,7 +1,11 @@
 package gov.cms.madie.terminology.controller;
 
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.OperationOutcome;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
@@ -27,6 +31,7 @@ import java.util.Map;
 public class VsacControllerAdvice {
 
   private final ErrorAttributes errorAttributes;
+  private final FhirContext fhirContext;
 
   @ExceptionHandler(WebClientResponseException.class)
   public ResponseEntity<Map<String, Object>> handleWebClientResponseException(
@@ -58,6 +63,30 @@ public class VsacControllerAdvice {
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
     errorAttributes.put("validationErrors", validationErrors);
     return errorAttributes;
+  }
+
+  @ExceptionHandler(VsacValueSetExpansionException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  ResponseEntity<Map<String, Object>> onVsacValueSetExpansionException(
+      VsacValueSetExpansionException ex, WebRequest request) {
+    IParser parser = fhirContext.newJsonParser();
+    OperationOutcome outcome = parser.parseResource(OperationOutcome.class, ex.getBody());
+    String filter = ex.getFilter();
+    if (filter.contains("Manifest")) {
+      filter += " " + ex.getValueSetUrl().substring(ex.getValueSetUrl().lastIndexOf("Library/"));
+    }
+    String message =
+        String.format(
+            "Value Set %s could not be expanded using %s. Per VSAC, \"%s\"\n\n (DEBUG) URL: %s",
+            ex.getValueSetUrl()
+                .substring("ValueSet/".length() + 1, ex.getValueSetUrl().lastIndexOf("/$")),
+            filter,
+            outcome.getIssueFirstRep().getDiagnostics(),
+            ex.getValueSetUrl());
+    return handleWebClientResponseException(
+        new WebClientResponseException(
+            message, ex.getStatusCode(), ex.getStatusText(), null, null, null, null),
+        request);
   }
 
   @ExceptionHandler(VsacGenericException.class)
