@@ -100,6 +100,23 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
+  void getDraftValueSetResourceSuccessfully_when_noCustomSearchCriteriaIsProvided()
+      throws InterruptedException {
+    mockBackEnd.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(MOCK_RESPONSE_STRING)
+            .addHeader("Content-Type", "application/fhir+json"));
+    String actualResponse =
+        fhirTerminologyServiceWebClient.getValueSetResource(
+            MOCK_API_KEY, testValueSetParams, null, "yes", new ManifestExpansion());
+    assertNotNull(actualResponse);
+    assertEquals(MOCK_RESPONSE_STRING, actualResponse);
+    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
+    assertEquals("/ValueSet/test-vs-id/$expand?includeDraft=true", recordedRequest.getPath());
+  }
+
+  @Test
   void getValueSetResourceSuccessfully_when_manifestExpansionIsProvided()
       throws InterruptedException {
     mockBackEnd.enqueue(
