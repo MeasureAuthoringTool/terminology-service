@@ -124,6 +124,8 @@ public class TerminologyServiceUtil {
     } else if (manifestExpansion != null
         && StringUtils.isNotBlank(manifestExpansion.getFullUrl())) {
       params.put("manifest", List.of(manifestExpansion.getFullUrl()));
+    } else if (StringUtils.isNotBlank(includeDraft)) {
+      params.put("includeDraft", List.of("true"));
     }
     return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
   }
