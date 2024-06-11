@@ -13,7 +13,7 @@ public class VsacValueSetExpansionException extends WebClientResponseException {
 
   private String body;
   private String filter;
-  private String valueSetUrl;
+  private String valueSetUri;
 
   public VsacValueSetExpansionException(
       String message,
@@ -21,10 +21,10 @@ public class VsacValueSetExpansionException extends WebClientResponseException {
       String statusText,
       String body,
       String filter,
-      String valueSetUrl) {
+      String valueSetUri) {
     super(message, status, statusText, null, body.getBytes(), Charset.defaultCharset(), null);
     this.body = body;
     this.filter = filter;
-    this.valueSetUrl = valueSetUrl;
+    this.valueSetUri = valueSetUri;
   }
 }
