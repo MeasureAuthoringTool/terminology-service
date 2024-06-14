@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.controller;
 
+import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.QdmValueSet;
@@ -41,6 +42,8 @@ class VsacFhirTerminologyControllerMvcTest {
   @MockBean private VsacService vsacService;
 
   @MockBean private FhirTerminologyService fhirTerminologyService;
+
+  @MockBean private FhirContext fhirContext;
 
   @Autowired private MockMvc mockMvc;
 

@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.webclient;
 
+import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.models.measure.ManifestExpansion;
@@ -124,7 +125,18 @@ public class FhirTerminologyServiceWebClient {
                 return clientResponse.bodyToMono(String.class);
               } else {
                 log.debug("Received NON-OK response while retrieving {}", resourceType);
-                return clientResponse.createException().flatMap(Mono::error);
+                return clientResponse
+                    .createException()
+                    .flatMap(
+                        ex ->
+                            Mono.error(
+                                new VsacValueSetExpansionException(
+                                    "",
+                                    ex.getStatusCode(),
+                                    ex.getStatusText(),
+                                    ex.getResponseBodyAsString(),
+                                    uri.contains("manifest") ? "Manifest" : "Latest",
+                                    uri)));
               }
             })
         .block();

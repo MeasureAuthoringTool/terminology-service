@@ -1,7 +1,11 @@
 package gov.cms.madie.terminology.controller;
 
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.OperationOutcome;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
@@ -27,6 +31,7 @@ import java.util.Map;
 public class VsacControllerAdvice {
 
   private final ErrorAttributes errorAttributes;
+  private final FhirContext fhirContext;
 
   @ExceptionHandler(WebClientResponseException.class)
   public ResponseEntity<Map<String, Object>> handleWebClientResponseException(
@@ -57,6 +62,32 @@ public class VsacControllerAdvice {
     validationErrors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
     errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(VsacValueSetExpansionException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onVsacValueSetExpansionException(
+      VsacValueSetExpansionException ex, WebRequest request) {
+    IParser parser = fhirContext.newJsonParser();
+    OperationOutcome outcome = parser.parseResource(OperationOutcome.class, ex.getBody());
+
+    Map<String, Object> errorAttributes =
+        getErrorAttributes(request, HttpStatus.valueOf(ex.getStatusCode().value()));
+
+    errorAttributes.put("diagnostic", outcome.getIssueFirstRep().getDiagnostics());
+    errorAttributes.put(
+        "valueSet",
+        ex.getValueSetUri()
+            .substring("ValueSet/".length() + 1, ex.getValueSetUri().lastIndexOf("/$")));
+    if (ex.getFilter().equalsIgnoreCase("manifest") && ex.getValueSetUri().contains("Library/")) {
+      errorAttributes.put(
+          "manifest",
+          ex.getValueSetUri()
+              .substring(ex.getValueSetUri().lastIndexOf("Library/") + "Library/".length()));
+    }
+
     return errorAttributes;
   }
 
