@@ -38,6 +38,7 @@ public class VsacService {
   private final VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
   private final MappingService mappingService;
   private final UmlsUserRepository umlsUserRepository;
+  private static final String CS_VERSION_PREFIX = "urn:hl7:version:";
 
   /**
    * If umlsUser is not available or if API-KEY is unavailable then return false. Otherwise, return
@@ -235,9 +236,10 @@ public class VsacService {
   private String buildCodeSystemVersion(CqlCode cqlCode, CodeSystemEntry codeSystemEntry) {
     List<CodeSystemEntry.Version> codeSystemEntryVersion = codeSystemEntry.getVersions();
     if (!StringUtils.isBlank(cqlCode.getCodeSystem().getVersion())) {
+      // TODO: address QICore code system versions
       String cqlCodeSystemVersion =
           TerminologyServiceUtil.sanitizeInput(
-              cqlCode.getCodeSystem().getVersion().replace("urn:hl7:version:", ""));
+              cqlCode.getCodeSystem().getVersion().replace(CS_VERSION_PREFIX, ""));
       if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
         log.info(
             "CodeSystem {} does not have any known versions", cqlCode.getCodeSystem().getOid());
