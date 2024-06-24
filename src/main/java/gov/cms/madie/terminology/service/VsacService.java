@@ -236,7 +236,8 @@ public class VsacService {
     List<CodeSystemEntry.Version> codeSystemEntryVersion = codeSystemEntry.getVersions();
     if (!StringUtils.isBlank(cqlCode.getCodeSystem().getVersion())) {
       String cqlCodeSystemVersion =
-          TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeSystem().getVersion());
+          TerminologyServiceUtil.sanitizeInput(
+              cqlCode.getCodeSystem().getVersion().replace("urn:hl7:version:", ""));
       if (CollectionUtils.isEmpty(codeSystemEntryVersion)) {
         log.info(
             "CodeSystem {} does not have any known versions", cqlCode.getCodeSystem().getOid());
