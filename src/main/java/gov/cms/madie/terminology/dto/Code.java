@@ -13,4 +13,5 @@ public class Code {
   private String codeSystem;
   private String codeSystemOid;
   private CodeStatus status;
+  private boolean versionIncluded;
 }
