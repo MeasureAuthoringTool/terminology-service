@@ -478,7 +478,14 @@ class FhirTerminologyServiceTest {
     List<Map<String, String>> codeList =
         List.of(
             Map.of(
-                "code", "1963-8", "codeSystem", "LOINC", "oid", "'urn:oid:2.16.840.1.113883.6.1'"));
+                "code",
+                "1963-8",
+                "codeSystem",
+                "LOINC",
+                "oid",
+                "'urn:oid:2.16.840.1.113883.6.1'",
+                "versionIncluded",
+                "false"));
 
     String codeJson =
         "{\n"
@@ -537,5 +544,6 @@ class FhirTerminologyServiceTest {
     assertThat(code.get(0).getCodeSystem(), is(equalTo("LOINC")));
     assertThat(code.get(0).getFhirVersion(), is(equalTo("2.40")));
     assertThat(code.get(0).getStatus(), is(equalTo(CodeStatus.ACTIVE)));
+    assertThat(code.get(0).isVersionIncluded(), is(equalTo(false)));
   }
 }

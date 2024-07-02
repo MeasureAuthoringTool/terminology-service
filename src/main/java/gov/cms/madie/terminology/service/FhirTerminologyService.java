@@ -341,7 +341,10 @@ public class FhirTerminologyService {
               List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
               String codeName = codeDetails.get("code");
               String codeSystemName = codeDetails.get("codeSystem");
-              String oid = codeDetails.get("oid") != null ? codeDetails.get("oid").replaceAll("'|'", "") : null;
+              String oid =
+                  codeDetails.get("oid") != null
+                      ? codeDetails.get("oid").replaceAll("'|'", "")
+                      : null;
 
               Optional<Map.Entry<String, String>> mappedVersion =
                   mapVersion(codeDetails.get("version"), oid, codeSystemEntries, "svsVersion");
@@ -362,8 +365,9 @@ public class FhirTerminologyService {
                   return null;
                 }
 
-                Code code = retrieveCodes(
-                    codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
+                Code code =
+                    retrieveCodes(
+                        codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
                 code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
                 return code;
               }
