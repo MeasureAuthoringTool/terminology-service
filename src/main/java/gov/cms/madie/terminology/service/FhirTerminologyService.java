@@ -70,7 +70,7 @@ public class FhirTerminologyService {
               ValueSet ValueSetResource = parser.parseResource(ValueSet.class, resource);
               // Converting a ValueSet FHIR Resource into QDM Value Set DTO
               List<QdmValueSet.Concept> concepts =
-                  getValueSetConcepts(ValueSetResource, codeSystemEntries);
+                  getValueSetConcepts(ValueSetResource, codeSystemEntries, "QDM");
               return QdmValueSet.builder()
                   .oid(ValueSetResource.getIdPart())
                   .displayName(ValueSetResource.getName())
@@ -90,7 +90,7 @@ public class FhirTerminologyService {
    *     system.
    */
   private List<QdmValueSet.Concept> getValueSetConcepts(
-      ValueSet valueSet, List<CodeSystemEntry> codeSystemEntries) {
+      ValueSet valueSet, List<CodeSystemEntry> codeSystemEntries, String model) {
     if (valueSet.getExpansion() != null && valueSet.getExpansion().getTotal() > 0) {
       return valueSet.getExpansion().getContains().stream()
           .map(
@@ -100,15 +100,19 @@ public class FhirTerminologyService {
                         codeSystemEntries, concept.getSystem(), "FHIR");
                 String codeSystemOid = concept.getSystem();
                 String codeSystem = concept.getSystem();
+                String codeSystemVersion = concept.getVersion();
                 if (optionalCodeSystemEntry.isPresent()) {
                   codeSystemOid = optionalCodeSystemEntry.get().getOid();
                   codeSystem = optionalCodeSystemEntry.get().getName();
+                  codeSystemVersion =
+                      TerminologyServiceUtil.getCodeSystemVersion(
+                          optionalCodeSystemEntry.get(), concept.getVersion(), model);
                 }
                 return QdmValueSet.Concept.builder()
                     .code(concept.getCode())
                     .displayName(concept.getDisplay())
                     .codeSystemName(codeSystem)
-                    .codeSystemVersion(concept.getVersion())
+                    .codeSystemVersion(codeSystemVersion)
                     .codeSystemOid(TerminologyServiceUtil.removeUrnOidSubString(codeSystemOid))
                     .build();
               })

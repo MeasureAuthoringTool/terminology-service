@@ -135,8 +135,8 @@ class FhirTerminologyServiceTest {
             Objects.requireNonNull(fileWithNoCodes), Charset.defaultCharset());
     codeSystemEntries = new ArrayList<>();
     CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2024");
-    version.setFhir("2024");
+    version.setVsac("2022-05");
+    version.setFhir("2022");
     var codeSystemEntry =
         CodeSystemEntry.builder()
             .name("Icd10CM")
@@ -195,6 +195,7 @@ class FhirTerminologyServiceTest {
     assertEquals("2.16.840.1.113883.6.90", result.get(0).getConcepts().get(0).getCodeSystemOid());
     assertEquals("M45.1", result.get(0).getConcepts().get(1).getCode());
     assertEquals("2.16.840.1.113883.6.90", result.get(0).getConcepts().get(1).getCodeSystemOid());
+    assertEquals("2022-05", result.get(0).getConcepts().get(1).getCodeSystemVersion());
   }
 
   @Test
