@@ -130,6 +130,13 @@ public class TerminologyServiceUtil {
     return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
   }
 
+  /**
+   * Returns model specific code system version
+   * @param codeSystem
+   * @param fhirCsVersion
+   * @param model
+   * @return code system version string
+   */
   public static String getCodeSystemVersion(
       CodeSystemEntry codeSystem, String fhirCsVersion, String model) {
     if ("QDM".equals(model) && codeSystem != null && StringUtils.isNotBlank(fhirCsVersion)) {
