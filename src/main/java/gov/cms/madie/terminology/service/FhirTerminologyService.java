@@ -70,7 +70,7 @@ public class FhirTerminologyService {
               ValueSet ValueSetResource = parser.parseResource(ValueSet.class, resource);
               // Converting a ValueSet FHIR Resource into QDM Value Set DTO
               List<QdmValueSet.Concept> concepts =
-                  getValueSetConcepts(ValueSetResource, codeSystemEntries);
+                  getValueSetConcepts(ValueSetResource, codeSystemEntries, "QDM");
               return QdmValueSet.builder()
                   .oid(ValueSetResource.getIdPart())
                   .displayName(ValueSetResource.getName())
@@ -90,7 +90,7 @@ public class FhirTerminologyService {
    *     system.
    */
   private List<QdmValueSet.Concept> getValueSetConcepts(
-      ValueSet valueSet, List<CodeSystemEntry> codeSystemEntries) {
+      ValueSet valueSet, List<CodeSystemEntry> codeSystemEntries, String model) {
     if (valueSet.getExpansion() != null && valueSet.getExpansion().getTotal() > 0) {
       return valueSet.getExpansion().getContains().stream()
           .map(
@@ -100,15 +100,19 @@ public class FhirTerminologyService {
                         codeSystemEntries, concept.getSystem(), "FHIR");
                 String codeSystemOid = concept.getSystem();
                 String codeSystem = concept.getSystem();
+                String codeSystemVersion = concept.getVersion();
                 if (optionalCodeSystemEntry.isPresent()) {
                   codeSystemOid = optionalCodeSystemEntry.get().getOid();
                   codeSystem = optionalCodeSystemEntry.get().getName();
+                  codeSystemVersion =
+                      TerminologyServiceUtil.getCodeSystemVersion(
+                          optionalCodeSystemEntry.get(), concept.getVersion(), model);
                 }
                 return QdmValueSet.Concept.builder()
                     .code(concept.getCode())
                     .displayName(concept.getDisplay())
                     .codeSystemName(codeSystem)
-                    .codeSystemVersion(concept.getVersion())
+                    .codeSystemVersion(codeSystemVersion)
                     .codeSystemOid(TerminologyServiceUtil.removeUrnOidSubString(codeSystemOid))
                     .build();
               })
@@ -337,14 +341,17 @@ public class FhirTerminologyService {
   public List<Code> retrieveCodesAndCodeSystems(List<Map<String, String>> codeList, String apiKey) {
     return codeList.stream()
         .map(
-            code -> {
+            codeDetails -> {
               List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
-              String codeName = code.get("code");
-              String codeSystemName = code.get("codeSystem");
-              String oid = code.get("oid") != null ? code.get("oid").replaceAll("'|'", "") : null;
+              String codeName = codeDetails.get("code");
+              String codeSystemName = codeDetails.get("codeSystem");
+              String oid =
+                  codeDetails.get("oid") != null
+                      ? codeDetails.get("oid").replaceAll("'|'", "")
+                      : null;
 
               Optional<Map.Entry<String, String>> mappedVersion =
-                  mapVersion(code.get("version"), oid, codeSystemEntries, "svsVersion");
+                  mapVersion(codeDetails.get("version"), oid, codeSystemEntries, "svsVersion");
 
               if (mappedVersion.isPresent()) {
                 String vsacVersion = mappedVersion.get().getKey();
@@ -362,8 +369,11 @@ public class FhirTerminologyService {
                   return null;
                 }
 
-                return retrieveCodes(
-                    codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
+                Code code =
+                    retrieveCodes(
+                        codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
+                code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
+                return code;
               }
               return null;
             })

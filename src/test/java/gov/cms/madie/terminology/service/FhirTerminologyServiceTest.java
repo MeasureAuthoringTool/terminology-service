@@ -135,8 +135,8 @@ class FhirTerminologyServiceTest {
             Objects.requireNonNull(fileWithNoCodes), Charset.defaultCharset());
     codeSystemEntries = new ArrayList<>();
     CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2024");
-    version.setFhir("2024");
+    version.setVsac("2022-05");
+    version.setFhir("2022");
     var codeSystemEntry =
         CodeSystemEntry.builder()
             .name("Icd10CM")
@@ -195,6 +195,7 @@ class FhirTerminologyServiceTest {
     assertEquals("2.16.840.1.113883.6.90", result.get(0).getConcepts().get(0).getCodeSystemOid());
     assertEquals("M45.1", result.get(0).getConcepts().get(1).getCode());
     assertEquals("2.16.840.1.113883.6.90", result.get(0).getConcepts().get(1).getCodeSystemOid());
+    assertEquals("2022-05", result.get(0).getConcepts().get(1).getCodeSystemVersion());
   }
 
   @Test
@@ -478,7 +479,14 @@ class FhirTerminologyServiceTest {
     List<Map<String, String>> codeList =
         List.of(
             Map.of(
-                "code", "1963-8", "codeSystem", "LOINC", "oid", "'urn:oid:2.16.840.1.113883.6.1'"));
+                "code",
+                "1963-8",
+                "codeSystem",
+                "LOINC",
+                "oid",
+                "'urn:oid:2.16.840.1.113883.6.1'",
+                "versionIncluded",
+                "false"));
 
     String codeJson =
         "{\n"
@@ -537,5 +545,6 @@ class FhirTerminologyServiceTest {
     assertThat(code.get(0).getCodeSystem(), is(equalTo("LOINC")));
     assertThat(code.get(0).getFhirVersion(), is(equalTo("2.40")));
     assertThat(code.get(0).getStatus(), is(equalTo(CodeStatus.ACTIVE)));
+    assertThat(code.get(0).isVersionIncluded(), is(equalTo(false)));
   }
 }

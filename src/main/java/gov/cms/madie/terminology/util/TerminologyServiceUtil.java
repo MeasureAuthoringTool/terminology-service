@@ -129,4 +129,27 @@ public class TerminologyServiceUtil {
     }
     return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
   }
+
+  /**
+   * Returns model specific code system version
+   * @param codeSystem
+   * @param fhirCsVersion
+   * @param model
+   * @return code system version string
+   */
+  public static String getCodeSystemVersion(
+      CodeSystemEntry codeSystem, String fhirCsVersion, String model) {
+    if ("QDM".equals(model) && codeSystem != null && StringUtils.isNotBlank(fhirCsVersion)) {
+      CodeSystemEntry.Version csv =
+          codeSystem.getVersions().stream()
+              .filter(version -> fhirCsVersion.equals(version.getFhir()))
+              .findFirst()
+              .orElse(null);
+      if (csv == null) {
+        return null;
+      }
+      return csv.getVsac();
+    }
+    return fhirCsVersion;
+  }
 }
