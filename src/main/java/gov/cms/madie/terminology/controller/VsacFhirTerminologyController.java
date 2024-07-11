@@ -3,7 +3,7 @@ package gov.cms.madie.terminology.controller;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.QdmValueSet;
-import gov.cms.madie.terminology.dto.ValueSetForSearch;
+import gov.cms.madie.terminology.dto.ValueSetSearchResult;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -72,7 +72,7 @@ public class VsacFhirTerminologyController {
 
   @GetMapping(path = "/search-value-sets", produces = MediaType.APPLICATION_JSON_VALUE)
   @ResponseBody
-  public ResponseEntity<List<ValueSetForSearch>> searchValueSets(
+  public ResponseEntity<ValueSetSearchResult> searchValueSets(
       Principal principal, @RequestParam Map<String, String> queryParams) {
     final String username = principal.getName();
     UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
