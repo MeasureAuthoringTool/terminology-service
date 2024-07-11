@@ -3,6 +3,7 @@ package gov.cms.madie.terminology.controller;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.VsacValueSetNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -20,6 +21,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import gov.cms.madie.terminology.exceptions.VsacGenericException;
+import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 
 import java.util.HashMap;
@@ -89,6 +91,21 @@ public class VsacControllerAdvice {
     }
 
     return errorAttributes;
+  }
+
+  @ExceptionHandler(VsacResourceNotFoundException.class)
+  @ResponseStatus(HttpStatus.NOT_FOUND)
+  @ResponseBody
+  Map<String, Object> onVsacResourceNotFoundException(
+    VsacResourceNotFoundException ex, WebRequest request) {
+    IParser parser = fhirContext.newJsonParser();
+    OperationOutcome outcome1 = parser.parseResource(OperationOutcome.class, ex.getBody());
+
+    Map<String, Object> errorAttributes1 =
+        getErrorAttributes(request, HttpStatus.valueOf(ex.getStatusCode().value()));
+
+    errorAttributes1.put("diagnostic", outcome1.getIssueFirstRep().getDiagnostics());
+    return errorAttributes1;
   }
 
   @ExceptionHandler(VsacGenericException.class)
