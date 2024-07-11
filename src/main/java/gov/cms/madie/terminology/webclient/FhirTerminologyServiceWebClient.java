@@ -84,7 +84,6 @@ public class FhirTerminologyServiceWebClient {
     URI uri =
         UriComponentsBuilder.fromUriString(searchValueSetEndpoint)
             .queryParams(multiValueMap)
-            .encode()
             .build()
             .toUri();
     log.info("value set search url is: {}", uri.toString());
