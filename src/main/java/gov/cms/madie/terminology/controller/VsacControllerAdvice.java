@@ -3,7 +3,6 @@ package gov.cms.madie.terminology.controller;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -97,7 +96,7 @@ public class VsacControllerAdvice {
   @ResponseStatus(HttpStatus.NOT_FOUND)
   @ResponseBody
   Map<String, Object> onVsacResourceNotFoundException(
-    VsacResourceNotFoundException ex, WebRequest request) {
+      VsacResourceNotFoundException ex, WebRequest request) {
     IParser parser = fhirContext.newJsonParser();
     OperationOutcome outcome1 = parser.parseResource(OperationOutcome.class, ex.getBody());
 

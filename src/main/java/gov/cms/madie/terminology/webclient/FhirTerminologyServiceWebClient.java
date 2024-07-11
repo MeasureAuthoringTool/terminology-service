@@ -1,7 +1,7 @@
 package gov.cms.madie.terminology.webclient;
 
 import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetNotFoundException;
+import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.models.measure.ManifestExpansion;
@@ -131,7 +131,7 @@ public class FhirTerminologyServiceWebClient {
                     .flatMap(
                         ex ->
                             Mono.error(
-                                new VsacValueSetNotFoundException(
+                                new VsacResourceNotFoundException(
                                     "",
                                     ex.getStatusCode(),
                                     ex.getStatusText(),
