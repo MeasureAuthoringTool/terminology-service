@@ -13,14 +13,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -85,8 +82,13 @@ public class FhirTerminologyServiceWebClient {
     }
 
     // Manually construct the query string
-    String queryString = queryParams.entrySet().stream()
-            .map(entry -> URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
+    String queryString =
+        queryParams.entrySet().stream()
+            .map(
+                entry ->
+                    URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)
+                        + "="
+                        + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
             .collect(Collectors.joining("&"));
 
     String url = searchValueSetEndpoint + "?" + queryString;
@@ -121,8 +123,6 @@ public class FhirTerminologyServiceWebClient {
   }
 
   private String fetchResourceFromVsac(String uri, String apiKey, String resourceType) {
-    var currentUri = uri;
-    log.info("[{}] currentUri is", currentUri);
     return fhirTerminologyWebClient
         .get()
         .uri(uri)
