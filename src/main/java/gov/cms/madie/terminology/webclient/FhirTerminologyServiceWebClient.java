@@ -20,8 +20,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -73,19 +77,22 @@ public class FhirTerminologyServiceWebClient {
       if (!urlValue.startsWith("http://cts.nlm.nih.gov/fhir/ValueSet/")) {
         urlValue = "http://cts.nlm.nih.gov/fhir/ValueSet/" + urlValue;
       }
-      // if user didnt add htpp:// we do
+      // if user didn't add http:// we do
       if (!urlValue.startsWith("http://")) {
         urlValue = "http://" + urlValue;
       }
       queryParams.put("url", urlValue);
     }
-    MultiValueMap<String, String> multiValueMap = new LinkedMultiValueMap<>();
-    multiValueMap.setAll(queryParams);
-    URI uri =
-        UriComponentsBuilder.fromUriString(searchValueSetEndpoint)
-            .queryParams(multiValueMap)
-            .build()
-            .toUri();
+
+    // Manually construct the query string
+    String queryString = queryParams.entrySet().stream()
+            .map(entry -> URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
+            .collect(Collectors.joining("&"));
+
+    String url = searchValueSetEndpoint + "?" + queryString;
+
+    URI uri = URI.create(url);
+
     log.info("value set search url is: {}", uri.toString());
     return fetchResourceFromVsac(uri.toString(), apiKey, "bundle");
   }
@@ -114,6 +121,8 @@ public class FhirTerminologyServiceWebClient {
   }
 
   private String fetchResourceFromVsac(String uri, String apiKey, String resourceType) {
+    var currentUri = uri;
+    log.info("[{}] currentUri is", currentUri);
     return fhirTerminologyWebClient
         .get()
         .uri(uri)
