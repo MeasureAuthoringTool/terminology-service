@@ -122,7 +122,7 @@ public class FhirTerminologyService {
     return List.of();
   }
 
-  public List<ValueSetForSearch> searchValueSets(String apiKey, Map<String, String> queryParams) {
+  public ValueSetSearchResult searchValueSets(String apiKey, Map<String, String> queryParams) {
     IParser parser = fhirContext.newJsonParser();
     String responseString = fhirTerminologyServiceWebClient.searchValueSets(apiKey, queryParams);
     Bundle bundle = parser.parseResource(Bundle.class, responseString);
@@ -177,8 +177,7 @@ public class FhirTerminologyService {
               }
               log.info("valueSetList {}", valueSetList);
             });
-
-    return valueSetList;
+    return ValueSetSearchResult.builder().valueSets(valueSetList).resultBundle(responseString).build();
   }
 
   public List<CodeSystem> getAllCodeSystems() {
