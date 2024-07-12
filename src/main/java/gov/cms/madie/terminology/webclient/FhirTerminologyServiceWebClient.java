@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.webclient;
 
 import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.models.measure.ManifestExpansion;
@@ -122,6 +123,20 @@ public class FhirTerminologyServiceWebClient {
             clientResponse -> {
               if (clientResponse.statusCode().equals(HttpStatus.OK)) {
                 return clientResponse.bodyToMono(String.class);
+              } else if (clientResponse.statusCode().equals(HttpStatus.NOT_FOUND)) {
+                log.debug("Received NOT_FOUND response while retrieving {}", resourceType);
+                return clientResponse
+                    .createException()
+                    .flatMap(
+                        ex ->
+                            Mono.error(
+                                new VsacResourceNotFoundException(
+                                    "",
+                                    ex.getStatusCode(),
+                                    ex.getStatusText(),
+                                    ex.getResponseBodyAsString(),
+                                    uri)));
+
               } else {
                 log.debug("Received NON-OK response while retrieving {}", resourceType);
                 return clientResponse
