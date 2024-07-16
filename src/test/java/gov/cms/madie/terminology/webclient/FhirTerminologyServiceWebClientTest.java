@@ -8,7 +8,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -31,7 +30,7 @@ class FhirTerminologyServiceWebClientTest {
 
   private ValueSetsSearchCriteria.ValueSetParams testValueSetParams;
 
-  @InjectMocks FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
+  FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
 
   @BeforeAll
   static void setUp() throws IOException {
