@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
@@ -42,9 +43,12 @@ public class FhirTerminologyServiceWebClient {
       @Value("${client.fhir-terminology-service.code-lookups}") String codeLookupsUrl,
       @Value("${client.default_profile}") String defaultProfile,
       @Value("${client.search_value_set_endpoint}") String searchValueSetEndpoint) {
+    DefaultUriBuilderFactory uriBuilderFactory =
+        new DefaultUriBuilderFactory(fhirTerminologyServiceBaseUrl);
+    uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
     fhirTerminologyWebClient =
         WebClient.builder()
-            .baseUrl(fhirTerminologyServiceBaseUrl)
+            .uriBuilderFactory(uriBuilderFactory)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .codecs(
                 clientCodecConfigurer -> clientCodecConfigurer.defaultCodecs().maxInMemorySize(-1))

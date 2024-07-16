@@ -177,7 +177,10 @@ public class FhirTerminologyService {
               }
               log.info("valueSetList {}", valueSetList);
             });
-    return ValueSetSearchResult.builder().valueSets(valueSetList).resultBundle(responseString).build();
+    return ValueSetSearchResult.builder()
+        .valueSets(valueSetList)
+        .resultBundle(responseString)
+        .build();
   }
 
   public List<CodeSystem> getAllCodeSystems() {

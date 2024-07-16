@@ -285,7 +285,8 @@ class VsacFhirTerminologyControllerTest {
     Principal principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(fhirTerminologyService.searchValueSets(any(), any())).thenReturn(ValueSetSearchResult.builder().valueSets(mockValueSets).build());
+    when(fhirTerminologyService.searchValueSets(any(), any()))
+        .thenReturn(ValueSetSearchResult.builder().valueSets(mockValueSets).build());
     Map<String, String> queryParams = new HashMap<>();
     queryParams.put("param1", "value1");
     queryParams.put("param2", "value2");
