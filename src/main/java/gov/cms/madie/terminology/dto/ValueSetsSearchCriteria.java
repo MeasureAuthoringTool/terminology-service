@@ -21,5 +21,7 @@ public class ValueSetsSearchCriteria {
     private String oid;
     private String release;
     private String version;
+    private Integer count;
+    private Integer offset;
   }
 }
