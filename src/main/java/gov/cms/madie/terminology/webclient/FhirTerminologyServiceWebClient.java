@@ -126,7 +126,7 @@ public class FhirTerminologyServiceWebClient {
     return fetchResourceFromVsac(uri.toString(), apiKey, "Code");
   }
 
-  private String fetchResourceFromVsac(String uri, String apiKey, String resourceType) {
+  public String fetchResourceFromVsac(String uri, String apiKey, String resourceType) {
     return fhirTerminologyWebClient
         .get()
         .uri(uri)

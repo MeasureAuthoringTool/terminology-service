@@ -131,56 +131,98 @@ public class FhirTerminologyService {
         .getEntry()
         .forEach(
             entry -> {
-              Resource resource = entry.getResource();
-              ValueSet vs = (ValueSet) resource;
-              if (resource instanceof ValueSet) {
-                String oid = "";
-                for (Identifier identifier : ((ValueSet) resource).getIdentifier()) {
-                  if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
-                    oid = identifier.getValue();
-                  }
-                }
-                ValueSetForSearch valueSet =
-                    ValueSetForSearch.builder()
-                        .title(vs.getTitle())
-                        .author(
-                            Optional.ofNullable(
-                                    vs.getExtensionByUrl(
-                                        "http://hl7.org/fhir/StructureDefinition/valueset-author"))
-                                .map(extension -> String.valueOf(extension.getValue()))
-                                .orElse(""))
-                        .name(vs.getName())
-                        .composedOf(
-                            vs.getCompose().getInclude().stream()
-                                .map(x -> x.getSystem())
-                                .collect(Collectors.joining(",")))
-                        .effectiveDate(
-                            String.valueOf(
-                                vs.getExtensionByUrl(
-                                        "http://hl7.org/fhir/StructureDefinition/valueset-effectiveDate")
-                                    .getValue()))
-                        .lastReviewDate(
-                            String.valueOf(
-                                vs.getExtensionByUrl(
-                                        "http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate")
-                                    .getValue()))
-                        .lastUpdated(vs.getMeta().getLastUpdated().toString())
-                        .url(vs.getUrl())
-                        .version(vs.getVersion())
-                        .status(vs.getStatus())
-                        .publisher(vs.getPublisher())
-                        .purpose(vs.getPurpose())
-                        .steward(vs.getPublisher())
-                        .oid(oid)
-                        .build();
-                valueSetList.add(valueSet);
-              }
-              log.info("valueSetList {}", valueSetList);
+              traverseValueSet(entry, valueSetList);
             });
+    //  if there's a next link we want to hit it, and append the results until we're out of results
+    var links = bundle.getLink();
+    links.forEach(
+        (l) -> {
+          if (l.getRelation().equals("next")) {
+            recursiveRequestValueSets(valueSetList, apiKey, l.getUrl());
+          }
+        });
+
     return ValueSetSearchResult.builder()
         .valueSets(valueSetList)
         .resultBundle(responseString)
         .build();
+  }
+
+  public void recursiveRequestValueSets(
+      List<ValueSetForSearch> allValueSets, String apiKey, String uriString) {
+    String httpsString = uriString.replaceFirst("http", "https");
+    log.info(
+        "uri we're going to hit is[{}]",
+        httpsString); // vsac gives us http, we want https or it fails
+    IParser parser = fhirContext.newJsonParser();
+    String responseString =
+        fhirTerminologyServiceWebClient.fetchResourceFromVsac(httpsString, apiKey, "bundle");
+    Bundle bundle = parser.parseResource(Bundle.class, responseString);
+    List<ValueSetForSearch> valueSetListPage = new ArrayList<>();
+    bundle
+        .getEntry()
+        .forEach(
+            entry -> {
+              traverseValueSet(entry, valueSetListPage);
+            });
+    allValueSets.addAll(valueSetListPage);
+    var links = bundle.getLink();
+    links.forEach(
+        (l) -> {
+          if (l.getRelation().equals("next")) {
+            recursiveRequestValueSets(allValueSets, apiKey, l.getUrl());
+          }
+        });
+  }
+
+  private void traverseValueSet(
+      Bundle.BundleEntryComponent entry, List<ValueSetForSearch> valueSetList) {
+    Resource resource = entry.getResource();
+    ValueSet vs = (ValueSet) resource;
+    if (resource instanceof ValueSet) {
+      String oid = "";
+      for (Identifier identifier : ((ValueSet) resource).getIdentifier()) {
+        if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
+          oid = identifier.getValue();
+        }
+      }
+      ValueSetForSearch valueSet =
+          ValueSetForSearch.builder()
+              .title(vs.getTitle())
+              .author(
+                  Optional.ofNullable(
+                          vs.getExtensionByUrl(
+                              "http://hl7.org/fhir/StructureDefinition/valueset-author"))
+                      .map(extension -> String.valueOf(extension.getValue()))
+                      .orElse(""))
+              .name(vs.getName())
+              .composedOf(
+                  vs.getCompose().getInclude().stream()
+                      .map(x -> x.getSystem())
+                      .collect(Collectors.joining(",")))
+              .effectiveDate(
+                  Optional.ofNullable(
+                          vs.getExtensionByUrl(
+                              "http://hl7.org/fhir/StructureDefinition/valueset-effectiveDate"))
+                      .map(extension -> String.valueOf(extension.getValue()))
+                      .orElse(""))
+              .lastReviewDate(
+                  Optional.ofNullable(
+                          vs.getExtensionByUrl(
+                              "http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate"))
+                      .map(extension -> String.valueOf(extension.getValue()))
+                      .orElse(""))
+              .lastUpdated(vs.getMeta().getLastUpdated().toString())
+              .url(vs.getUrl())
+              .version(vs.getVersion())
+              .status(vs.getStatus())
+              .publisher(vs.getPublisher())
+              .purpose(vs.getPurpose())
+              .steward(vs.getPublisher())
+              .oid(oid)
+              .build();
+      valueSetList.add(valueSet);
+    }
   }
 
   public List<CodeSystem> getAllCodeSystems() {
