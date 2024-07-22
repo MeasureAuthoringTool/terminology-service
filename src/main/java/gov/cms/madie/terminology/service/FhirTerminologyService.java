@@ -53,32 +53,66 @@ public class FhirTerminologyService {
     return manifestOptions;
   }
 
+  // spin off requests based on values provided in the expansion
+  public List<QdmValueSet> recursivelyRequestAllValueSetsExpansionsForQDM(
+      List<QdmValueSet> allValueSets,
+      String apiKey,
+      ValueSetsSearchCriteria.ValueSetParams vsParam,
+      ValueSetsSearchCriteria valueSetsSearchCriteria,
+      List<CodeSystemEntry> codeSystemEntries) {
+    IParser parser = fhirContext.newJsonParser();
+    String resource =
+        fhirTerminologyServiceWebClient.getValueSetResource(
+            apiKey,
+            vsParam,
+            valueSetsSearchCriteria.getProfile(),
+            valueSetsSearchCriteria.getIncludeDraft(),
+            valueSetsSearchCriteria.getManifestExpansion());
+    ValueSet ValueSetResource = parser.parseResource(ValueSet.class, resource);
+
+    var total = ValueSetResource.getExpansion().getTotal(); // total valuesets
+
+    List<QdmValueSet.Concept> concepts =
+        getValueSetConcepts(ValueSetResource, codeSystemEntries, "QDM");
+
+    allValueSets.add(
+        QdmValueSet.builder()
+            .oid(ValueSetResource.getIdPart())
+            .displayName(ValueSetResource.getName())
+            .version(ValueSetResource.getVersion())
+            .concepts(concepts)
+            .build());
+    //  if the total results in the searchSet are still greater than our current offset + the count
+    // of our last request, then we request again
+    if (vsParam.getOffset() + vsParam.getCount() < total) {
+      vsParam.setOffset(vsParam.getOffset() + 1000);
+      recursivelyRequestAllValueSetsExpansionsForQDM(
+          allValueSets, apiKey, vsParam, valueSetsSearchCriteria, codeSystemEntries);
+    }
+    return allValueSets;
+  }
+
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+    List<QdmValueSet> allValueSets = new ArrayList<>(); // going to build all values here.
     return valueSetsSearchCriteria.getValueSetParams().stream()
         .map(
             vsParam -> {
-              String resource =
-                  fhirTerminologyServiceWebClient.getValueSetResource(
-                      umlsUser.getApiKey(),
-                      vsParam,
-                      valueSetsSearchCriteria.getProfile(),
-                      valueSetsSearchCriteria.getIncludeDraft(),
-                      valueSetsSearchCriteria.getManifestExpansion());
-              IParser parser = fhirContext.newJsonParser();
-              ValueSet ValueSetResource = parser.parseResource(ValueSet.class, resource);
-              // Converting a ValueSet FHIR Resource into QDM Value Set DTO
-              List<QdmValueSet.Concept> concepts =
-                  getValueSetConcepts(ValueSetResource, codeSystemEntries, "QDM");
-              return QdmValueSet.builder()
-                  .oid(ValueSetResource.getIdPart())
-                  .displayName(ValueSetResource.getName())
-                  .version(ValueSetResource.getVersion())
-                  .concepts(concepts)
-                  .build();
+              vsParam.setCount(1000);
+              vsParam.setOffset(0);
+              return vsParam;
             })
-        .toList();
+        .flatMap(
+            vsParam ->
+                recursivelyRequestAllValueSetsExpansionsForQDM(
+                    allValueSets,
+                    umlsUser.getApiKey(),
+                    vsParam,
+                    valueSetsSearchCriteria,
+                    codeSystemEntries)
+                    .stream())
+        .collect(Collectors.toList());
   }
 
   /**
