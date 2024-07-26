@@ -19,11 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -107,7 +104,7 @@ public class FhirTerminologyService {
     // of our last request, then we request again
     if (vsParam.getOffset() + vsParam.getCount() <= total) {
       vsParam.setOffset(vsParam.getOffset() + 1000);
-      recursivelyRequestAllValueSetsExpansionsForQDM(
+      return recursivelyRequestAllValueSetsExpansionsForQDM(
           allValueSets, apiKey, vsParam, valueSetsSearchCriteria, codeSystemEntries);
     }
     return allValueSets;
@@ -116,7 +113,6 @@ public class FhirTerminologyService {
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
-    List<QdmValueSet> allValueSets = new ArrayList<>(); // going to build all values here.
     return valueSetsSearchCriteria.getValueSetParams().stream()
         .map(
             vsParam -> {
@@ -127,7 +123,7 @@ public class FhirTerminologyService {
         .flatMap(
             vsParam ->
                 recursivelyRequestAllValueSetsExpansionsForQDM(
-                    allValueSets,
+                        new ArrayList<>(),
                     umlsUser.getApiKey(),
                     vsParam,
                     valueSetsSearchCriteria,
