@@ -65,12 +65,12 @@ public class FhirTerminologyService {
             valueSetsSearchCriteria.getProfile(),
             valueSetsSearchCriteria.getIncludeDraft(),
             valueSetsSearchCriteria.getManifestExpansion());
-    ValueSet ValueSetResource = parser.parseResource(ValueSet.class, resource);
 
-    var total = ValueSetResource.getExpansion().getTotal(); // total valuesets
+    ValueSet valueSetResource = parser.parseResource(ValueSet.class, resource);
+    var total = valueSetResource.getExpansion().getTotal(); // total valuesets
 
     List<QdmValueSet.Concept> concepts =
-        getValueSetConcepts(ValueSetResource, codeSystemEntries, "QDM");
+        getValueSetConcepts(valueSetResource, codeSystemEntries, "QDM");
   log.info("vs total [{}] count: [{}] offset: [{}], oid: [{}]", total, vsParam.getCount(), vsParam.getOffset(), vsParam.getOid());
 
     // Check if the ValueSet with the same oid already exists in allValueSets
@@ -93,9 +93,9 @@ public class FhirTerminologyService {
   } else {
     allValueSets.add(
             QdmValueSet.builder()
-                    .oid(ValueSetResource.getIdPart())
-                    .displayName(ValueSetResource.getName())
-                    .version(ValueSetResource.getVersion())
+                    .oid(valueSetResource.getIdPart())
+                    .displayName(valueSetResource.getName())
+                    .version(valueSetResource.getVersion())
                     .concepts(concepts)
                     .build());
 
