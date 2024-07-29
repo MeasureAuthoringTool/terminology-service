@@ -119,11 +119,15 @@ public class TerminologyServiceUtil {
       ManifestExpansion manifestExpansion) {
     MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
     String expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
-    if (valueSetParams.getOffset() >= 0) {
-      params.put("offset", List.of(String.valueOf(valueSetParams.getOffset())));
-    }
-    if (valueSetParams.getCount() >= 0) {
-      params.put("count", List.of(String.valueOf(valueSetParams.getCount())));
+    if (valueSetParams != null) {
+      Integer offset = valueSetParams.getOffset();
+      Integer count = valueSetParams.getCount();
+      if (offset != null && offset >= 0) {
+        params.put("offset", List.of(String.valueOf(offset)));
+      }
+      if (count != null && count >= 0) {
+        params.put("count", List.of(String.valueOf(count)));
+      }
     }
     if (StringUtils.isNotBlank(valueSetParams.getVersion())) {
       params.put("valueSetVersion", List.of(valueSetParams.getVersion()));

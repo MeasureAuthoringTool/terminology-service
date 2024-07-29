@@ -71,34 +71,40 @@ public class FhirTerminologyService {
 
     List<QdmValueSet.Concept> concepts =
         getValueSetConcepts(valueSetResource, codeSystemEntries, "QDM");
-  log.info("vs total [{}] count: [{}] offset: [{}], oid: [{}]", total, vsParam.getCount(), vsParam.getOffset(), vsParam.getOid());
+    log.info(
+        "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
+        total,
+        vsParam.getCount(),
+        vsParam.getOffset(),
+        vsParam.getOid());
 
     // Check if the ValueSet with the same oid already exists in allValueSets
-    QdmValueSet existingValueSet = allValueSets.stream()
+    QdmValueSet existingValueSet =
+        allValueSets.stream()
             .filter(vs -> vs.getOid().equals(vsParam.getOid()))
             .findFirst()
             .orElse(null);
-  if (existingValueSet != null) {
-    List<QdmValueSet.Concept> updatedConcepts = new ArrayList<>(existingValueSet.getConcepts());
-    updatedConcepts.addAll(concepts);
-    // Create a new QdmValueSet with the updated concepts
-    QdmValueSet updatedValueSet = QdmValueSet.builder()
-            .oid(existingValueSet.getOid())
-            .displayName(existingValueSet.getDisplayName())
-            .version(existingValueSet.getVersion())
-            .concepts(updatedConcepts)
-            .build();
-    // Replace the existing QdmValueSet in the list
-    allValueSets.set(allValueSets.indexOf(existingValueSet), updatedValueSet);
-  } else {
-    allValueSets.add(
-            QdmValueSet.builder()
-                    .oid(valueSetResource.getIdPart())
-                    .displayName(valueSetResource.getName())
-                    .version(valueSetResource.getVersion())
-                    .concepts(concepts)
-                    .build());
-
+    if (existingValueSet != null) {
+      List<QdmValueSet.Concept> updatedConcepts = new ArrayList<>(existingValueSet.getConcepts());
+      updatedConcepts.addAll(concepts);
+      // Create a new QdmValueSet with the updated concepts
+      QdmValueSet updatedValueSet =
+          QdmValueSet.builder()
+              .oid(existingValueSet.getOid())
+              .displayName(existingValueSet.getDisplayName())
+              .version(existingValueSet.getVersion())
+              .concepts(updatedConcepts)
+              .build();
+      // Replace the existing QdmValueSet in the list
+      allValueSets.set(allValueSets.indexOf(existingValueSet), updatedValueSet);
+    } else {
+      allValueSets.add(
+          QdmValueSet.builder()
+              .oid(valueSetResource.getIdPart())
+              .displayName(valueSetResource.getName())
+              .version(valueSetResource.getVersion())
+              .concepts(concepts)
+              .build());
     }
     //  if the total results in the searchSet are still greater than our current offset + the count
     // of our last request, then we request again
@@ -123,7 +129,7 @@ public class FhirTerminologyService {
         .flatMap(
             vsParam ->
                 recursivelyRequestAllValueSetsExpansionsForQDM(
-                        new ArrayList<>(),
+                    new ArrayList<>(),
                     umlsUser.getApiKey(),
                     vsParam,
                     valueSetsSearchCriteria,
