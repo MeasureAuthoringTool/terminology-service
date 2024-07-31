@@ -19,11 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -68,25 +65,52 @@ public class FhirTerminologyService {
             valueSetsSearchCriteria.getProfile(),
             valueSetsSearchCriteria.getIncludeDraft(),
             valueSetsSearchCriteria.getManifestExpansion());
-    ValueSet ValueSetResource = parser.parseResource(ValueSet.class, resource);
 
-    var total = ValueSetResource.getExpansion().getTotal(); // total valuesets
+    ValueSet valueSetResource = parser.parseResource(ValueSet.class, resource);
+    var total = valueSetResource.getExpansion().getTotal(); // total valuesets
 
     List<QdmValueSet.Concept> concepts =
-        getValueSetConcepts(ValueSetResource, codeSystemEntries, "QDM");
+        getValueSetConcepts(valueSetResource, codeSystemEntries, "QDM");
+    log.info(
+        "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
+        total,
+        vsParam.getCount(),
+        vsParam.getOffset(),
+        vsParam.getOid());
 
-    allValueSets.add(
-        QdmValueSet.builder()
-            .oid(ValueSetResource.getIdPart())
-            .displayName(ValueSetResource.getName())
-            .version(ValueSetResource.getVersion())
-            .concepts(concepts)
-            .build());
+    // Check if the ValueSet with the same oid already exists in allValueSets
+    QdmValueSet existingValueSet =
+        allValueSets.stream()
+            .filter(vs -> vs.getOid().equals(vsParam.getOid()))
+            .findFirst()
+            .orElse(null);
+    if (existingValueSet != null) {
+      List<QdmValueSet.Concept> updatedConcepts = new ArrayList<>(existingValueSet.getConcepts());
+      updatedConcepts.addAll(concepts);
+      // Create a new QdmValueSet with the updated concepts
+      QdmValueSet updatedValueSet =
+          QdmValueSet.builder()
+              .oid(existingValueSet.getOid())
+              .displayName(existingValueSet.getDisplayName())
+              .version(existingValueSet.getVersion())
+              .concepts(updatedConcepts)
+              .build();
+      // Replace the existing QdmValueSet in the list
+      allValueSets.set(allValueSets.indexOf(existingValueSet), updatedValueSet);
+    } else {
+      allValueSets.add(
+          QdmValueSet.builder()
+              .oid(valueSetResource.getIdPart())
+              .displayName(valueSetResource.getName())
+              .version(valueSetResource.getVersion())
+              .concepts(concepts)
+              .build());
+    }
     //  if the total results in the searchSet are still greater than our current offset + the count
     // of our last request, then we request again
-    if (vsParam.getOffset() + vsParam.getCount() < total) {
+    if (vsParam.getOffset() + vsParam.getCount() <= total) {
       vsParam.setOffset(vsParam.getOffset() + 1000);
-      recursivelyRequestAllValueSetsExpansionsForQDM(
+      return recursivelyRequestAllValueSetsExpansionsForQDM(
           allValueSets, apiKey, vsParam, valueSetsSearchCriteria, codeSystemEntries);
     }
     return allValueSets;
@@ -95,7 +119,6 @@ public class FhirTerminologyService {
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
-    List<QdmValueSet> allValueSets = new ArrayList<>(); // going to build all values here.
     return valueSetsSearchCriteria.getValueSetParams().stream()
         .map(
             vsParam -> {
@@ -106,7 +129,7 @@ public class FhirTerminologyService {
         .flatMap(
             vsParam ->
                 recursivelyRequestAllValueSetsExpansionsForQDM(
-                    allValueSets,
+                    new ArrayList<>(),
                     umlsUser.getApiKey(),
                     vsParam,
                     valueSetsSearchCriteria,
