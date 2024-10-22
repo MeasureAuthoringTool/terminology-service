@@ -380,7 +380,7 @@ public class FhirTerminologyService {
               codeSystemsPage.add(
                   CodeSystem.builder()
                       .id(codeSystem.getTitle() + codeSystem.getVersion())
-                      .fullUrl(entry.getFullUrl())
+                      .fullUrl(codeSystem.getUrl())
                       .title(codeSystem.getTitle())
                       .name(codeSystem.getName())
                       .version(codeSystem.getVersion())
