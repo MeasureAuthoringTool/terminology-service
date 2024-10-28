@@ -13,6 +13,7 @@ import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
@@ -141,6 +142,14 @@ public class VsacToFhirValueSetMapperTest {
     assertEquals(vs.getDescription(), TEST);
     assertEquals(vs.getPurpose(), TEST);
     assertEquals(vs.getDate(), today);
+  }
+
+  @Test
+  public void testMapMainAttributesUnknownStatus() {
+    ValueSet vs = new ValueSet();
+    describedValueSet.setStatus("Not Maintained");
+    vs = mapper.setFhirMainAttributes(vs, describedValueSet, TEST);
+    assertEquals(Enumerations.PublicationStatus.UNKNOWN.getDisplay(), vs.getStatus().getDisplay());
   }
 
   @Test
