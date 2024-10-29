@@ -7,6 +7,7 @@ import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.service.MappingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.Identifier;
@@ -55,14 +56,21 @@ public class VsacToFhirValueSetMapper {
     fhirValueSet.setName(vsacDescribedValueSet.getDisplayName());
     fhirValueSet.setTitle(vsacDescribedValueSet.getDisplayName());
     fhirValueSet.setVersion(vsacDescribedValueSet.getVersion());
-    fhirValueSet.setStatus(
-        PublicationStatus.fromCode(vsacDescribedValueSet.getStatus().toLowerCase()));
+    fhirValueSet.setStatus(mapVsacValueSetStatusToFhir(vsacDescribedValueSet.getStatus()));
     fhirValueSet.setDate(vsacDescribedValueSet.getRevisionDate().toGregorianCalendar().getTime());
     fhirValueSet.setPublisher(vsacDescribedValueSet.getSource());
     // ??
     fhirValueSet.setDescription(vsacDescribedValueSet.getDefinition());
     fhirValueSet.setPurpose(vsacDescribedValueSet.getPurpose());
     return fhirValueSet;
+  }
+
+  private PublicationStatus mapVsacValueSetStatusToFhir(String vsacStatus) {
+    try {
+      return PublicationStatus.fromCode(vsacStatus.toLowerCase());
+    } catch (FHIRException | NullPointerException e) {
+      return PublicationStatus.UNKNOWN;
+    }
   }
 
   protected void addFhirValueSetComposeComponent(
