@@ -56,8 +56,8 @@ public class InternalTerminologyServiceTest {
     when(operationUntyped.withNoParameters(Parameters.class)).thenReturn(operationUntypedWithInput);
 
     // mock response
-    Parameters parameters = new Parameters();
     ValueSet valueSet = new ValueSet();
+    Parameters parameters = new Parameters();
     parameters.addParameter().setResource(valueSet);
     when(operationUntypedWithInput.execute()).thenReturn(parameters);
 
