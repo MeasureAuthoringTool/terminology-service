@@ -1,4 +1,4 @@
-package gov.cms.madie.terminology.service.hapi;
+package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.server.exceptions.*;
@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class HapiFhirService {
+public class InternalTerminologyService {
   private final IGenericClient hapiClient;
 
   /**

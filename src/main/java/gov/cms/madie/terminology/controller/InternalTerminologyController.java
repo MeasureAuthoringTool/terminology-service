@@ -1,7 +1,7 @@
 package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
-import gov.cms.madie.terminology.service.hapi.HapiFhirService;
+import gov.cms.madie.terminology.service.InternalTerminologyService;
 import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.http.MediaType;
@@ -17,11 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalTerminologyController {
 
   private final FhirContext fhirContext;
-  private final HapiFhirService hapiFhirService;
+  private final InternalTerminologyService internalTerminologyService;
 
   @GetMapping("ValueSet/{id}/expand")
   public ResponseEntity<String> valueSetExpansion(@PathVariable String id) {
-    ValueSet valueSet = hapiFhirService.getValueSetExpansionById(id);
+    ValueSet valueSet = internalTerminologyService.getValueSetExpansionById(id);
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_JSON)
         .body(fhirContext.newJsonParser().encodeResourceToString(valueSet));
