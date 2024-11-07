@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import gov.cms.madie.terminology.exceptions.VsacGenericException;
+import gov.cms.madie.terminology.exceptions.HapiOperationException;
 import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 
@@ -107,14 +107,14 @@ public class VsacControllerAdvice {
     return errorAttributes1;
   }
 
-  @ExceptionHandler(VsacGenericException.class)
+  @ExceptionHandler(HapiOperationException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ResponseBody
-  Map<String, Object> onVsacGenericException(VsacGenericException ex, WebRequest request) {
-    Map<String, String> validationErrors = new HashMap<>();
-    validationErrors.put(request.getContextPath(), ex.getMessage());
+  Map<String, Object> onHapiOperationException(HapiOperationException ex, WebRequest request) {
+    Map<String, String> errors = new HashMap<>();
+    errors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
-    errorAttributes.put("validationErrors", validationErrors);
+    errorAttributes.put("errors", errors);
     return errorAttributes;
   }
 
