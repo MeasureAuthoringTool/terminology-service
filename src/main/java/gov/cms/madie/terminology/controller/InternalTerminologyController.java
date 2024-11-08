@@ -19,11 +19,9 @@ public class InternalTerminologyController {
   private final FhirContext fhirContext;
   private final InternalTerminologyService internalTerminologyService;
 
-  @GetMapping("ValueSet/{id}/expand")
+  @GetMapping(path = "ValueSet/{id}/expand", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> valueSetExpansion(@PathVariable String id) {
     ValueSet valueSet = internalTerminologyService.getValueSetExpansionById(id);
-    return ResponseEntity.ok()
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(fhirContext.newJsonParser().encodeResourceToString(valueSet));
+    return ResponseEntity.ok().body(fhirContext.newJsonParser().encodeResourceToString(valueSet));
   }
 }
