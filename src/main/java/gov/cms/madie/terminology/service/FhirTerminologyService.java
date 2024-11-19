@@ -64,6 +64,7 @@ public class FhirTerminologyService {
             vsParam,
             valueSetsSearchCriteria.getProfile(),
             valueSetsSearchCriteria.getIncludeDraft(),
+            valueSetsSearchCriteria.getActiveOnly(),
             valueSetsSearchCriteria.getManifestExpansion());
 
     ValueSet valueSetResource = parser.parseResource(ValueSet.class, resource);

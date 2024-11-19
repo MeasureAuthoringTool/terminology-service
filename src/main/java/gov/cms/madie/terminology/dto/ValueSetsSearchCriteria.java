@@ -12,6 +12,7 @@ public class ValueSetsSearchCriteria {
 
   private String profile;
   private String includeDraft;
+  private String activeOnly;
   private ManifestExpansion manifestExpansion;
   private List<ValueSetParams> valueSetParams;
 
