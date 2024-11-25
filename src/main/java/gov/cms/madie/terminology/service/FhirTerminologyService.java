@@ -381,7 +381,7 @@ public class FhirTerminologyService {
               codeSystemsPage.add(
                   CodeSystem.builder()
                       .id(codeSystem.getTitle() + codeSystem.getVersion())
-                      .fullUrl(codeSystem.getUrl())
+                      .fullUrl(entry.getFullUrl())
                       .title(codeSystem.getTitle())
                       .name(codeSystem.getName())
                       .version(codeSystem.getVersion())
