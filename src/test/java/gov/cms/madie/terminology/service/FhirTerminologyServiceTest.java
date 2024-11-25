@@ -173,6 +173,7 @@ class FhirTerminologyServiceTest {
                         .build()))
             .profile("test-profile")
             .includeDraft("false")
+            .activeOnly("true")
             .manifestExpansion(
                 ManifestExpansion.builder()
                     .fullUrl("https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05")
@@ -180,7 +181,7 @@ class FhirTerminologyServiceTest {
                     .build())
             .build();
     when(fhirTerminologyServiceWebClient.getValueSetResource(
-            anyString(), any(), anyString(), anyString(), any()))
+            anyString(), any(), anyString(), anyString(), anyString(), any()))
         .thenReturn(mockValueSetResourceWithCodes);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
@@ -209,6 +210,7 @@ class FhirTerminologyServiceTest {
                         .build()))
             .profile("test-profile")
             .includeDraft("false")
+            .activeOnly("false")
             .manifestExpansion(
                 ManifestExpansion.builder()
                     .fullUrl("https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05")
@@ -217,11 +219,12 @@ class FhirTerminologyServiceTest {
             .build();
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(fhirTerminologyServiceWebClient.getValueSetResource(
-            anyString(),
-            any(ValueSetsSearchCriteria.ValueSetParams.class),
-            anyString(),
-            anyString(),
-            any(ManifestExpansion.class)))
+        anyString(),
+        any(ValueSetsSearchCriteria.ValueSetParams.class),
+        anyString(),
+        anyString(),
+        anyString(),
+        any(ManifestExpansion.class)))
         .thenReturn(mockValueSetResourceWithNoCodes);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result =

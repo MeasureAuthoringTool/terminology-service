@@ -91,11 +91,11 @@ class FhirTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/fhir+json"));
     String actualResponse =
         fhirTerminologyServiceWebClient.getValueSetResource(
-            MOCK_API_KEY, testValueSetParams, null, null, new ManifestExpansion());
+            MOCK_API_KEY, testValueSetParams, null, null, "false", new ManifestExpansion());
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals("/ValueSet/test-vs-id/$expand", recordedRequest.getPath());
+    assertEquals("/ValueSet/test-vs-id/$expand?activeOnly=false", recordedRequest.getPath());
   }
 
   @Test
@@ -108,11 +108,11 @@ class FhirTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/fhir+json"));
     String actualResponse =
         fhirTerminologyServiceWebClient.getValueSetResource(
-            MOCK_API_KEY, testValueSetParams, null, "yes", new ManifestExpansion());
+            MOCK_API_KEY, testValueSetParams, null, "yes", "false", new ManifestExpansion());
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals("/ValueSet/test-vs-id/$expand?includeDraft=true", recordedRequest.getPath());
+    assertEquals("/ValueSet/test-vs-id/$expand?includeDraft=true&activeOnly=false", recordedRequest.getPath());
   }
 
   @Test
@@ -129,6 +129,7 @@ class FhirTerminologyServiceWebClientTest {
             testValueSetParams,
             null,
             null,
+            "true",
             ManifestExpansion.builder()
                 .id("test-manifest-456")
                 .fullUrl("https://cts.nlm.nih.gov/fhir/Library/test-manifest-456")
@@ -152,7 +153,7 @@ class FhirTerminologyServiceWebClientTest {
     testValueSetParams.setVersion("test-value-set-version-2024");
     String actualResponse =
         fhirTerminologyServiceWebClient.getValueSetResource(
-            MOCK_API_KEY, testValueSetParams, null, null, new ManifestExpansion());
+            MOCK_API_KEY, testValueSetParams, null, null, "false", new ManifestExpansion());
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
@@ -169,9 +170,9 @@ class FhirTerminologyServiceWebClientTest {
         WebClientResponseException.class,
         () ->
             fhirTerminologyServiceWebClient.getValueSetResource(
-                MOCK_API_KEY, testValueSetParams, null, null, new ManifestExpansion()));
+                MOCK_API_KEY, testValueSetParams, null, null, "false", new ManifestExpansion()));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals("/ValueSet/test-vs-id/$expand", recordedRequest.getPath());
+    assertEquals("/ValueSet/test-vs-id/$expand?activeOnly=false", recordedRequest.getPath());
   }
 
   @Test
