@@ -219,12 +219,12 @@ class FhirTerminologyServiceTest {
             .build();
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(fhirTerminologyServiceWebClient.getValueSetResource(
-        anyString(),
-        any(ValueSetsSearchCriteria.ValueSetParams.class),
-        anyString(),
-        anyString(),
-        anyString(),
-        any(ManifestExpansion.class)))
+            anyString(),
+            any(ValueSetsSearchCriteria.ValueSetParams.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            any(ManifestExpansion.class)))
         .thenReturn(mockValueSetResourceWithNoCodes);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result =

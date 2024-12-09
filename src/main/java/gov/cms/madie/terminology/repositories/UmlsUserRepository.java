@@ -10,4 +10,6 @@ public interface UmlsUserRepository extends MongoRepository<UmlsUser, String> {
   Optional<UmlsUser> findByHarpId(String harpId);
 
   Optional<UmlsUser> findByHarpIdAndApiKey(String harpId, String apiKey);
+
+  Optional<UmlsUser> deleteByHarpId(String harpId);
 }

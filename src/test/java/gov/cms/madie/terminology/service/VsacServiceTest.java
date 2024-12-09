@@ -592,4 +592,34 @@ class VsacServiceTest {
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.NA)));
   }
+
+  @Test
+  void testUserUmlsLogout() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUser));
+    UmlsUser user = vsacService.verifyUmlsAccess(TEST_API_KEY);
+    when(umlsUserRepository.deleteByHarpId(anyString())).thenReturn(Optional.of(umlsUser));
+    boolean loggedOut = vsacService.logoutUMLSUser(umlsUser.getHarpId());
+    assertThat(user.getHarpId(), is(equalTo(TEST_HARP_ID)));
+    assertThat(user.getApiKey(), is(equalTo(TEST_API_KEY)));
+    assertThat(loggedOut, is(equalTo(true)));
+  }
+
+  @Test
+  void testUserUmlsLogoutUserNotFound() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.empty());
+    Exception exception =
+        assertThrows(
+            VsacUnauthorizedException.class, () -> vsacService.logoutUMLSUser(TEST_API_KEY));
+    assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
+  }
+
+  @Test
+  void testUserUmlsLogoutUserApiKeyIsMissing() {
+    UmlsUser umlsUserCopy = umlsUser.toBuilder().apiKey(null).build();
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUserCopy));
+    Exception exception =
+        assertThrows(
+            VsacUnauthorizedException.class, () -> vsacService.logoutUMLSUser(TEST_API_KEY));
+    assertThat(exception.getMessage(), is(equalTo("Please login to UMLS before proceeding")));
+  }
 }

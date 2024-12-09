@@ -358,4 +358,13 @@ public class VsacService {
   public Optional<UmlsUser> findByHarpId(String harpId) {
     return umlsUserRepository.findByHarpId(harpId);
   }
+
+  public boolean logoutUMLSUser(String userName) {
+    UmlsUser user = verifyUmlsAccess(userName);
+    boolean deleted = false;
+    Optional<UmlsUser> deletedUser = umlsUserRepository.deleteByHarpId(userName);
+    deleted = deletedUser.isPresent();
+    log.info("Log out UMLS User:{} : {}.", user.getHarpId(), deleted);
+    return deleted;
+  }
 }

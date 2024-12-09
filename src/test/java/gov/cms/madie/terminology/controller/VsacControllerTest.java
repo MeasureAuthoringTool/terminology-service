@@ -133,4 +133,26 @@ public class VsacControllerTest {
 
     assertEquals(response.getStatusCode(), HttpStatus.UNAUTHORIZED);
   }
+
+  @Test
+  void testUserUmlsLogout() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    when(vsacService.logoutUMLSUser(anyString())).thenReturn(true);
+    ResponseEntity<Boolean> response = vsacController.umlsLogout(principal);
+
+    assertEquals(response.getBody(), Boolean.TRUE);
+  }
+
+  @Test
+  void testUserUmlsLogoutFailed() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    when(vsacService.logoutUMLSUser(anyString())).thenReturn(false);
+    ResponseEntity<Boolean> response = vsacController.umlsLogout(principal);
+
+    assertEquals(response.getStatusCode(), HttpStatus.UNAUTHORIZED);
+  }
 }
