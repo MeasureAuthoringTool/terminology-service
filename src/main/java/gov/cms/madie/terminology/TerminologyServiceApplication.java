@@ -25,7 +25,7 @@ public class TerminologyServiceApplication {
       public void addCorsMappings(CorsRegistry registry) {
         registry
             .addMapping("/**")
-            .allowedMethods("PUT", "POST", "GET")
+            .allowedMethods("PUT", "POST", "GET", "DELETE")
             .allowedOrigins(
                 "http://localhost:9000",
                 "https://dev-madie.hcqis.org",

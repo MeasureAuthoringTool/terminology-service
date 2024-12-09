@@ -112,7 +112,9 @@ class FhirTerminologyServiceWebClientTest {
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals("/ValueSet/test-vs-id/$expand?includeDraft=true&activeOnly=false", recordedRequest.getPath());
+    assertEquals(
+        "/ValueSet/test-vs-id/$expand?includeDraft=true&activeOnly=false",
+        recordedRequest.getPath());
   }
 
   @Test
