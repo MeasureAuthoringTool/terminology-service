@@ -360,11 +360,13 @@ public class VsacService {
   }
 
   public boolean logoutUMLSUser(String userName) {
-    UmlsUser user = verifyUmlsAccess(userName);
-    boolean deleted = false;
     Optional<UmlsUser> deletedUser = umlsUserRepository.deleteByHarpId(userName);
-    deleted = deletedUser.isPresent();
-    log.info("Log out UMLS User:{} : {}.", user.getHarpId(), deleted);
+    boolean deleted = deletedUser.isPresent();
+    if (deleted) {
+      log.info("Successfully deleted UMLS information for User Name: {}", userName);
+    } else {
+      log.error("Error while deleting UMLS information for User Name: {}", userName);
+    }
     return deleted;
   }
 }
