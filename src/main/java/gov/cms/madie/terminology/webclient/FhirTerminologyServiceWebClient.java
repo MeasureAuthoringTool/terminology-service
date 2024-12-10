@@ -108,11 +108,12 @@ public class FhirTerminologyServiceWebClient {
       ValueSetsSearchCriteria.ValueSetParams valueSetParams,
       String profile,
       String includeDraft,
+      String activeOnly,
       ManifestExpansion manifestExpansion) {
     profile = StringUtils.isNotBlank(profile) ? defaultProfile : profile;
     URI uri =
         TerminologyServiceUtil.buildValueSetResourceUri(
-            valueSetParams, profile, includeDraft, manifestExpansion);
+            valueSetParams, profile, includeDraft, activeOnly, manifestExpansion);
 
     return fetchResourceFromVsac(uri.toString(), apiKey, "ValueSet");
   }

@@ -8,6 +8,7 @@ import gov.cms.madie.terminology.dto.QdmValueSet;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -131,6 +132,14 @@ public class VsacController {
   @GetMapping("/umls-credentials/status")
   public ResponseEntity<Boolean> checkUserLogin(Principal principal) {
     return vsacService.validateUmlsInformation(principal.getName())
+        ? ResponseEntity.ok().body(Boolean.TRUE)
+        : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+  }
+
+  @DeleteMapping("/umls-credentials")
+  public ResponseEntity<Boolean> umlsLogout(Principal principal) {
+    log.info("Entering: umlsLogout(): username = " + principal.getName());
+    return vsacService.logoutUMLSUser(principal.getName())
         ? ResponseEntity.ok().body(Boolean.TRUE)
         : new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
   }

@@ -592,4 +592,18 @@ class VsacServiceTest {
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.NA)));
   }
+
+  @Test
+  void testUserUmlsLogout() {
+    when(umlsUserRepository.deleteByHarpId(anyString())).thenReturn(Optional.of(umlsUser));
+    boolean loggedOut = vsacService.logoutUMLSUser(umlsUser.getHarpId());
+    assertTrue(loggedOut);
+  }
+
+  @Test
+  void testUserUmlsLogoutFailed() {
+    when(umlsUserRepository.deleteByHarpId(anyString())).thenReturn(Optional.empty());
+    boolean loggedOut = vsacService.logoutUMLSUser(umlsUser.getHarpId());
+    assertFalse(loggedOut);
+  }
 }

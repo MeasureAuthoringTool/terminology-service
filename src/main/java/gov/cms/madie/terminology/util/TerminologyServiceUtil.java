@@ -116,6 +116,7 @@ public class TerminologyServiceUtil {
       ValueSetsSearchCriteria.ValueSetParams valueSetParams,
       String profile,
       String includeDraft,
+      String activeOnly,
       ManifestExpansion manifestExpansion) {
     MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
     String expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
@@ -134,8 +135,12 @@ public class TerminologyServiceUtil {
     } else if (manifestExpansion != null
         && StringUtils.isNotBlank(manifestExpansion.getFullUrl())) {
       params.put("manifest", List.of(manifestExpansion.getFullUrl()));
-    } else if (StringUtils.isNotBlank(includeDraft)) {
-      params.put("includeDraft", List.of("true"));
+    } else {
+      if (StringUtils.isNotBlank(includeDraft)) {
+        params.put("includeDraft", List.of("true"));
+      }
+
+      params.put("activeOnly", List.of(activeOnly));
     }
 
     return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
