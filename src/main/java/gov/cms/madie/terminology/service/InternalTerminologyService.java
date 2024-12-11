@@ -5,10 +5,7 @@ import ca.uhn.fhir.rest.server.exceptions.*;
 import gov.cms.madie.terminology.exceptions.HapiOperationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.OperationOutcome;
-import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.*;
 import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
@@ -22,22 +19,22 @@ public class InternalTerminologyService {
   /**
    * This method fetches the ValueSet expansion by id from HAPI server
    *
-   * @param id -> Value Set id
+   * @param url -> Value Set url
    * @return ValueSet -> Value Set with expansion details
    */
-  public ValueSet getValueSetExpansionById(String id) {
+  public ValueSet getValueSetExpansionByUrl(String url) {
     try {
-      log.info("Fetching ValueSet expansion for {}", id);
+      log.info("Fetching ValueSet expansion for {}", url);
       Parameters parameters =
           hapiClient
               .operation()
-              .onInstance(new IdType("ValueSet", id))
+              .onInstance(new IdType(new UriType(url)))
               .named("$expand")
               .withNoParameters(Parameters.class)
               .execute();
       return (ValueSet) parameters.getParameter().get(0).getResource();
     } catch (BaseServerResponseException ex) {
-      log.error("An error occurred while fetching expansion for the ValueSet[{}]", id, ex);
+      log.error("An error occurred while fetching expansion for the ValueSet[{}]", url, ex);
       OperationOutcome outcome = (OperationOutcome) ex.getOperationOutcome();
       if (outcome != null) {
         String errors =

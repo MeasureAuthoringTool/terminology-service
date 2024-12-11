@@ -35,6 +35,7 @@ class InternalTerminologyControllerMvcTest {
 
   @Autowired private MockMvc mockMvc;
   private static final String TEST_USER = "test.user";
+  private static final String VALUE_SET_URL = "ValueSet/us-core-vaccines-cvx-1";
 
   @Test
   void testGetValueSetExpansion() throws Exception {
@@ -49,13 +50,13 @@ class InternalTerminologyControllerMvcTest {
     valueSet.setId("us-core-vaccines-cvx-1");
     valueSet.setExpansion(expansion);
 
-    when(internalTerminologyService.getValueSetExpansionById(anyString())).thenReturn(valueSet);
+    when(internalTerminologyService.getValueSetExpansionByUrl(anyString())).thenReturn(valueSet);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     MvcResult result =
         mockMvc
             .perform(
                 MockMvcRequestBuilders.get(
-                        "/internal-terminology/ValueSet/us-core-vaccines-cvx-1/expand")
+                        "/internal-terminology/ValueSet/expand?url=" + VALUE_SET_URL)
                     .with(user(TEST_USER))
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -63,7 +64,7 @@ class InternalTerminologyControllerMvcTest {
             .andReturn();
     assertThat(result.getResponse().getStatus(), is(equalTo(200)));
     String content = result.getResponse().getContentAsString();
-    verify(internalTerminologyService, times(1)).getValueSetExpansionById(anyString());
+    verify(internalTerminologyService, times(1)).getValueSetExpansionByUrl(anyString());
     assertThat(
         content,
         containsString(
@@ -77,19 +78,19 @@ class InternalTerminologyControllerMvcTest {
 
     doThrow(new HapiOperationException("Value set not found"))
         .when(internalTerminologyService)
-        .getValueSetExpansionById(anyString());
+        .getValueSetExpansionByUrl(anyString());
     MvcResult result =
         mockMvc
             .perform(
                 MockMvcRequestBuilders.get(
-                        "/internal-terminology/ValueSet/us-core-vaccines-cvx-1/expand")
+                        "/internal-terminology/ValueSet/expand?url=" + VALUE_SET_URL)
                     .with(user(TEST_USER))
                     .with(csrf())
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(status().isBadRequest())
             .andReturn();
     String content = result.getResponse().getContentAsString();
-    verify(internalTerminologyService, times(1)).getValueSetExpansionById(anyString());
+    verify(internalTerminologyService, times(1)).getValueSetExpansionByUrl(anyString());
     assertThat(content, containsString("Value set not found"));
   }
 }
