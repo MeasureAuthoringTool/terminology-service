@@ -9,6 +9,7 @@ import gov.cms.madie.terminology.exceptions.HapiOperationException;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,9 @@ public class InternalTerminologyServiceTest {
   private IOperationUntyped operationUntyped;
   private IOperationUntypedWithInput operationUntypedWithInput;
 
+  private static final String VALUE_SET_URL = "ValueSet/us-core-vaccines-cvx-1";
+  private IdType idType;
+
   @BeforeEach
   public void setUp() {
     operation = mock(IOperation.class);
@@ -42,13 +46,11 @@ public class InternalTerminologyServiceTest {
     operationUntyped = mock(IOperationUntyped.class);
     operationUntypedWithInput =
         (IOperationUntypedWithInput<Parameters>) mock(IOperationUntypedWithInput.class);
+    idType = new IdType(new UriType(VALUE_SET_URL));
   }
 
   @Test
   void testGetValueSetExpansionById() {
-    String valueSetId = "us-core-vaccines-cvx-1";
-    var idType = new IdType("ValueSet", valueSetId);
-
     // mock hapi client operation
     when(hapiClient.operation()).thenReturn(operation);
     when(operation.onInstance(idType)).thenReturn(operationUnnamed);
@@ -61,14 +63,12 @@ public class InternalTerminologyServiceTest {
     parameters.addParameter().setResource(valueSet);
     when(operationUntypedWithInput.execute()).thenReturn(parameters);
 
-    ValueSet expansion = service.getValueSetExpansionById(valueSetId);
+    ValueSet expansion = service.getValueSetExpansionByUrl(VALUE_SET_URL);
     assertThat(expansion, is(not(nullValue())));
   }
 
   @Test
   void testGetValueSetExpansionByIdIfValueSetNotFound() {
-    String valueSetId = "us-core-vaccines-cvx-1";
-    var idType = new IdType("ValueSet", valueSetId);
     FhirContext fhirContext = FhirContext.forR4();
     // mock hapi client operation
     when(hapiClient.operation()).thenReturn(operation);
@@ -86,7 +86,7 @@ public class InternalTerminologyServiceTest {
 
     Exception ex =
         Assertions.assertThrows(
-            HapiOperationException.class, () -> service.getValueSetExpansionById(valueSetId));
+            HapiOperationException.class, () -> service.getValueSetExpansionByUrl(VALUE_SET_URL));
     assertThat(ex.getMessage(), is(equalTo("Resource not found")));
   }
 }
