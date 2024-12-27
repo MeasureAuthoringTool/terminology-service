@@ -243,6 +243,7 @@ class VsacFhirTerminologyControllerTest {
             .fhirVersion("2.72")
             .display("Bicarbonate [Moles/volume] in Serum")
             .codeSystemOid("2.16.840.1.113883.6.1")
+            .codeSystemUrl("https://loinc.org")
             .status(CodeStatus.valueOf("ACTIVE"))
             .build();
 
