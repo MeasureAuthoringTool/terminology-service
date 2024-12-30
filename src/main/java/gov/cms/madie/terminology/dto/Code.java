@@ -12,6 +12,7 @@ public class Code {
   private String svsVersion; // 'vsac' in the code-system-entry.json
   private String codeSystem;
   private String codeSystemOid;
+  private String codeSystemUrl;
   private CodeStatus status;
   private boolean versionIncluded;
 }

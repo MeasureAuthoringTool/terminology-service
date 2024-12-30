@@ -537,6 +537,7 @@ public class FhirTerminologyService {
             .codeSystem(codeSystemName)
             .fhirVersion(fhirVersion)
             .svsVersion(vsacVersion)
+            .codeSystemUrl(codeSystem.getFullUrl())
             .display(parameters.getParameter("display").getValue().toString())
             .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
             .build();
