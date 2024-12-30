@@ -349,12 +349,12 @@ public class FhirTerminologyService {
     }
 
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
-    Optional<Map.Entry<String, String>> mappedVersion =
-        mapVersion(version, codeSystem.getOid(), codeSystemEntries, "fhirVersion");
+    Optional<CodeSystemEntry.Version> codeSystemVersion =
+        getCodeSystemEntryVersion(version, codeSystem.getOid(), codeSystemEntries);
 
-    if (mappedVersion.isPresent()) {
-      String vsacVersion = mappedVersion.get().getKey();
-      String fhirVersion = mappedVersion.get().getValue();
+    if (codeSystemVersion.isPresent()) {
+      String vsacVersion = codeSystemVersion.get().getVsac();
+      String fhirVersion = codeSystemVersion.get().getFhir();
 
       return retrieveCodes(codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
     }
@@ -452,12 +452,12 @@ public class FhirTerminologyService {
                       ? codeDetails.get("oid").replaceAll("'|'", "")
                       : null;
 
-              Optional<Map.Entry<String, String>> mappedVersion =
-                  mapVersion(codeDetails.get("version"), oid, codeSystemEntries, "svsVersion");
+              Optional<CodeSystemEntry.Version> codeSystemVersion =
+                  getCodeSystemEntryVersion(codeDetails.get("version"), oid, codeSystemEntries);
 
-              if (mappedVersion.isPresent()) {
-                String vsacVersion = mappedVersion.get().getKey();
-                String fhirVersion = mappedVersion.get().getValue();
+              if (codeSystemVersion.isPresent()) {
+                String vsacVersion = codeSystemVersion.get().getVsac();
+                String fhirVersion = codeSystemVersion.get().getFhir();
 
                 if (StringUtils.isEmpty(codeName)
                     || StringUtils.isEmpty(codeSystemName)
@@ -482,23 +482,19 @@ public class FhirTerminologyService {
         .collect(Collectors.toList());
   }
 
-  private Optional<Map.Entry<String, String>> mapVersion(
-      String version, String oid, List<CodeSystemEntry> codeSystemEntries, String versionType) {
+  private Optional<CodeSystemEntry.Version> getCodeSystemEntryVersion(
+      String version, String oid, List<CodeSystemEntry> codeSystemEntries) {
     if (oid == null) {
       return Optional.empty();
     }
 
-    Optional<Map.Entry<String, String>> result;
+    Optional<CodeSystemEntry.Version> result;
     if (version == null) {
       result =
           codeSystemEntries.stream()
               .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
-              .findFirst()
-              .map(
-                  codeSystemVersion ->
-                      Map.entry(
-                          codeSystemVersion.getVersions().get(0).getVsac(),
-                          codeSystemVersion.getVersions().get(0).getFhir()));
+              .map(codeSystemEntry -> codeSystemEntry.getVersions().get(0))
+              .findFirst();
     } else {
       result =
           codeSystemEntries.stream()
@@ -507,14 +503,8 @@ public class FhirTerminologyService {
               // depending on the version type suitable mapping is done
               .filter(
                   codeSystemVersion ->
-                      StringUtils.equals(
-                          versionType == "svsVersion"
-                              ? codeSystemVersion.getVsac()
-                              : codeSystemVersion.getFhir(),
-                          version))
-              .map(
-                  codeSystemVersion ->
-                      Map.entry(codeSystemVersion.getVsac(), codeSystemVersion.getFhir()))
+                      StringUtils.equals(codeSystemVersion.getVsac(), version)
+                          || StringUtils.equals(codeSystemVersion.getFhir(), version))
               .findFirst();
     }
 
