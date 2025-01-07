@@ -371,13 +371,6 @@ public class FhirTerminologyService {
         .forEach(
             entry -> {
               var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
-              String codeSystemValue = "";
-              for (Identifier identifier : codeSystem.getIdentifier()) {
-                if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
-                  codeSystemValue = identifier.getValue();
-                  break;
-                }
-              }
               codeSystemsPage.add(
                   CodeSystem.builder()
                       .id(codeSystem.getTitle() + codeSystem.getVersion())
@@ -386,7 +379,7 @@ public class FhirTerminologyService {
                       .name(codeSystem.getName())
                       .version(codeSystem.getVersion())
                       .versionId(codeSystem.getMeta().getVersionId())
-                      .oid(codeSystemValue)
+                      .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
                       .lastUpdated(Instant.now())
                       .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
                       .build());
@@ -406,6 +399,24 @@ public class FhirTerminologyService {
                 umlsUser, Integer.parseInt(newOffset), Integer.parseInt(newCount), allCodeSystems);
           }
         });
+  }
+
+  private String parseOidFromIdentifier(List<Identifier> identifiers) {
+    for (Identifier identifier : identifiers) {
+      if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
+        // HCPCS contains two OIDs, which VSAC returns as comma delimited String.
+        // MADiE is only concerned with the Level 2 OID ending in .285 as it
+        // CMS's custom codes. Level 1 is a duplicate of CPT, and
+        // users should be utilizing CPT directly.
+        if (StringUtils.equalsIgnoreCase(
+            StringUtils.deleteWhitespace(identifier.getValue()),
+            "urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285")) {
+          return "urn:oid:2.16.840.1.113883.6.285";
+        }
+        return identifier.getValue();
+      }
+    }
+    return "";
   }
 
   // one to call only, one to mutate and build
