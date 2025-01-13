@@ -50,93 +50,111 @@ public class FhirTerminologyService {
     return manifestOptions;
   }
 
-  // spin off requests based on values provided in the expansion
-  public List<QdmValueSet> recursivelyRequestAllValueSetsExpansionsForQDM(
+  public List<QdmValueSet> requestAllValueSetsExpansionsForQDM(
       List<QdmValueSet> allValueSets,
+      ValueSetsSearchCriteria searchCriteria,
       String apiKey,
-      ValueSetsSearchCriteria.ValueSetParams vsParam,
-      ValueSetsSearchCriteria valueSetsSearchCriteria,
       List<CodeSystemEntry> codeSystemEntries) {
     IParser parser = fhirContext.newJsonParser();
-    String resource =
-        fhirTerminologyServiceWebClient.getValueSetResource(
-            apiKey,
-            vsParam,
-            valueSetsSearchCriteria.getProfile(),
-            valueSetsSearchCriteria.getIncludeDraft(),
-            valueSetsSearchCriteria.getActiveOnly(),
-            valueSetsSearchCriteria.getManifestExpansion());
+    String resource = fhirTerminologyServiceWebClient.getValueSetResources(apiKey, searchCriteria);
 
-    ValueSet valueSetResource = parser.parseResource(ValueSet.class, resource);
-    var total = valueSetResource.getExpansion().getTotal(); // total valuesets
+    Bundle bundleResource = parser.parseResource(Bundle.class, resource);
 
-    List<QdmValueSet.Concept> concepts =
-        getValueSetConcepts(valueSetResource, codeSystemEntries, "QDM");
-    log.info(
-        "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
-        total,
-        vsParam.getCount(),
-        vsParam.getOffset(),
-        vsParam.getOid());
+    bundleResource
+        .getEntry()
+        .forEach(
+            bundleEntryComponent -> {
+              ValueSet valueSetResource = (ValueSet) bundleEntryComponent.getResource();
 
-    // Check if the ValueSet with the same oid already exists in allValueSets
-    QdmValueSet existingValueSet =
-        allValueSets.stream()
-            .filter(vs -> vs.getOid().equals(vsParam.getOid()))
-            .findFirst()
-            .orElse(null);
-    if (existingValueSet != null) {
-      List<QdmValueSet.Concept> updatedConcepts = new ArrayList<>(existingValueSet.getConcepts());
-      updatedConcepts.addAll(concepts);
-      // Create a new QdmValueSet with the updated concepts
-      QdmValueSet updatedValueSet =
-          QdmValueSet.builder()
-              .oid(existingValueSet.getOid())
-              .displayName(existingValueSet.getDisplayName())
-              .version(existingValueSet.getVersion())
-              .concepts(updatedConcepts)
-              .build();
-      // Replace the existing QdmValueSet in the list
-      allValueSets.set(allValueSets.indexOf(existingValueSet), updatedValueSet);
-    } else {
-      allValueSets.add(
-          QdmValueSet.builder()
-              .oid(valueSetResource.getIdPart())
-              .displayName(valueSetResource.getName())
-              .version(valueSetResource.getVersion())
-              .concepts(concepts)
-              .build());
-    }
-    //  if the total results in the searchSet are still greater than our current offset + the count
-    // of our last request, then we request again
-    if (vsParam.getOffset() + vsParam.getCount() <= total) {
-      vsParam.setOffset(vsParam.getOffset() + 1000);
-      return recursivelyRequestAllValueSetsExpansionsForQDM(
-          allValueSets, apiKey, vsParam, valueSetsSearchCriteria, codeSystemEntries);
-    }
+              var total = valueSetResource.getExpansion().getTotal(); // total valuesets
+
+              List<QdmValueSet.Concept> concepts =
+                  getValueSetConcepts(valueSetResource, codeSystemEntries, "QDM");
+              log.info(
+                  "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
+                  total,
+                  valueSetResource.getExpansion().getContains().size(),
+                  valueSetResource.getExpansion().getOffset(),
+                  valueSetResource.getId());
+
+              // Check if the ValueSet with the same oid already exists in allValueSets
+              QdmValueSet existingValueSet =
+                  allValueSets.stream()
+                      .filter(vs -> vs.getOid().equals(valueSetResource.getId()))
+                      .findFirst()
+                      .orElse(null);
+              if (existingValueSet != null) {
+                List<QdmValueSet.Concept> updatedConcepts =
+                    new ArrayList<>(existingValueSet.getConcepts());
+                updatedConcepts.addAll(concepts);
+                // Create a new QdmValueSet with the updated concepts
+                QdmValueSet updatedValueSet =
+                    QdmValueSet.builder()
+                        .oid(existingValueSet.getOid())
+                        .displayName(existingValueSet.getDisplayName())
+                        .version(existingValueSet.getVersion())
+                        .concepts(updatedConcepts)
+                        .build();
+                // Replace the existing QdmValueSet in the list
+                allValueSets.set(allValueSets.indexOf(existingValueSet), updatedValueSet);
+              } else {
+                allValueSets.add(
+                    QdmValueSet.builder()
+                        .oid(valueSetResource.getIdPart())
+                        .displayName(valueSetResource.getName())
+                        .version(valueSetResource.getVersion())
+                        .concepts(concepts)
+                        .build());
+              }
+
+              //  if the total results in the searchSet are still greater than our current offset +
+              // the count
+              // of our last request, then we request again
+              if (valueSetResource.getExpansion().getOffset()
+                      + valueSetResource.getExpansion().getContains().size()
+                  < total) {
+                ValueSetsSearchCriteria newSearch =
+                    ValueSetsSearchCriteria.builder()
+                        .includeDraft(searchCriteria.getIncludeDraft())
+                        .manifestExpansion(searchCriteria.getManifestExpansion())
+                        .activeOnly(searchCriteria.getActiveOnly())
+                        .build();
+
+                ValueSetsSearchCriteria.ValueSetParams newParams =
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .count(1000)
+                        .offset(valueSetResource.getExpansion().getOffset() + 1000)
+                        .oid(
+                            valueSetResource
+                                .getIdentifier()
+                                .get(0)
+                                .getValue()
+                                .replace("urn:oid:", ""))
+                        .build();
+                newSearch.setValueSetParams(List.of(newParams));
+
+                requestAllValueSetsExpansionsForQDM(
+                    allValueSets, newSearch, apiKey, codeSystemEntries);
+              }
+            });
+
     return allValueSets;
   }
 
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
-    return valueSetsSearchCriteria.getValueSetParams().stream()
-        .map(
-            vsParam -> {
-              vsParam.setCount(1000);
-              vsParam.setOffset(0);
-              return vsParam;
-            })
-        .flatMap(
-            vsParam ->
-                recursivelyRequestAllValueSetsExpansionsForQDM(
-                    new ArrayList<>(),
-                    umlsUser.getApiKey(),
-                    vsParam,
-                    valueSetsSearchCriteria,
-                    codeSystemEntries)
-                    .stream())
-        .collect(Collectors.toList());
+    valueSetsSearchCriteria.setValueSetParams(
+        valueSetsSearchCriteria.getValueSetParams().stream()
+            .map(
+                vsParam -> {
+                  vsParam.setCount(1000);
+                  vsParam.setOffset(0);
+                  return vsParam;
+                })
+            .collect(Collectors.toList()));
+    return requestAllValueSetsExpansionsForQDM(
+        new ArrayList<>(), valueSetsSearchCriteria, umlsUser.getApiKey(), codeSystemEntries);
   }
 
   /**

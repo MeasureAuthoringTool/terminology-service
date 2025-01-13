@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.webclient;
 
+import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -8,6 +9,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -27,6 +29,8 @@ class FhirTerminologyServiceWebClientTest {
   private static final String DEFAULT_PROFILE = "Most Recent Code System Versions in VSAC";
   public static MockWebServer mockBackEnd;
   private static final String SEARCH_VALUE_SET_ENDPOINT = "https://cts.nlm.nih.gov/fhir/ValueSet";
+
+  @Mock FhirContext fhirContext;
 
   private ValueSetsSearchCriteria.ValueSetParams testValueSetParams;
 
@@ -49,7 +53,8 @@ class FhirTerminologyServiceWebClientTest {
             MOCK_CODE_SYSTEM_URN,
             MOCK_CODE_LOOKUP,
             DEFAULT_PROFILE,
-            SEARCH_VALUE_SET_ENDPOINT);
+            SEARCH_VALUE_SET_ENDPOINT,
+            fhirContext);
   }
 
   @AfterAll
