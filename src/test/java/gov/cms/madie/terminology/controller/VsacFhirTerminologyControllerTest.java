@@ -1,13 +1,16 @@
 package gov.cms.madie.terminology.controller;
 
+import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
+import gov.cms.madie.terminology.helpers.TestHelpers;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,10 +21,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 
+import java.io.IOException;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.*;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,8 +39,8 @@ class VsacFhirTerminologyControllerTest {
   private CodeSystemRepository codeSystemRepository;
 
   @Mock private VsacService vsacService;
-  @Mock FhirTerminologyService fhirTerminologyService;
-
+  @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock private FhirContext fhirContext;
   @InjectMocks private VsacFhirTerminologyController vsacFhirTerminologyController;
   private UmlsUser umlsUser;
   private static final String TEST_USER = "test.user";
@@ -44,6 +51,7 @@ class VsacFhirTerminologyControllerTest {
   MockHttpServletRequest request;
   private final List<ManifestExpansion> mockManifests = new ArrayList<>();
   private final List<QdmValueSet> mockQdmValueSets = new ArrayList<>();
+  private Principal principal;
 
   @BeforeEach
   public void setUp() {
@@ -66,12 +74,12 @@ class VsacFhirTerminologyControllerTest {
             .displayName("test-value-set-display-name")
             .build());
     request = new MockHttpServletRequest();
+    principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
   }
 
   @Test
   void testGetManifestsSuccessfully() {
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getManifests(any(UmlsUser.class))).thenReturn(mockManifests);
     ResponseEntity<List<ManifestExpansion>> response =
@@ -82,8 +90,6 @@ class VsacFhirTerminologyControllerTest {
 
   @Test
   void testUnAuthorizedUmlsUserWhileFetchingManifests() {
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
         .when(vsacService)
         .verifyUmlsAccess(anyString());
@@ -94,15 +100,13 @@ class VsacFhirTerminologyControllerTest {
 
   @Test
   void testGetValueSetsExpansionsSuccessfully() {
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     ValueSetsSearchCriteria valueSetsSearchCriteria = ValueSetsSearchCriteria.builder().build();
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getValueSetsExpansionsForQdm(
             any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
         .thenReturn(mockQdmValueSets);
     ResponseEntity<List<QdmValueSet>> response =
-        vsacFhirTerminologyController.getValueSetsExpansions(principal, valueSetsSearchCriteria);
+        vsacFhirTerminologyController.getQdmValueSetsExpansions(principal, valueSetsSearchCriteria);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
     assertEquals(response.getBody(), mockQdmValueSets);
   }
@@ -121,8 +125,6 @@ class VsacFhirTerminologyControllerTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build());
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(mockCodeSystemsPage);
 
@@ -135,8 +137,6 @@ class VsacFhirTerminologyControllerTest {
 
   @Test
   void testUnAuthorizedUmlsUserWhileFetchingValueSetsExpansions() {
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
         .when(vsacService)
         .verifyUmlsAccess(anyString());
@@ -147,8 +147,6 @@ class VsacFhirTerminologyControllerTest {
 
   @Test
   void testUnAuthorizedUmlsUserWhileretrievingAndUpdatingCodeSystems() {
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
         .when(vsacService)
         .verifyUmlsAccess(anyString());
@@ -173,8 +171,6 @@ class VsacFhirTerminologyControllerTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build());
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     when(fhirTerminologyService.getAllCodeSystems()).thenReturn(mockCodeSystemsPage);
 
     ResponseEntity<List<CodeSystem>> response =
@@ -188,7 +184,6 @@ class VsacFhirTerminologyControllerTest {
     String codeName = "1963-8";
     String codeSystem = "LOINC";
     String version = "2.40";
-    Principal principal = mock(Principal.class);
     Code code =
         Code.builder()
             .name(codeName)
@@ -198,7 +193,6 @@ class VsacFhirTerminologyControllerTest {
             .display("Bicarbonate [Moles/volume] in Serum")
             .codeSystemOid("2.16.840.1.113883.6.1")
             .build();
-    when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.retrieveCode(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(code);
@@ -214,8 +208,6 @@ class VsacFhirTerminologyControllerTest {
     String codeName = "1963-8";
     String codeSystem = "LOINC";
     String version = "2.40";
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
         .when(vsacService)
         .verifyUmlsAccess(anyString());
@@ -246,9 +238,6 @@ class VsacFhirTerminologyControllerTest {
             .codeSystemUrl("https://loinc.org")
             .status(CodeStatus.valueOf("ACTIVE"))
             .build();
-
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.retrieveCodesAndCodeSystems(any(), anyString()))
         .thenReturn(List.of(code));
@@ -283,8 +272,6 @@ class VsacFhirTerminologyControllerTest {
             .build();
     mockValueSets.add(v1);
     mockValueSets.add(v2);
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.searchValueSets(any(), any()))
         .thenReturn(ValueSetSearchResult.builder().valueSets(mockValueSets).build());
@@ -294,5 +281,24 @@ class VsacFhirTerminologyControllerTest {
     ResponseEntity<ValueSetSearchResult> response =
         vsacFhirTerminologyController.searchValueSets(principal, queryParams);
     assertEquals(response.getStatusCode(), HttpStatus.OK);
+  }
+
+  @Test
+  void testGetFhirValueSetsExpansions() throws IOException {
+    ValueSet valueSet =
+        TestHelpers.getFhirTestResource(
+            "/value-sets/value_set_with_expansion_codes.json", ValueSet.class);
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.getValueSetsExpansion(
+            any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
+        .thenReturn(List.of(valueSet));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+
+    ResponseEntity<String> response =
+        vsacFhirTerminologyController.getFhirValueSetsExpansions(
+            principal, ValueSetsSearchCriteria.builder().build());
+    assertThat(response.getStatusCode(), is(equalTo(HttpStatus.OK)));
+    assertThat(response.getBody().contains("\"resourceType\":\"ValueSet\""), is(true));
+    assertThat(response.getBody().contains("\"url\":\"" + valueSet.getUrl() + "\""), is(true));
   }
 }
