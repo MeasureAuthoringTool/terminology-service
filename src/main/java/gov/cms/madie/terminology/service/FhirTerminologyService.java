@@ -77,7 +77,18 @@ public class FhirTerminologyService {
         vsParam.getCount(),
         vsParam.getOffset(),
         vsParam.getOid());
-    allValueSets.add(valueSet);
+    ValueSet existingValueSet =
+        allValueSets.stream()
+            .filter(vs -> valueSet.getIdPart().equals(valueSet.getIdPart()))
+            .findFirst()
+            .orElse(null);
+    // Check if the ValueSet with the same oid already exists in allValueSets, update if exists
+    // This happens if value set has multiple page requests.
+    if (existingValueSet == null) {
+      allValueSets.add(valueSet);
+    } else {
+      existingValueSet.getExpansion().getContains().addAll(valueSet.getExpansion().getContains());
+    }
     //  if the total results in the searchSet are still greater than our current offset + the count
     // of our last request, then we request again
     if (vsParam.getOffset() + vsParam.getCount() <= total) {
@@ -115,28 +126,19 @@ public class FhirTerminologyService {
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
     List<ValueSet> fhirValueSets = getValueSetsExpansion(valueSetsSearchCriteria, umlsUser);
 
-    List<QdmValueSet> allValueSets = new ArrayList<>();
-    for (ValueSet valueSet : fhirValueSets) {
-      List<QdmValueSet.Concept> concepts = getValueSetConcepts(valueSet, codeSystemEntries, "QDM");
-      // Check if the ValueSet with the same oid already exists in allValueSets
-      QdmValueSet existingValueSet =
-          allValueSets.stream()
-              .filter(vs -> vs.getOid().equals(valueSet.getIdPart()))
-              .findFirst()
-              .orElse(null);
-      if (existingValueSet != null) {
-        existingValueSet.getConcepts().addAll(concepts);
-      } else {
-        allValueSets.add(
-            QdmValueSet.builder()
-                .oid(valueSet.getIdPart())
-                .displayName(valueSet.getName())
-                .version(valueSet.getVersion())
-                .concepts(concepts)
-                .build());
-      }
-    }
-    return allValueSets;
+    return fhirValueSets.stream()
+        .map(
+            fhirValueSet -> {
+              List<QdmValueSet.Concept> concepts =
+                  getValueSetConcepts(fhirValueSet, codeSystemEntries, "QDM");
+              return QdmValueSet.builder()
+                  .oid(fhirValueSet.getIdPart())
+                  .displayName(fhirValueSet.getName())
+                  .version(fhirValueSet.getVersion())
+                  .concepts(concepts)
+                  .build();
+            })
+        .toList();
   }
 
   /**
