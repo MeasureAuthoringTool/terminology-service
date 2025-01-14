@@ -68,7 +68,7 @@ public class FhirTerminologyService {
             valueSetsSearchCriteria.getManifestExpansion());
 
     ValueSet valueSet = parser.parseResource(ValueSet.class, resource);
-    // total number of pages in expansion, max 1000 codes suppoerted in one-page request
+    // total number of pages in expansion, max 1000 codes supported in one-page request
     var total = valueSet.getExpansion().getTotal();
 
     log.info(
