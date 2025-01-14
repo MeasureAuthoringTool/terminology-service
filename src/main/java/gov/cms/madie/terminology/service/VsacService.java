@@ -6,7 +6,6 @@ import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
-import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.mapper.VsacToFhirValueSetMapper;
@@ -26,8 +25,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
 
 @Service
 @Slf4j
@@ -68,13 +65,6 @@ public class VsacService {
     return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValueSetResponse);
   }
 
-  public List<ValueSet> convertToFHIRValueSets(
-      List<RetrieveMultipleValueSetsResponse> vsacValueSets) {
-    return vsacValueSets.stream()
-        .map(vsacToFhirValueSetMapper::convertToFHIRValueSet)
-        .collect(Collectors.toList());
-  }
-
   public List<RetrieveMultipleValueSetsResponse> getValueSets(
       ValueSetsSearchCriteria searchCriteria, UmlsUser umlsUser) {
     List<ValueSetsSearchCriteria.ValueSetParams> valueSetParams =
@@ -90,12 +80,6 @@ public class VsacService {
                     vsParam.getRelease(),
                     vsParam.getVersion()))
         .collect(Collectors.toList());
-  }
-
-  public List<QdmValueSet> getValueSetsInQdmFormat(
-      ValueSetsSearchCriteria searchCriteria, UmlsUser umlsUser) {
-    List<RetrieveMultipleValueSetsResponse> vsacValueSets = getValueSets(searchCriteria, umlsUser);
-    return convertToQdmValueSets(vsacValueSets);
   }
 
   /**
@@ -317,42 +301,6 @@ public class VsacService {
     UmlsUser umlsUser =
         UmlsUser.builder().apiKey(apiKey).harpId(harpId).createdAt(now).modifiedAt(now).build();
     return umlsUserRepository.save(umlsUser);
-  }
-
-  private List<QdmValueSet> convertToQdmValueSets(
-      List<RetrieveMultipleValueSetsResponse> valueSetsResponses) {
-    return valueSetsResponses.stream()
-        .map(
-            response -> {
-              var describedValueSet = response.getDescribedValueSet();
-              List<QdmValueSet.Concept> concepts = getValueSetConcepts(describedValueSet);
-              return QdmValueSet.builder()
-                  .oid(describedValueSet.getID())
-                  .displayName(describedValueSet.getDisplayName())
-                  .version(describedValueSet.getVersion())
-                  .concepts(concepts)
-                  .build();
-            })
-        .toList();
-  }
-
-  private List<QdmValueSet.Concept> getValueSetConcepts(DescribedValueSet valueSet) {
-    var conceptList = valueSet.getConceptList();
-    if (conceptList == null) {
-      log.info("Empty value set:{}", valueSet.getID());
-      return List.of();
-    }
-    return conceptList.getConcepts().stream()
-        .map(
-            concept ->
-                QdmValueSet.Concept.builder()
-                    .code(concept.getCode())
-                    .codeSystemName(concept.getCodeSystemName())
-                    .codeSystemVersion(concept.getCodeSystemVersion())
-                    .codeSystemOid(concept.getCodeSystem())
-                    .displayName(concept.getDisplayName())
-                    .build())
-        .toList();
   }
 
   public Optional<UmlsUser> findByHarpId(String harpId) {

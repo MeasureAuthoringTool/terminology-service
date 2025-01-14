@@ -16,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
@@ -51,12 +52,11 @@ public class FhirTerminologyService {
   }
 
   // spin off requests based on values provided in the expansion
-  public List<QdmValueSet> recursivelyRequestAllValueSetsExpansionsForQDM(
-      List<QdmValueSet> allValueSets,
+  public List<ValueSet> recursivelyRequestAllValueSetsExpansions(
+      List<ValueSet> allValueSets,
       String apiKey,
       ValueSetsSearchCriteria.ValueSetParams vsParam,
-      ValueSetsSearchCriteria valueSetsSearchCriteria,
-      List<CodeSystemEntry> codeSystemEntries) {
+      ValueSetsSearchCriteria valueSetsSearchCriteria) {
     IParser parser = fhirContext.newJsonParser();
     String resource =
         fhirTerminologyServiceWebClient.getValueSetResource(
@@ -67,59 +67,45 @@ public class FhirTerminologyService {
             valueSetsSearchCriteria.getActiveOnly(),
             valueSetsSearchCriteria.getManifestExpansion());
 
-    ValueSet valueSetResource = parser.parseResource(ValueSet.class, resource);
-    var total = valueSetResource.getExpansion().getTotal(); // total valuesets
+    ValueSet valueSet = parser.parseResource(ValueSet.class, resource);
+    // total number of pages in expansion, max 1000 codes supported in one-page request
+    var total = valueSet.getExpansion().getTotal();
 
-    List<QdmValueSet.Concept> concepts =
-        getValueSetConcepts(valueSetResource, codeSystemEntries, "QDM");
     log.info(
         "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
         total,
         vsParam.getCount(),
         vsParam.getOffset(),
         vsParam.getOid());
-
-    // Check if the ValueSet with the same oid already exists in allValueSets
-    QdmValueSet existingValueSet =
+    ValueSet existingValueSet =
         allValueSets.stream()
-            .filter(vs -> vs.getOid().equals(vsParam.getOid()))
+            .filter(vs -> valueSet.getIdPart().equals(valueSet.getIdPart()))
             .findFirst()
             .orElse(null);
-    if (existingValueSet != null) {
-      List<QdmValueSet.Concept> updatedConcepts = new ArrayList<>(existingValueSet.getConcepts());
-      updatedConcepts.addAll(concepts);
-      // Create a new QdmValueSet with the updated concepts
-      QdmValueSet updatedValueSet =
-          QdmValueSet.builder()
-              .oid(existingValueSet.getOid())
-              .displayName(existingValueSet.getDisplayName())
-              .version(existingValueSet.getVersion())
-              .concepts(updatedConcepts)
-              .build();
-      // Replace the existing QdmValueSet in the list
-      allValueSets.set(allValueSets.indexOf(existingValueSet), updatedValueSet);
+    // Check if the ValueSet with the same oid already exists in allValueSets, update if exists
+    // This happens if value set has multiple page requests.
+    if (existingValueSet == null) {
+      allValueSets.add(valueSet);
     } else {
-      allValueSets.add(
-          QdmValueSet.builder()
-              .oid(valueSetResource.getIdPart())
-              .displayName(valueSetResource.getName())
-              .version(valueSetResource.getVersion())
-              .concepts(concepts)
-              .build());
+      existingValueSet.getExpansion().getContains().addAll(valueSet.getExpansion().getContains());
     }
     //  if the total results in the searchSet are still greater than our current offset + the count
     // of our last request, then we request again
     if (vsParam.getOffset() + vsParam.getCount() <= total) {
       vsParam.setOffset(vsParam.getOffset() + 1000);
-      return recursivelyRequestAllValueSetsExpansionsForQDM(
-          allValueSets, apiKey, vsParam, valueSetsSearchCriteria, codeSystemEntries);
+      return recursivelyRequestAllValueSetsExpansions(
+          allValueSets, apiKey, vsParam, valueSetsSearchCriteria);
     }
     return allValueSets;
   }
 
-  public List<QdmValueSet> getValueSetsExpansionsForQdm(
+  public List<ValueSet> getValueSetsExpansion(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
-    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+    if (valueSetsSearchCriteria == null
+        || CollectionUtils.isEmpty(valueSetsSearchCriteria.getValueSetParams())) {
+      return Collections.emptyList();
+    }
+
     return valueSetsSearchCriteria.getValueSetParams().stream()
         .map(
             vsParam -> {
@@ -129,14 +115,30 @@ public class FhirTerminologyService {
             })
         .flatMap(
             vsParam ->
-                recursivelyRequestAllValueSetsExpansionsForQDM(
-                    new ArrayList<>(),
-                    umlsUser.getApiKey(),
-                    vsParam,
-                    valueSetsSearchCriteria,
-                    codeSystemEntries)
+                recursivelyRequestAllValueSetsExpansions(
+                    new ArrayList<>(), umlsUser.getApiKey(), vsParam, valueSetsSearchCriteria)
                     .stream())
-        .collect(Collectors.toList());
+        .toList();
+  }
+
+  public List<QdmValueSet> getValueSetsExpansionsForQdm(
+      ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
+    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+    List<ValueSet> fhirValueSets = getValueSetsExpansion(valueSetsSearchCriteria, umlsUser);
+
+    return fhirValueSets.stream()
+        .map(
+            fhirValueSet -> {
+              List<QdmValueSet.Concept> concepts =
+                  getValueSetConcepts(fhirValueSet, codeSystemEntries, "QDM");
+              return QdmValueSet.builder()
+                  .oid(fhirValueSet.getIdPart())
+                  .displayName(fhirValueSet.getName())
+                  .version(fhirValueSet.getVersion())
+                  .concepts(concepts)
+                  .build();
+            })
+        .toList();
   }
 
   /**

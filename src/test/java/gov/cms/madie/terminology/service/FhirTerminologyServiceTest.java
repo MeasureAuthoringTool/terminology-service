@@ -237,6 +237,22 @@ class FhirTerminologyServiceTest {
   }
 
   @Test
+  void getsValueSetsExpansionsForQdmIfSearchCriteriaIsEmpty() {
+    var valueSetsSearchCriteria = ValueSetsSearchCriteria.builder().build();
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<QdmValueSet> result =
+        fhirTerminologyService.getValueSetsExpansionsForQdm(valueSetsSearchCriteria, umlsUser);
+    assertEquals(0, result.size());
+  }
+
+  @Test
+  void getsValueSetsExpansionsForQdmIfSearchCriteriaIsNull() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<QdmValueSet> result = fhirTerminologyService.getValueSetsExpansionsForQdm(null, umlsUser);
+    assertEquals(0, result.size());
+  }
+
+  @Test
   void testRetrieveAllCodeSystems() {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());

@@ -11,7 +11,6 @@ import gov.cms.madie.models.mapping.CodeSystemEntry;
 
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
-import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.helpers.TestHelpers;
@@ -392,39 +391,6 @@ class VsacServiceTest {
         .thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(List.of(snomedCode), umlsUser, QDM_MODEL);
     assertTrue(result.get(0).isValid());
-  }
-
-  @Test
-  public void testGetQdmValueSets() {
-
-    when(terminologyServiceWebClient.getValueSet(any(), any(), any(), any(), any(), any()))
-        .thenReturn(svsValueSet);
-
-    List<QdmValueSet> valueSets =
-        vsacService.getValueSetsInQdmFormat(valueSetsSearchCriteria, umlsUser);
-
-    assertThat(
-        valueSets.get(0).getOid(),
-        is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
-    assertThat(valueSets.get(0).getDisplayName(), is(equalTo("Office Visit")));
-    assertThat(valueSets.get(0).getConcepts().size(), is(equalTo(16)));
-  }
-
-  @Test
-  public void testGetEmptyQdmValueSets() {
-
-    svsValueSet.getDescribedValueSet().setConceptList(null);
-    when(terminologyServiceWebClient.getValueSet(any(), any(), any(), any(), any(), any()))
-        .thenReturn(svsValueSet);
-
-    List<QdmValueSet> valueSets =
-        vsacService.getValueSetsInQdmFormat(valueSetsSearchCriteria, umlsUser);
-
-    assertThat(
-        valueSets.get(0).getOid(),
-        is(equalTo(valueSetsSearchCriteria.getValueSetParams().get(0).getOid())));
-    assertThat(valueSets.get(0).getDisplayName(), is(equalTo("Office Visit")));
-    assertThat(valueSets.get(0).getConcepts().size(), is(equalTo(0)));
   }
 
   @Test
