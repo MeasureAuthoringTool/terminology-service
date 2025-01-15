@@ -65,16 +65,16 @@ public class FhirTerminologyService {
         .forEach(
             bundleEntryComponent -> {
               ValueSet valueSetResource = (ValueSet) bundleEntryComponent.getResource();
-
-              var total = valueSetResource.getExpansion().getTotal(); // total valuesets
+              var expansion = valueSetResource.getExpansion();
+              var total = expansion.getTotal(); // total valuesets
 
               List<QdmValueSet.Concept> concepts =
                   getValueSetConcepts(valueSetResource, codeSystemEntries, "QDM");
               log.info(
                   "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
                   total,
-                  valueSetResource.getExpansion().getContains().size(),
-                  valueSetResource.getExpansion().getOffset(),
+                  expansion.getContains().size(),
+                  expansion.getOffset(),
                   valueSetResource.getId());
 
               // Check if the ValueSet with the same oid already exists in allValueSets
@@ -84,17 +84,7 @@ public class FhirTerminologyService {
                       .findFirst()
                       .orElse(null);
               if (existingValueSet != null) {
-                List<QdmValueSet.Concept> updatedConcepts =
-                    new ArrayList<>(existingValueSet.getConcepts());
-                updatedConcepts.addAll(concepts);
-                // Create a new QdmValueSet with the updated concepts
-                QdmValueSet updatedValueSet =
-                    QdmValueSet.builder()
-                        .oid(existingValueSet.getOid())
-                        .displayName(existingValueSet.getDisplayName())
-                        .version(existingValueSet.getVersion())
-                        .concepts(updatedConcepts)
-                        .build();
+                QdmValueSet updatedValueSet = updateValueSetConcepts(concepts, existingValueSet);
                 // Replace the existing QdmValueSet in the list
                 allValueSets.set(allValueSets.indexOf(existingValueSet), updatedValueSet);
               } else {
@@ -108,30 +98,10 @@ public class FhirTerminologyService {
               }
 
               //  if the total results in the searchSet are still greater than our current offset +
-              // the count
-              // of our last request, then we request again
-              if (valueSetResource.getExpansion().getOffset()
-                      + valueSetResource.getExpansion().getContains().size()
-                  < total) {
+              // the count of our last request, then we request again
+              if (expansion.getOffset() + expansion.getContains().size() < total) {
                 ValueSetsSearchCriteria newSearch =
-                    ValueSetsSearchCriteria.builder()
-                        .includeDraft(searchCriteria.getIncludeDraft())
-                        .manifestExpansion(searchCriteria.getManifestExpansion())
-                        .activeOnly(searchCriteria.getActiveOnly())
-                        .build();
-
-                ValueSetsSearchCriteria.ValueSetParams newParams =
-                    ValueSetsSearchCriteria.ValueSetParams.builder()
-                        .count(1000)
-                        .offset(valueSetResource.getExpansion().getOffset() + 1000)
-                        .oid(
-                            valueSetResource
-                                .getIdentifier()
-                                .get(0)
-                                .getValue()
-                                .replace("urn:oid:", ""))
-                        .build();
-                newSearch.setValueSetParams(List.of(newParams));
+                    buildValueSetsSearchCriteria(searchCriteria, valueSetResource);
 
                 requestAllValueSetsExpansionsForQDM(
                     allValueSets, newSearch, apiKey, codeSystemEntries);
@@ -139,6 +109,40 @@ public class FhirTerminologyService {
             });
 
     return allValueSets;
+  }
+
+  private QdmValueSet updateValueSetConcepts(
+      List<QdmValueSet.Concept> concepts, QdmValueSet existingValueSet) {
+    List<QdmValueSet.Concept> updatedConcepts = new ArrayList<>(existingValueSet.getConcepts());
+    updatedConcepts.addAll(concepts);
+    // Create a new QdmValueSet with the updated concepts
+    QdmValueSet updatedValueSet =
+        QdmValueSet.builder()
+            .oid(existingValueSet.getOid())
+            .displayName(existingValueSet.getDisplayName())
+            .version(existingValueSet.getVersion())
+            .concepts(updatedConcepts)
+            .build();
+    return updatedValueSet;
+  }
+
+  private ValueSetsSearchCriteria buildValueSetsSearchCriteria(
+      ValueSetsSearchCriteria searchCriteria, ValueSet valueSetResource) {
+    ValueSetsSearchCriteria newSearch =
+        ValueSetsSearchCriteria.builder()
+            .includeDraft(searchCriteria.getIncludeDraft())
+            .manifestExpansion(searchCriteria.getManifestExpansion())
+            .activeOnly(searchCriteria.getActiveOnly())
+            .build();
+
+    ValueSetsSearchCriteria.ValueSetParams newParams =
+        ValueSetsSearchCriteria.ValueSetParams.builder()
+            .count(1000)
+            .offset(valueSetResource.getExpansion().getOffset() + 1000)
+            .oid(valueSetResource.getIdentifier().get(0).getValue().replace("urn:oid:", ""))
+            .build();
+    newSearch.setValueSetParams(List.of(newParams));
+    return newSearch;
   }
 
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
