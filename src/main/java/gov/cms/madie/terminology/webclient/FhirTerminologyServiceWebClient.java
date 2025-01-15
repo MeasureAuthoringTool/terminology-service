@@ -6,7 +6,6 @@ import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
-import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
@@ -118,21 +117,6 @@ public class FhirTerminologyServiceWebClient {
 
     log.info("value set search url is: {}", uri.toString());
     return fetchResourceFromVsac(uri.toString(), apiKey, "bundle");
-  }
-
-  public String getValueSetResource(
-      String apiKey,
-      ValueSetsSearchCriteria.ValueSetParams valueSetParams,
-      String profile,
-      String includeDraft,
-      String activeOnly,
-      ManifestExpansion manifestExpansion) {
-    profile = StringUtils.isNotBlank(profile) ? defaultProfile : profile;
-    URI uri =
-        TerminologyServiceUtil.buildValueSetResourceUri(
-            valueSetParams, profile, includeDraft, activeOnly, manifestExpansion);
-
-    return fetchResourceFromVsac(uri.toString(), apiKey, "ValueSet");
   }
 
   public String getValueSetResources(String apiKey, ValueSetsSearchCriteria searchCriteria) {
