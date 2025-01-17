@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.controller;
 
+import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.QdmValueSet;
@@ -12,6 +13,7 @@ import gov.cms.madie.terminology.service.VsacService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = "/terminology")
@@ -29,6 +32,7 @@ import java.util.Map;
 public class VsacFhirTerminologyController {
   private final FhirTerminologyService fhirTerminologyService;
   private final VsacService vsacService;
+  private final FhirContext fhirContext;
 
   @GetMapping("/manifest-list")
   public ResponseEntity<List<ManifestExpansion>> getManifests(Principal principal) {
@@ -39,16 +43,28 @@ public class VsacFhirTerminologyController {
   }
 
   @PutMapping("/value-sets/expansion/qdm")
-  public ResponseEntity<List<QdmValueSet>> getValueSetsExpansions(
+  public ResponseEntity<List<QdmValueSet>> getQdmValueSetsExpansions(
       Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     final String username = principal.getName();
-    log.info(
-        "User [{}] is attempting to fetch value sets expansions from VSAC FHIR Terminology Server.",
-        username);
+    log.info("User [{}] is attempting to fetch QDM value sets expansions.", username);
     UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
     List<QdmValueSet> qdmValueSets =
         fhirTerminologyService.getValueSetsExpansionsForQdm(searchCriteria, umlsUser);
     return ResponseEntity.ok().body(qdmValueSets);
+  }
+
+  @PutMapping("/value-sets/expansion/fhir")
+  public ResponseEntity<String> getFhirValueSetsExpansions(
+      Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
+    final String username = principal.getName();
+    log.info("User [{}] is attempting to fetch FHIR value sets expansions.", username);
+    UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
+    List<ValueSet> fhirValueSets =
+        fhirTerminologyService.getValueSetsExpansion(searchCriteria, umlsUser);
+    String serializedValueSets =
+        fhirValueSets.stream().map(this::serializeFhirValueSet).collect(Collectors.joining(", "));
+
+    return ResponseEntity.ok().body("[" + serializedValueSets + "]");
   }
 
   @GetMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -105,5 +121,9 @@ public class VsacFhirTerminologyController {
     UmlsUser user = vsacService.verifyUmlsAccess(username);
     return ResponseEntity.ok()
         .body(fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, user.getApiKey()));
+  }
+
+  private String serializeFhirValueSet(ValueSet fhirValueSet) {
+    return fhirContext.newJsonParser().encodeResourceToString(fhirValueSet);
   }
 }
