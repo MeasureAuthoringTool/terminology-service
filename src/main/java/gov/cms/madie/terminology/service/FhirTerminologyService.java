@@ -79,7 +79,7 @@ public class FhirTerminologyService {
               ValueSet existingValueSet =
                   allValueSets.stream()
                       .filter(
-                          vs -> valueSetResource.getIdPart().equals(valueSetResource.getIdPart()))
+                          vs -> vs.getIdPart().equals(valueSetResource.getIdPart()))
                       .findFirst()
                       .orElse(null);
               // Check if the ValueSet with the same oid already exists in allValueSets, update if
