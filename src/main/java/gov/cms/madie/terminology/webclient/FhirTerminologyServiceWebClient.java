@@ -192,6 +192,7 @@ public class FhirTerminologyServiceWebClient {
         .block();
   }
 
+  @SuppressWarnings("CPD-START")
   public String fetchBatchResourcesFromVsac(List<String> uri, String apiKey, String resourceType) {
     String result =
         fhirTerminologyWebClient
