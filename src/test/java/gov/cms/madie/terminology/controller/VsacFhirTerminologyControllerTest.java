@@ -10,6 +10,7 @@ import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -285,13 +286,17 @@ class VsacFhirTerminologyControllerTest {
 
   @Test
   void testGetFhirValueSetsExpansions() throws IOException {
-    ValueSet valueSet =
+    Bundle bundle =
         TestHelpers.getFhirTestResource(
-            "/value-sets/value_set_with_expansion_codes.json", ValueSet.class);
+            "/value-sets/value_set_with_expansion_codes.json", Bundle.class);
+    List<ValueSet> valueSet =
+        bundle.getEntry().stream()
+            .map(bundleEntryComponent -> (ValueSet) bundleEntryComponent.getResource())
+            .toList();
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getValueSetsExpansion(
             any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
-        .thenReturn(List.of(valueSet));
+        .thenReturn(valueSet);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     ResponseEntity<String> response =
@@ -299,6 +304,7 @@ class VsacFhirTerminologyControllerTest {
             principal, ValueSetsSearchCriteria.builder().build());
     assertThat(response.getStatusCode(), is(equalTo(HttpStatus.OK)));
     assertThat(response.getBody().contains("\"resourceType\":\"ValueSet\""), is(true));
-    assertThat(response.getBody().contains("\"url\":\"" + valueSet.getUrl() + "\""), is(true));
+    assertThat(
+        response.getBody().contains("\"url\":\"" + valueSet.get(0).getUrl() + "\""), is(true));
   }
 }
