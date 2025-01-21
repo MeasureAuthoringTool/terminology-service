@@ -180,8 +180,7 @@ class FhirTerminologyServiceTest {
                     .id("ecqm-update-2022-05-05")
                     .build())
             .build();
-    when(fhirTerminologyServiceWebClient.getValueSetResource(
-            anyString(), any(), anyString(), anyString(), anyString(), any()))
+    when(fhirTerminologyServiceWebClient.getValueSetResources(anyString(), any()))
         .thenReturn(mockValueSetResourceWithCodes);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
@@ -218,13 +217,8 @@ class FhirTerminologyServiceTest {
                     .build())
             .build();
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-    when(fhirTerminologyServiceWebClient.getValueSetResource(
-            anyString(),
-            any(ValueSetsSearchCriteria.ValueSetParams.class),
-            anyString(),
-            anyString(),
-            anyString(),
-            any(ManifestExpansion.class)))
+    when(fhirTerminologyServiceWebClient.getValueSetResources(
+            anyString(), any(ValueSetsSearchCriteria.class)))
         .thenReturn(mockValueSetResourceWithNoCodes);
     when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result =

@@ -52,51 +52,78 @@ public class FhirTerminologyService {
   }
 
   // spin off requests based on values provided in the expansion
-  public List<ValueSet> recursivelyRequestAllValueSetsExpansions(
-      List<ValueSet> allValueSets,
-      String apiKey,
-      ValueSetsSearchCriteria.ValueSetParams vsParam,
-      ValueSetsSearchCriteria valueSetsSearchCriteria) {
+  public List<ValueSet> requestAllValueSetsExpansions(
+      List<ValueSet> allValueSets, String apiKey, ValueSetsSearchCriteria valueSetsSearchCriteria) {
     IParser parser = fhirContext.newJsonParser();
     String resource =
-        fhirTerminologyServiceWebClient.getValueSetResource(
-            apiKey,
-            vsParam,
-            valueSetsSearchCriteria.getProfile(),
-            valueSetsSearchCriteria.getIncludeDraft(),
-            valueSetsSearchCriteria.getActiveOnly(),
-            valueSetsSearchCriteria.getManifestExpansion());
+        fhirTerminologyServiceWebClient.getValueSetResources(apiKey, valueSetsSearchCriteria);
 
-    ValueSet valueSet = parser.parseResource(ValueSet.class, resource);
-    // total number of pages in expansion, max 1000 codes supported in one-page request
-    var total = valueSet.getExpansion().getTotal();
+    Bundle bundleResource = parser.parseResource(Bundle.class, resource);
 
-    log.info(
-        "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
-        total,
-        vsParam.getCount(),
-        vsParam.getOffset(),
-        vsParam.getOid());
-    ValueSet existingValueSet =
-        allValueSets.stream()
-            .filter(vs -> valueSet.getIdPart().equals(valueSet.getIdPart()))
-            .findFirst()
-            .orElse(null);
-    // Check if the ValueSet with the same oid already exists in allValueSets, update if exists
-    // This happens if value set has multiple page requests.
-    if (existingValueSet == null) {
-      allValueSets.add(valueSet);
-    } else {
-      existingValueSet.getExpansion().getContains().addAll(valueSet.getExpansion().getContains());
-    }
-    //  if the total results in the searchSet are still greater than our current offset + the count
-    // of our last request, then we request again
-    if (vsParam.getOffset() + vsParam.getCount() <= total) {
-      vsParam.setOffset(vsParam.getOffset() + 1000);
-      return recursivelyRequestAllValueSetsExpansions(
-          allValueSets, apiKey, vsParam, valueSetsSearchCriteria);
-    }
+    bundleResource
+        .getEntry()
+        .forEach(
+            bundleEntryComponent -> {
+              ValueSet valueSetResource = (ValueSet) bundleEntryComponent.getResource();
+              var expansion = valueSetResource.getExpansion();
+              var total = expansion.getTotal(); // total valuesets
+
+              log.info(
+                  "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
+                  total,
+                  expansion.getContains().size(),
+                  expansion.getOffset(),
+                  valueSetResource.getId());
+
+              // Check if the ValueSet with the same oid already exists in allValueSets
+              ValueSet existingValueSet =
+                  allValueSets.stream()
+                      .filter(
+                          vs -> vs.getIdPart().equals(valueSetResource.getIdPart()))
+                      .findFirst()
+                      .orElse(null);
+              // Check if the ValueSet with the same oid already exists in allValueSets, update if
+              // exists
+              // This happens if value set has multiple page requests.
+              if (existingValueSet == null) {
+                allValueSets.add(valueSetResource);
+              } else {
+                existingValueSet
+                    .getExpansion()
+                    .getContains()
+                    .addAll(valueSetResource.getExpansion().getContains());
+              }
+
+              //  if the total results in the searchSet are still greater than our current offset +
+              // the count of our last request, then we request again
+              if (expansion.getOffset() + expansion.getContains().size() < total) {
+                ValueSetsSearchCriteria newSearch =
+                    buildValueSetsSearchCriteria(valueSetsSearchCriteria, valueSetResource);
+
+                requestAllValueSetsExpansions(allValueSets, apiKey, newSearch);
+              }
+            });
+
     return allValueSets;
+  }
+
+  private ValueSetsSearchCriteria buildValueSetsSearchCriteria(
+      ValueSetsSearchCriteria searchCriteria, ValueSet valueSetResource) {
+    ValueSetsSearchCriteria newSearch =
+        ValueSetsSearchCriteria.builder()
+            .includeDraft(searchCriteria.getIncludeDraft())
+            .manifestExpansion(searchCriteria.getManifestExpansion())
+            .activeOnly(searchCriteria.getActiveOnly())
+            .build();
+
+    ValueSetsSearchCriteria.ValueSetParams newParams =
+        ValueSetsSearchCriteria.ValueSetParams.builder()
+            .count(1000)
+            .offset(valueSetResource.getExpansion().getOffset() + 1000)
+            .oid(valueSetResource.getIdentifier().get(0).getValue().replace("urn:oid:", ""))
+            .build();
+    newSearch.setValueSetParams(List.of(newParams));
+    return newSearch;
   }
 
   public List<ValueSet> getValueSetsExpansion(
@@ -106,19 +133,17 @@ public class FhirTerminologyService {
       return Collections.emptyList();
     }
 
-    return valueSetsSearchCriteria.getValueSetParams().stream()
-        .map(
-            vsParam -> {
-              vsParam.setCount(1000);
-              vsParam.setOffset(0);
-              return vsParam;
-            })
-        .flatMap(
-            vsParam ->
-                recursivelyRequestAllValueSetsExpansions(
-                    new ArrayList<>(), umlsUser.getApiKey(), vsParam, valueSetsSearchCriteria)
-                    .stream())
-        .toList();
+    valueSetsSearchCriteria.setValueSetParams(
+        valueSetsSearchCriteria.getValueSetParams().stream()
+            .map(
+                vsParam -> {
+                  vsParam.setCount(1000);
+                  vsParam.setOffset(0);
+                  return vsParam;
+                })
+            .collect(Collectors.toList()));
+    return requestAllValueSetsExpansions(
+        new ArrayList<>(), umlsUser.getApiKey(), valueSetsSearchCriteria);
   }
 
   public List<QdmValueSet> getValueSetsExpansionsForQdm(

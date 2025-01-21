@@ -1,27 +1,35 @@
 package gov.cms.madie.terminology.webclient;
 
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
-import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.r4.model.Bundle;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -35,6 +43,7 @@ public class FhirTerminologyServiceWebClient {
   private final String codeLookupsUrl;
   private final String defaultProfile;
   private final String searchValueSetEndpoint;
+  private final FhirContext fhirContext;
 
   public FhirTerminologyServiceWebClient(
       @Value("${client.fhir-terminology-service.base-url}") String fhirTerminologyServiceBaseUrl,
@@ -42,16 +51,23 @@ public class FhirTerminologyServiceWebClient {
       @Value("${client.fhir-terminology-service.code-system-urn}") String codeSystemUrn,
       @Value("${client.fhir-terminology-service.code-lookups}") String codeLookupsUrl,
       @Value("${client.default_profile}") String defaultProfile,
-      @Value("${client.search_value_set_endpoint}") String searchValueSetEndpoint) {
+      @Value("${client.search_value_set_endpoint}") String searchValueSetEndpoint,
+      FhirContext fhirContext) {
+    this.fhirContext = fhirContext;
     DefaultUriBuilderFactory uriBuilderFactory =
         new DefaultUriBuilderFactory(fhirTerminologyServiceBaseUrl);
     uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
+    ConnectionProvider provider =
+        ConnectionProvider.builder("custom").maxIdleTime(Duration.ofSeconds(300)).build();
+    HttpClient client =
+        HttpClient.create(provider).followRedirect(true).option(ChannelOption.SO_KEEPALIVE, true);
     fhirTerminologyWebClient =
         WebClient.builder()
             .uriBuilderFactory(uriBuilderFactory)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .codecs(
                 clientCodecConfigurer -> clientCodecConfigurer.defaultCodecs().maxInMemorySize(-1))
+            .clientConnector(new ReactorClientHttpConnector(client))
             .build();
     this.manifestPath = manifestUrn;
     this.codeSystemPath = codeSystemUrn;
@@ -103,19 +119,25 @@ public class FhirTerminologyServiceWebClient {
     return fetchResourceFromVsac(uri.toString(), apiKey, "bundle");
   }
 
-  public String getValueSetResource(
-      String apiKey,
-      ValueSetsSearchCriteria.ValueSetParams valueSetParams,
-      String profile,
-      String includeDraft,
-      String activeOnly,
-      ManifestExpansion manifestExpansion) {
-    profile = StringUtils.isNotBlank(profile) ? defaultProfile : profile;
-    URI uri =
-        TerminologyServiceUtil.buildValueSetResourceUri(
-            valueSetParams, profile, includeDraft, activeOnly, manifestExpansion);
+  public String getValueSetResources(String apiKey, ValueSetsSearchCriteria searchCriteria) {
+    String profile =
+        StringUtils.isNotBlank(searchCriteria.getProfile())
+            ? defaultProfile
+            : searchCriteria.getProfile();
+    List<String> uriList =
+        searchCriteria.getValueSetParams().stream()
+            .map(
+                valueSetParam ->
+                    TerminologyServiceUtil.buildValueSetResourceUri(
+                            valueSetParam,
+                            profile,
+                            searchCriteria.getIncludeDraft(),
+                            searchCriteria.getActiveOnly(),
+                            searchCriteria.getManifestExpansion())
+                        .toString())
+            .collect(Collectors.toList());
 
-    return fetchResourceFromVsac(uri.toString(), apiKey, "ValueSet");
+    return fetchBatchResourcesFromVsac(uriList, apiKey, "ValueSet");
   }
 
   public String getCodeResource(String code, CodeSystem codeSystem, String apiKey) {
@@ -168,5 +190,70 @@ public class FhirTerminologyServiceWebClient {
               }
             })
         .block();
+  }
+
+  @SuppressWarnings("CPD-START")
+  public String fetchBatchResourcesFromVsac(List<String> uri, String apiKey, String resourceType) {
+    String result =
+        fhirTerminologyWebClient
+            .post()
+            .headers(headers -> headers.setBasicAuth("apikey", apiKey))
+            .bodyValue(buildBatchBundle(uri))
+            .header("Content-Type", "application/fhir+json")
+            .accept(new MediaType("application", "fhir+json", Charset.defaultCharset()))
+            .exchangeToMono(
+                clientResponse -> {
+                  if (clientResponse.statusCode().equals(HttpStatus.OK)) {
+                    return clientResponse.bodyToMono(String.class);
+                  } else if (clientResponse.statusCode().equals(HttpStatus.NOT_FOUND)) {
+                    log.debug("Received NOT_FOUND response while retrieving {}", resourceType);
+                    return clientResponse
+                        .createException()
+                        .flatMap(
+                            ex ->
+                                Mono.error(
+                                    new VsacResourceNotFoundException(
+                                        "",
+                                        ex.getStatusCode(),
+                                        ex.getStatusText(),
+                                        ex.getResponseBodyAsString(),
+                                        "")));
+
+                  } else {
+                    log.debug("Received NON-OK response while retrieving {}", resourceType);
+                    return clientResponse
+                        .createException()
+                        .flatMap(
+                            ex ->
+                                Mono.error(
+                                    new VsacValueSetExpansionException(
+                                        "",
+                                        ex.getStatusCode(),
+                                        ex.getStatusText(),
+                                        ex.getResponseBodyAsString(),
+                                        uri.contains("manifest") ? "Manifest" : "Latest",
+                                        "")));
+                  }
+                })
+            .block();
+    return result;
+  }
+
+  private String buildBatchBundle(List<String> uri) {
+
+    Bundle bundle = new Bundle();
+    bundle.setType(Bundle.BundleType.BATCH);
+    uri.forEach(
+        value -> {
+          Bundle.BundleEntryComponent compo = new Bundle.BundleEntryComponent();
+          Bundle.BundleEntryRequestComponent request = new Bundle.BundleEntryRequestComponent();
+          request.setMethod(Bundle.HTTPVerb.GET);
+          request.setUrl(value);
+          compo.setRequest(request);
+          bundle.addEntry(compo);
+        });
+
+    IParser parser = fhirContext.newJsonParser();
+    return parser.encodeToString(bundle);
   }
 }

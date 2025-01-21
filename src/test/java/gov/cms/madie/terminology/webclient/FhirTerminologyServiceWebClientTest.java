@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.webclient;
 
+import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -8,12 +9,18 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.io.IOException;
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FhirTerminologyServiceWebClientTest {
@@ -28,7 +35,11 @@ class FhirTerminologyServiceWebClientTest {
   public static MockWebServer mockBackEnd;
   private static final String SEARCH_VALUE_SET_ENDPOINT = "https://cts.nlm.nih.gov/fhir/ValueSet";
 
+  @Mock FhirContext fhirContext;
+
   private ValueSetsSearchCriteria.ValueSetParams testValueSetParams;
+
+  private ValueSetsSearchCriteria searchCriteria;
 
   FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
 
@@ -40,6 +51,15 @@ class FhirTerminologyServiceWebClientTest {
 
   @BeforeEach
   void initialize() {
+    searchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .profile(null)
+            .includeDraft(null)
+            .activeOnly("false")
+            .manifestExpansion(new ManifestExpansion())
+            .valueSetParams(
+                List.of(ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build()))
+            .build();
     testValueSetParams = ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build();
     String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
     fhirTerminologyServiceWebClient =
@@ -49,7 +69,8 @@ class FhirTerminologyServiceWebClientTest {
             MOCK_CODE_SYSTEM_URN,
             MOCK_CODE_LOOKUP,
             DEFAULT_PROFILE,
-            SEARCH_VALUE_SET_ENDPOINT);
+            SEARCH_VALUE_SET_ENDPOINT,
+            fhirContext);
   }
 
   @AfterAll
@@ -89,13 +110,15 @@ class FhirTerminologyServiceWebClientTest {
             .setResponseCode(200)
             .setBody(MOCK_RESPONSE_STRING)
             .addHeader("Content-Type", "application/fhir+json"));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResource(
-            MOCK_API_KEY, testValueSetParams, null, null, "false", new ManifestExpansion());
+        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals("/ValueSet/test-vs-id/$expand?activeOnly=false", recordedRequest.getPath());
+    assertThat(
+        recordedRequest.getBody().readUtf8(),
+        containsString("/ValueSet/test-vs-id/$expand?activeOnly=false"));
   }
 
   @Test
@@ -106,15 +129,16 @@ class FhirTerminologyServiceWebClientTest {
             .setResponseCode(200)
             .setBody(MOCK_RESPONSE_STRING)
             .addHeader("Content-Type", "application/fhir+json"));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    searchCriteria.setIncludeDraft("true");
     String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResource(
-            MOCK_API_KEY, testValueSetParams, null, "yes", "false", new ManifestExpansion());
+        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals(
-        "/ValueSet/test-vs-id/$expand?includeDraft=true&activeOnly=false",
-        recordedRequest.getPath());
+    assertThat(
+        recordedRequest.getBody().readUtf8(),
+        containsString("ValueSet/test-vs-id/$expand?includeDraft=true&activeOnly=false"));
   }
 
   @Test
@@ -125,23 +149,21 @@ class FhirTerminologyServiceWebClientTest {
             .setResponseCode(200)
             .setBody(MOCK_RESPONSE_STRING)
             .addHeader("Content-Type", "application/fhir+json"));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    searchCriteria.setManifestExpansion(
+        ManifestExpansion.builder()
+            .id("test-manifest-456")
+            .fullUrl("https://cts.nlm.nih.gov/fhir/Library/test-manifest-456")
+            .build());
     String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResource(
-            MOCK_API_KEY,
-            testValueSetParams,
-            null,
-            null,
-            "true",
-            ManifestExpansion.builder()
-                .id("test-manifest-456")
-                .fullUrl("https://cts.nlm.nih.gov/fhir/Library/test-manifest-456")
-                .build());
+        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals(
-        "/ValueSet/test-vs-id/$expand?manifest=https://cts.nlm.nih.gov/fhir/Library/test-manifest-456",
-        recordedRequest.getPath());
+    assertThat(
+        recordedRequest.getBody().readUtf8(),
+        containsString(
+            "/ValueSet/test-vs-id/$expand?manifest=https://cts.nlm.nih.gov/fhir/Library/test-manifest-456"));
   }
 
   @Test
@@ -153,28 +175,30 @@ class FhirTerminologyServiceWebClientTest {
             .setBody(MOCK_RESPONSE_STRING)
             .addHeader("Content-Type", "application/fhir+json"));
     testValueSetParams.setVersion("test-value-set-version-2024");
+    searchCriteria.setValueSetParams(List.of(testValueSetParams));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResource(
-            MOCK_API_KEY, testValueSetParams, null, null, "false", new ManifestExpansion());
+        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals(
-        "/ValueSet/test-vs-id/$expand?valueSetVersion=test-value-set-version-2024",
-        recordedRequest.getPath());
+    assertThat(
+        recordedRequest.getBody().readUtf8(),
+        containsString("ValueSet/test-vs-id/$expand?valueSetVersion=test-value-set-version-2024"));
   }
 
   @Test
   void getValueSetResource_ReturnsException() throws InterruptedException {
     testValueSetParams.setVersion("");
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     assertThrows(
         WebClientResponseException.class,
-        () ->
-            fhirTerminologyServiceWebClient.getValueSetResource(
-                MOCK_API_KEY, testValueSetParams, null, null, "false", new ManifestExpansion()));
+        () -> fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertEquals("/ValueSet/test-vs-id/$expand?activeOnly=false", recordedRequest.getPath());
+    assertThat(
+        recordedRequest.getBody().readUtf8(),
+        containsString("/ValueSet/test-vs-id/$expand?activeOnly=false"));
   }
 
   @Test
