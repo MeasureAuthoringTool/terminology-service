@@ -26,6 +26,7 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -161,10 +162,11 @@ class VsacFhirTerminologyControllerMvcTest {
     String content = result.getResponse().getContentAsString();
     verify(fhirTerminologyService, times(1))
         .getValueSetsExpansionsForQdm(any(ValueSetsSearchCriteria.class), any(UmlsUser.class));
-    assertThat(
-        content,
-        containsString(
-            "[{\"oid\":\"test-value-set-id-1234\",\"version\":\"20240101\",\"concepts\":[{\"code\":\"test-code-052\",\"code_system_oid\":null,\"code_system_name\":null,\"code_system_version\":null,\"display_name\":null}],\"display_name\":\"test-value-set-display-name\"}]"));
+    String valueSetExpansion =
+        """
+    		[{"oid":"test-value-set-id-1234","display_name":"test-value-set-display-name","version":"20240101","concepts":[{"code":"test-code-052","code_system_oid":null,"code_system_name":null,"code_system_version":null,"display_name":null}]}]
+    		""";
+    assertEquals(content, valueSetExpansion.trim());
   }
 
   @Test
