@@ -5,7 +5,7 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.4.1</version>
-    <relativePath></relativePath>
+    <relativePath/>
     <!-- lookup parent from repository -->
   </parent>
   <groupId>gov.cms.madie.terminologyservice</groupId>
@@ -16,7 +16,7 @@
   <properties>
     <hapifhir.version>7.6.0</hapifhir.version>
     <java.version>16</java.version>
-    <jxbmavenplugin.version>2.5.0</jxbmavenplugin.version>
+    <jxbmavenplugin.version>3.1.0</jxbmavenplugin.version>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
 
@@ -174,7 +174,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
