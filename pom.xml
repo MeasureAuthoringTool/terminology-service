@@ -56,6 +56,18 @@
       <groupId>com.okta.spring</groupId>
       <artifactId>okta-spring-boot-starter</artifactId>
       <version>${okta.springboot.starter.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.security</groupId>
+          <artifactId>spring-security-web</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Explicit use of spring-security-web version to resolve critical security vulnerabilities-->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-web</artifactId>
+      <version>6.4.4</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
