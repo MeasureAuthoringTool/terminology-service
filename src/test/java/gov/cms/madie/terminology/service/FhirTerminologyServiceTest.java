@@ -239,7 +239,7 @@ class FhirTerminologyServiceTest {
 
   @Test
   void
-      getValueSetsExpansionsForQdmThrowsVsacParseBatchValueSetExpansionException_When_ManifestExpansionIsProvided() {
+      getValueSetsExpansionsForQdmThrowsVsacParseBatchValueSetExpansionExceptionWhenManifestExpansionIsProvided() {
     var valueSetsSearchCriteria =
         ValueSetsSearchCriteria.builder()
             .valueSetParams(
