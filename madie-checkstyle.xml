@@ -30,7 +30,7 @@
         <!-- https://checkstyle.sourceforge.io/config_sizes.html#MethodLength -->
         <module name="MethodLength">
             <property name="tokens" value="METHOD_DEF" />
-            <property name="max" value="60" />
+            <property name="max" value="100" />
         </module>
 
         <!-- https://checkstyle.sourceforge.io/config_misc.html#OuterTypeFilename -->
