@@ -5,6 +5,7 @@ import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
+import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
@@ -59,49 +60,71 @@ public class FhirTerminologyService {
         fhirTerminologyServiceWebClient.getValueSetResources(apiKey, valueSetsSearchCriteria);
 
     Bundle bundleResource = parser.parseResource(Bundle.class, resource);
+    List<Bundle.BundleEntryComponent> bundleEntryComponents = bundleResource.getEntry();
 
-    bundleResource
-        .getEntry()
-        .forEach(
-            bundleEntryComponent -> {
-              ValueSet valueSetResource = (ValueSet) bundleEntryComponent.getResource();
-              var expansion = valueSetResource.getExpansion();
-              var total = expansion.getTotal(); // total valuesets
+    for (int i = 0; i < bundleEntryComponents.size(); i++) {
+      Bundle.BundleEntryComponent bundleEntryComponent = bundleEntryComponents.get(i);
 
-              log.info(
-                  "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
-                  total,
-                  expansion.getContains().size(),
-                  expansion.getOffset(),
-                  valueSetResource.getId());
+      ValueSet valueSetResource = (ValueSet) bundleEntryComponent.getResource();
 
-              // Check if the ValueSet with the same oid already exists in allValueSets
-              ValueSet existingValueSet =
-                  allValueSets.stream()
-                      .filter(vs -> vs.getIdPart().equals(valueSetResource.getIdPart()))
-                      .findFirst()
-                      .orElse(null);
-              // Check if the ValueSet with the same oid already exists in allValueSets, update if
-              // exists
-              // This happens if value set has multiple page requests.
-              if (existingValueSet == null) {
-                allValueSets.add(valueSetResource);
-              } else {
-                existingValueSet
-                    .getExpansion()
-                    .getContains()
-                    .addAll(valueSetResource.getExpansion().getContains());
-              }
+      if (valueSetResource == null) {
+        OperationOutcome outcome =
+            (OperationOutcome) bundleEntryComponent.getResponse().getOutcome();
 
-              //  if the total results in the searchSet are still greater than our current offset +
-              // the count of our last request, then we request again
-              if (expansion.getOffset() + expansion.getContains().size() < total) {
-                ValueSetsSearchCriteria newSearch =
-                    buildValueSetsSearchCriteria(valueSetsSearchCriteria, valueSetResource);
+        log.debug(
+            "VSAC did not return BundleEntryComponent containing ValueSet with ValueSetParams "
+                + "[{}] (at index [{}]) after successfully calling batch value set expansion with "
+                + "ValueSetsSearchCriteria [{}] ",
+            valueSetsSearchCriteria.getValueSetParams().get(i),
+            i,
+            valueSetsSearchCriteria);
 
-                requestAllValueSetsExpansions(allValueSets, apiKey, newSearch);
-              }
-            });
+        throw new VsacParseBatchValueSetExpansionException(
+            "Failed to fetch VSAC value set expansions",
+            outcome,
+            valueSetsSearchCriteria.getManifestExpansion() != null
+                ? valueSetsSearchCriteria.getManifestExpansion().getFullUrl()
+                : null,
+            valueSetsSearchCriteria.getValueSetParams().get(i).getOid());
+      }
+
+      var expansion = valueSetResource.getExpansion();
+      var total = expansion.getTotal(); // total valuesets
+
+      log.info(
+          "vs total [{}] count: [{}] offset: [{}], oid: [{}]",
+          total,
+          expansion.getContains().size(),
+          expansion.getOffset(),
+          valueSetResource.getId());
+
+      // Check if the ValueSet with the same oid already exists in allValueSets
+      ValueSet existingValueSet =
+          allValueSets.stream()
+              .filter(vs -> vs.getIdPart().equals(valueSetResource.getIdPart()))
+              .findFirst()
+              .orElse(null);
+      // Check if the ValueSet with the same oid already exists in allValueSets, update if
+      // exists
+      // This happens if value set has multiple page requests.
+      if (existingValueSet == null) {
+        allValueSets.add(valueSetResource);
+      } else {
+        existingValueSet
+            .getExpansion()
+            .getContains()
+            .addAll(valueSetResource.getExpansion().getContains());
+      }
+
+      //  if the total results in the searchSet are still greater than our current offset +
+      // the count of our last request, then we request again
+      if (expansion.getOffset() + expansion.getContains().size() < total) {
+        ValueSetsSearchCriteria newSearch =
+            buildValueSetsSearchCriteria(valueSetsSearchCriteria, valueSetResource);
+
+        requestAllValueSetsExpansions(allValueSets, apiKey, newSearch);
+      }
+    }
 
     return allValueSets;
   }

@@ -1,0 +1,22 @@
+{
+  "resourceType": "Bundle",
+  "id": "vsac-fhir-batch-request",
+  "type": "batch-response",
+  "link": [ {
+    "relation": "self",
+    "url": "https://cts.nlm.nih.gov/fhir"
+  } ],
+  "entry": [ {
+    "response": {
+      "status": "HTTP/1.1 400 ",
+      "outcome": {
+        "resourceType": "OperationOutcome",
+        "issue": [ {
+          "severity": "error",
+          "code": "invalid",
+          "diagnostics": "Content returned as invalid against the specification. Either the specification contains invalid elements, or the server failed to process due to internal errors."
+        } ]
+      }
+    }
+  }]
+}

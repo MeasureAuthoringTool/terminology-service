@@ -7,6 +7,7 @@ import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.helpers.TestHelpers;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
@@ -120,6 +121,7 @@ class FhirTerminologyServiceTest {
 
   private String mockValueSetResourceWithCodes;
   private String mockValueSetResourceWithNoCodes;
+  private String mockValueSetWithNoResource;
 
   @BeforeEach
   public void setUp() throws IOException {
@@ -128,11 +130,16 @@ class FhirTerminologyServiceTest {
         TestHelpers.getTestResourceFile("/value-sets/value_set_with_expansion_codes.json");
     File fileWithNoCodes =
         TestHelpers.getTestResourceFile("/value-sets/value_set_with_no_expansions.json");
+    File fileWithNoResource =
+        TestHelpers.getTestResourceFile("/value-sets/value_set_with_no_resource.json");
     mockValueSetResourceWithCodes =
         FileUtils.readFileToString(Objects.requireNonNull(fileWithCodes), Charset.defaultCharset());
     mockValueSetResourceWithNoCodes =
         FileUtils.readFileToString(
             Objects.requireNonNull(fileWithNoCodes), Charset.defaultCharset());
+    mockValueSetWithNoResource =
+        FileUtils.readFileToString(
+            Objects.requireNonNull(fileWithNoResource), Charset.defaultCharset());
     codeSystemEntries = new ArrayList<>();
     CodeSystemEntry.Version version = new CodeSystemEntry.Version();
     version.setVsac("2022-05");
@@ -228,6 +235,47 @@ class FhirTerminologyServiceTest {
     assertEquals("20180310", result.get(0).getVersion());
     assertEquals("AnkylosingSpondylitis", result.get(0).getDisplayName());
     assertEquals(0, result.get(0).getConcepts().size());
+  }
+
+  @Test
+  void
+      getValueSetsExpansionsForQdmThrowsVsacParseBatchValueSetExpansionException_When_ManifestExpansionIsProvided() {
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("2.16.840.1.113883.3.464.1003.113.11.1090")
+                        .build()))
+            .profile("test-profile")
+            .includeDraft("false")
+            .activeOnly("true")
+            .manifestExpansion(
+                ManifestExpansion.builder()
+                    .fullUrl("https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05")
+                    .id("ecqm-update-2022-05-05")
+                    .build())
+            .build();
+    when(fhirTerminologyServiceWebClient.getValueSetResources(anyString(), any()))
+        .thenReturn(mockValueSetWithNoResource);
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+
+    VsacParseBatchValueSetExpansionException ex =
+        assertThrows(
+            VsacParseBatchValueSetExpansionException.class,
+            () ->
+                fhirTerminologyService.getValueSetsExpansionsForQdm(
+                    valueSetsSearchCriteria, umlsUser));
+
+    assertEquals(ex.getMessage(), "Failed to fetch VSAC value set expansions");
+    assertEquals(
+        ex.getOperationOutcome().getIssueFirstRep().getDiagnostics(),
+        "Content returned as invalid against the specification. Either the specification contains invalid elements, or the server failed to process due to internal errors.");
+    assertEquals(
+        ex.getManifestExpansionFullUrl(),
+        "https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05");
+    assertEquals(ex.getOid(), "2.16.840.1.113883.3.464.1003.113.11.1090");
   }
 
   @Test
