@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.webclient;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -120,24 +121,26 @@ public class FhirTerminologyServiceWebClient {
   }
 
   public String getValueSetResources(String apiKey, ValueSetsSearchCriteria searchCriteria) {
+    return fetchBatchResourcesFromVsac(getUris(searchCriteria), apiKey, "ValueSet");
+  }
+
+  public List<String> getUris(ValueSetsSearchCriteria searchCriteria) {
     String profile =
         StringUtils.isNotBlank(searchCriteria.getProfile())
             ? defaultProfile
             : searchCriteria.getProfile();
-    List<String> uriList =
-        searchCriteria.getValueSetParams().stream()
-            .map(
-                valueSetParam ->
-                    TerminologyServiceUtil.buildValueSetResourceUri(
-                            valueSetParam,
-                            profile,
-                            searchCriteria.getIncludeDraft(),
-                            searchCriteria.getActiveOnly(),
-                            searchCriteria.getManifestExpansion())
-                        .toString())
-            .collect(Collectors.toList());
 
-    return fetchBatchResourcesFromVsac(uriList, apiKey, "ValueSet");
+    return searchCriteria.getValueSetParams().stream()
+        .map(
+            valueSetParam ->
+                TerminologyServiceUtil.buildValueSetResourceUri(
+                        valueSetParam,
+                        profile,
+                        searchCriteria.getIncludeDraft(),
+                        searchCriteria.getActiveOnly(),
+                        searchCriteria.getManifestExpansion())
+                    .toString())
+        .collect(Collectors.toList());
   }
 
   public String getCodeResource(String code, CodeSystem codeSystem, String apiKey) {
@@ -193,57 +196,46 @@ public class FhirTerminologyServiceWebClient {
   }
 
   @SuppressWarnings("CPD-START")
-  public String fetchBatchResourcesFromVsac(List<String> uri, String apiKey, String resourceType) {
+  public String fetchBatchResourcesFromVsac(List<String> uris, String apiKey, String resourceType) {
     String result =
         fhirTerminologyWebClient
             .post()
             .headers(headers -> headers.setBasicAuth("apikey", apiKey))
-            .bodyValue(buildBatchBundle(uri))
+            .bodyValue(buildBatchBundle(uris))
             .header("Content-Type", "application/fhir+json")
             .accept(new MediaType("application", "fhir+json", Charset.defaultCharset()))
             .exchangeToMono(
                 clientResponse -> {
                   if (clientResponse.statusCode().equals(HttpStatus.OK)) {
                     return clientResponse.bodyToMono(String.class);
-                  } else if (clientResponse.statusCode().equals(HttpStatus.NOT_FOUND)) {
-                    log.debug("Received NOT_FOUND response while retrieving {}", resourceType);
-                    return clientResponse
-                        .createException()
-                        .flatMap(
-                            ex ->
-                                Mono.error(
-                                    new VsacResourceNotFoundException(
-                                        "",
-                                        ex.getStatusCode(),
-                                        ex.getStatusText(),
-                                        ex.getResponseBodyAsString(),
-                                        "")));
-
                   } else {
-                    log.debug("Received NON-OK response while retrieving {}", resourceType);
                     return clientResponse
                         .createException()
                         .flatMap(
-                            ex ->
-                                Mono.error(
-                                    new VsacValueSetExpansionException(
-                                        "",
-                                        ex.getStatusCode(),
-                                        ex.getStatusText(),
-                                        ex.getResponseBodyAsString(),
-                                        uri.contains("manifest") ? "Manifest" : "Latest",
-                                        "")));
+                            ex -> {
+                              log.debug(
+                                  "Received NON-OK response while retrieving [{}] with " + "[{}] ",
+                                  resourceType,
+                                  uris,
+                                  ex);
+                              return Mono.error(
+                                  new VsacBatchValueSetExpansionException(
+                                      "Failed to fetch batch resources from VSAC",
+                                      ex.getStatusCode(),
+                                      ex.getStatusText(),
+                                      ex.getResponseBodyAsString()));
+                            });
                   }
                 })
             .block();
     return result;
   }
 
-  private String buildBatchBundle(List<String> uri) {
+  private String buildBatchBundle(List<String> uris) {
 
     Bundle bundle = new Bundle();
     bundle.setType(Bundle.BundleType.BATCH);
-    uri.forEach(
+    uris.forEach(
         value -> {
           Bundle.BundleEntryComponent compo = new Bundle.BundleEntryComponent();
           Bundle.BundleEntryRequestComponent request = new Bundle.BundleEntryRequestComponent();

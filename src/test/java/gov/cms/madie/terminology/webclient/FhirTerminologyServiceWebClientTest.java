@@ -3,6 +3,7 @@ package gov.cms.madie.terminology.webclient;
 import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -193,7 +194,7 @@ class FhirTerminologyServiceWebClientTest {
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     assertThrows(
-        WebClientResponseException.class,
+        VsacBatchValueSetExpansionException.class,
         () -> fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertThat(
