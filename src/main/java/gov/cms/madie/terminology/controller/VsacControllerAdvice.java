@@ -2,6 +2,8 @@ package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,6 +90,34 @@ public class VsacControllerAdvice {
           ex.getValueSetUri()
               .substring(ex.getValueSetUri().lastIndexOf("Library/") + "Library/".length()));
     }
+
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(VsacBatchValueSetExpansionException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onVsacBatchValueSetExpansionException(
+      VsacBatchValueSetExpansionException ex, WebRequest request) {
+    return getErrorAttributes(request, HttpStatus.valueOf(ex.getStatusCode().value()));
+  }
+
+  @ExceptionHandler(VsacParseBatchValueSetExpansionException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onVsacParseBatchValueSetExpansionException(
+      VsacParseBatchValueSetExpansionException ex, WebRequest request) {
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+
+    OperationOutcome outcome = ex.getOperationOutcome();
+
+    errorAttributes.put("diagnostic", outcome.getIssueFirstRep().getDiagnostics());
+    errorAttributes.put("manifestExpansionFullUrl", ex.getManifestExpansionFullUrl());
+    errorAttributes.put("valueSetOid", ex.getOid());
 
     return errorAttributes;
   }
