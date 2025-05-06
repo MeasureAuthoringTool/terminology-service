@@ -103,14 +103,14 @@ public class FhirTerminologyService {
       if (existingValueSet == null) {
         allValueSets.add(valueSetResource);
       } else {
-        List<ValueSet.ValueSetExpansionContainsComponent> newContains =
+        List<ValueSet.ValueSetExpansionContainsComponent> dedupeContains =
             valueSetResource.getExpansion().getContains().stream()
                 .filter(
                     newEntry ->
                         !containsEntry(existingValueSet.getExpansion().getContains(), newEntry))
                 .collect(Collectors.toList());
 
-        existingValueSet.getExpansion().getContains().addAll(newContains);
+        existingValueSet.getExpansion().getContains().addAll(dedupeContains);
       }
       if (expansion.getOffset() + expansion.getContains().size() < total) {
         ValueSetsSearchCriteria newSearch =
