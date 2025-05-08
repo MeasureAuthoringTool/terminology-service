@@ -70,7 +70,6 @@ public class FhirTerminologyService {
       if (valueSetResource == null) {
         OperationOutcome outcome =
             (OperationOutcome) bundleEntryComponent.getResponse().getOutcome();
-
         log.debug(
             "VSAC did not return BundleEntryComponent containing ValueSet with ValueSetParams "
                 + "[{}] (at index [{}]) after successfully calling batch value set expansion with "
@@ -87,7 +86,6 @@ public class FhirTerminologyService {
                 : null,
             valueSetsSearchCriteria.getValueSetParams().get(i).getOid());
       }
-
       var expansion = valueSetResource.getExpansion();
       var total = expansion.getTotal(); // total valuesets
 
@@ -97,27 +95,23 @@ public class FhirTerminologyService {
           expansion.getContains().size(),
           expansion.getOffset(),
           valueSetResource.getId());
-
-      // Check if the ValueSet with the same oid already exists in allValueSets
       ValueSet existingValueSet =
           allValueSets.stream()
               .filter(vs -> vs.getIdPart().equals(valueSetResource.getIdPart()))
               .findFirst()
               .orElse(null);
-      // Check if the ValueSet with the same oid already exists in allValueSets, update if
-      // exists
-      // This happens if value set has multiple page requests.
       if (existingValueSet == null) {
         allValueSets.add(valueSetResource);
       } else {
-        existingValueSet
-            .getExpansion()
-            .getContains()
-            .addAll(valueSetResource.getExpansion().getContains());
-      }
+        List<ValueSet.ValueSetExpansionContainsComponent> dedupeContains =
+            valueSetResource.getExpansion().getContains().stream()
+                .filter(
+                    newEntry ->
+                        !containsEntry(existingValueSet.getExpansion().getContains(), newEntry))
+                .collect(Collectors.toList());
 
-      //  if the total results in the searchSet are still greater than our current offset +
-      // the count of our last request, then we request again
+        existingValueSet.getExpansion().getContains().addAll(dedupeContains);
+      }
       if (expansion.getOffset() + expansion.getContains().size() < total) {
         ValueSetsSearchCriteria newSearch =
             buildValueSetsSearchCriteria(valueSetsSearchCriteria, valueSetResource);
@@ -127,6 +121,17 @@ public class FhirTerminologyService {
     }
 
     return allValueSets;
+  }
+
+  private boolean containsEntry(
+      List<ValueSet.ValueSetExpansionContainsComponent> existingEntries,
+      ValueSet.ValueSetExpansionContainsComponent newEntry) {
+    return existingEntries.stream()
+        .anyMatch(
+            existing ->
+                Objects.equals(existing.getCode(), newEntry.getCode())
+                    && Objects.equals(existing.getSystem(), newEntry.getSystem())
+                    && Objects.equals(existing.getVersion(), newEntry.getVersion()));
   }
 
   private ValueSetsSearchCriteria buildValueSetsSearchCriteria(
