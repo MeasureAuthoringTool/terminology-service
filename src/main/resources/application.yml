@@ -34,8 +34,6 @@ client:
     code-system-urn: /CodeSystem
     code-lookups: /CodeSystem/$lookup?system={fullUrl}&code={code}&version={version}
 
-hapi-fhir-url: ${HAPI_FHIR_URL:http://localhost:8888/fhir}
-
 spring:
   session:
     store-type: none
