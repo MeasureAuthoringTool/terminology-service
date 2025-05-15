@@ -1,5 +1,5 @@
 ## Use AWS AL2 + Corretto base image
-FROM amazoncorretto:17-al2-jdk
+FROM amazoncorretto:17-al2023-jdk
 
 ## Add compiled jar
 ARG JAR_FILE=target/*.jar
