@@ -20,6 +20,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
@@ -244,5 +245,22 @@ class FhirTerminologyServiceWebClientTest {
     assertEquals(MOCK_RESPONSE_STRING, codeJson);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertEquals("/CodeSystem/$lookup", recordedRequest.getPath());
+  }
+
+  @Test
+  void testGetUrisForValueSetSearchObject() {
+    var criteria =
+        searchCriteria.toBuilder()
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5.6").build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5.6").build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5.7").build()))
+            .build();
+    // duplicates should be removed and only 2 uris returned
+    List<String> uriList = fhirTerminologyServiceWebClient.getUris(criteria);
+    assertThat(uriList.size(), equalTo(2));
+    assertThat(uriList.get(0), equalTo("/ValueSet/1.2.3.4.5.6/$expand?activeOnly=false"));
+    assertThat(uriList.get(1), equalTo("/ValueSet/1.2.3.4.5.7/$expand?activeOnly=false"));
   }
 }

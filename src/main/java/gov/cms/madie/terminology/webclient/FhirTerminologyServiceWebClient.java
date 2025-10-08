@@ -30,8 +30,7 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -140,6 +139,7 @@ public class FhirTerminologyServiceWebClient {
                         searchCriteria.getActiveOnly(),
                         searchCriteria.getManifestExpansion())
                     .toString())
+        .distinct()
         .collect(Collectors.toList());
   }
 
