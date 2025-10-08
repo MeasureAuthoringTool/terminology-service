@@ -140,6 +140,7 @@ public class FhirTerminologyServiceWebClient {
                         searchCriteria.getActiveOnly(),
                         searchCriteria.getManifestExpansion())
                     .toString())
+        .distinct()
         .collect(Collectors.toList());
   }
 
