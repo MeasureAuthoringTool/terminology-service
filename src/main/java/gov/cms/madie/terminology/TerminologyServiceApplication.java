@@ -31,6 +31,9 @@ public class TerminologyServiceApplication {
                 "https://dev-madie.hcqis.org",
                 "https://test-madie.hcqis.org",
                 "https://impl-madie.hcqis.org",
+		"https://dev.madie.internal.cms.gov",
+                "https://test.madie.internal.cms.gov",
+                "https://impl.madie.internal.cms.gov",
                 "https://madie.cms.gov");
       }
     };
