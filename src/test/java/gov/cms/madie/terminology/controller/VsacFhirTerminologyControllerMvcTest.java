@@ -101,7 +101,7 @@ class VsacFhirTerminologyControllerMvcTest {
     assertThat(
         content,
         containsString(
-            "[{\"fullUrl\":\"https://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\"id\":\"ecqm-update-4q2017-eh\"},{\"fullUrl\":\"https://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\"id\":\"mu2-update-2012-10-25\"}]"));
+            "[{\"fullUrl\":\"https://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\"id\":\"ecqm-update-4q2017-eh\",\"title\":null},{\"fullUrl\":\"https://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\"id\":\"mu2-update-2012-10-25\",\"title\":null}]"));
   }
 
   @Test

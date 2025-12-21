@@ -43,12 +43,15 @@ public class FhirTerminologyService {
     manifestBundle
         .getEntry()
         .forEach(
-            entry ->
-                manifestOptions.add(
-                    ManifestExpansion.builder()
-                        .id(entry.getResource().getIdPart())
-                        .fullUrl(entry.getFullUrl())
-                        .build()));
+            entry -> {
+              Library library = (Library) entry.getResource();
+              manifestOptions.add(
+                  ManifestExpansion.builder()
+                      .id(library.getIdPart())
+                      .fullUrl(entry.getFullUrl())
+                      .title(library.getTitle())
+                      .build());
+            });
     return manifestOptions;
   }
 
