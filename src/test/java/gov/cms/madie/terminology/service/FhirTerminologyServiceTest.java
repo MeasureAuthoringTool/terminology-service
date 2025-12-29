@@ -92,6 +92,7 @@ class FhirTerminologyServiceTest {
           + "                    },\n"
           + "                    \"url\": \"http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\n"
           + "                    \"version\": \"2017-09-15\",\n"
+          + "                    \"title\": \"Ecqm Update 4q2017 EH\",\n"
           + "                    \"status\": \"active\"\n"
           + "                  }\n"
           + "                },\n"
@@ -164,6 +165,7 @@ class FhirTerminologyServiceTest {
     assertEquals("ecqm-update-4q2017-eh", result.get(0).getId());
     assertEquals(
         "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh", result.get(0).getFullUrl());
+    assertEquals("Ecqm Update 4q2017 EH", result.get(0).getTitle());
     assertEquals("mu2-update-2012-10-25", result.get(1).getId());
     assertEquals(
         "http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25", result.get(1).getFullUrl());

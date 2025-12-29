@@ -30,7 +30,7 @@ client:
   default_profile: ${DEFAULT_VSAC_PROFILE:Most Recent Code System Versions in VSAC}
   fhir-terminology-service:
     base-url: ${FHIR_TERMINOLOGY_BASE_URL:https://cts.nlm.nih.gov/fhir}
-    manifests-urn: /Library
+    manifests-urn: /Library?_sort=-effective
     code-system-urn: /CodeSystem
     code-lookups: /CodeSystem/$lookup?system={fullUrl}&code={code}&version={version}
 
