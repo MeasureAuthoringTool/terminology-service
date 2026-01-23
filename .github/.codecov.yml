@@ -1,0 +1,11 @@
+coverage:
+  status:
+    project:
+      default:   # default is the status check's name, not default settings
+        target: 90%
+        threshold: 20%
+        base: auto
+        paths:
+          - "src"
+exclude:
+  - "src/main/java/generated.vsac.nlm.nih.gov/**"
