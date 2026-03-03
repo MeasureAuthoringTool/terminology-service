@@ -21,10 +21,20 @@ public class CodeSystem {
   private String fullUrl;
   private String title;
   private String name;
-  private String version;
-  private String qdmDisplayVersion; // match version HL7V3.0_2019-12 against fhir
+  private Version version;
   private String versionId;
   private String oid; // identifier[0].value oid of identifier List
   private Instant lastUpdated; // when queried
   private Date lastUpdatedUpstream; // when was resource last updated on vsac end
+  private boolean vsacSearchable;
+  private boolean isLatestVersion;
+  private boolean fhir;
+  private boolean qdm;
+
+  @Data
+  @Builder(toBuilder = true)
+  public static class Version {
+    private String fhirVersion;
+    private String vsacVersion;
+  }
 }
