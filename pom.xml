@@ -14,6 +14,7 @@
   <name>Terminology Service</name>
   <description>Terminology Service for MADiE</description>
   <properties>
+      <flamingock.version>1.1.0-rc.1</flamingock.version>
     <hapifhir.version>8.8.0</hapifhir.version>
     <java.version>16</java.version>
     <jxbmavenplugin.version>2.5.0</jxbmavenplugin.version>
@@ -32,6 +33,18 @@
     <okta.springboot.starter.version>3.0.7</okta.springboot.starter.version>
     <puppycrawl.checkstyle.version>10.1</puppycrawl.checkstyle.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.flamingock</groupId>
+        <artifactId>flamingock-community-bom</artifactId>
+        <version>${flamingock.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -110,6 +123,22 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-mongodb</artifactId>
+    </dependency>
+
+    <!-- Flamingock dependencies -->
+    <dependency>
+      <groupId>io.flamingock</groupId>
+      <artifactId>flamingock-community</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.flamingock</groupId>
+      <artifactId>flamingock-springboot-integration</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.flamingock</groupId>
+      <artifactId>flamingock-springboot-test-support</artifactId>
+      <version>${flamingock.version}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -309,6 +338,18 @@
         <configuration>
           <source>${maven.compiler.source}</source>
           <target>${maven.compiler.target}</target>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+            <path>
+              <groupId>io.flamingock</groupId>
+              <artifactId>flamingock-processor</artifactId>
+              <version>${flamingock.version}</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
 
@@ -348,7 +389,6 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
   <reporting>

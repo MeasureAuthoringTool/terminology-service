@@ -1,5 +1,7 @@
 package gov.cms.madie.terminology;
 
+import io.flamingock.api.annotations.EnableFlamingock;
+import io.flamingock.api.annotations.Stage;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
@@ -11,6 +13,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @SpringBootApplication
 @EnableCaching
 @EnableScheduling
+@EnableFlamingock(stages = @Stage(location = "gov.cms.madie.terminology.config.migrations"))
 public class TerminologyServiceApplication {
 
   public static void main(String[] args) {
