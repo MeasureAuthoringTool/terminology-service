@@ -342,44 +342,54 @@ public class FhirTerminologyService {
 
   public List<CodeSystem> getAllCodeSystems() {
     // remove items that are marked as not present in vsac to cut expense
-    List<CodeSystemEntry> codeSystemMappingEntries =
-        mappingService.getCodeSystemEntries().stream()
-            .filter(codeSystemEntry -> !codeSystemEntry.getOid().contains("NOT.IN.VSAC"))
+    //    List<CodeSystemEntry> codeSystemMappingEntries =
+    //        mappingService.getCodeSystemEntries().stream()
+    //            .filter(codeSystemEntry -> !codeSystemEntry.getOid().contains("NOT.IN.VSAC"))
+    //            .toList();
+    List<CodeSystem> codeSystems =
+        codeSystemRepository.findAll().stream()
+            .filter(
+                codeSystem ->
+                    codeSystem.getOid().contains("NOT.IN.VSAC") || codeSystem.isVsacSearchable())
             .toList();
-    List<CodeSystem> codeSystems = codeSystemRepository.findAll();
-    codeSystems.forEach(
-        codeSystem -> {
-          Optional<CodeSystemEntry> matchingEntry =
-              codeSystemMappingEntries.stream()
-                  .filter(entry -> entry.getOid().equals(codeSystem.getOid()))
-                  .findFirst();
-          if (matchingEntry.isPresent()) {
-            matchingEntry
-                .get()
-                .getVersions()
-                .forEach(
-                    version -> {
-                      // We use fhir url to interact with VSAC FHIR Term Service.
-                      // Goal here is to look for fhir version, then give users
-                      // viewing QDM measures a display version that looks like
-                      // svs vsac because that's what they expect.
-                      if (version.getFhir().equals(codeSystem.getVersion())
-                          && version.getVsac() != null) {
-                        codeSystem.setQdmDisplayVersion(version.getVsac());
-                        log.debug(
-                            "CodeSystem title {} , version: {} was found in mapping document",
-                            codeSystem.getTitle(),
-                            codeSystem.getVersion());
-                      }
-                    });
-          } else {
-            // it was not found, we log that it's not located within vsac.
-            log.debug(
-                "CodeSystem title {} , version: {} was NOT found in mapping document",
-                codeSystem.getTitle(),
-                codeSystem.getName());
-          }
-        });
+
+    // TODO: USCoreConditionCategoryExtensionCodes is retrieved from VSAC,
+    //  but the response does not include the oid and our logic excludes
+    //  it as a possible search target.
+
+    //    codeSystems.forEach(
+    //        codeSystem -> {
+    //          Optional<CodeSystemEntry> matchingEntry =
+    //              codeSystemMappingEntries.stream()
+    //                  .filter(entry -> entry.getOid().equals(codeSystem.getOid()))
+    //                  .findFirst();
+    //          if (matchingEntry.isPresent()) {
+    //            matchingEntry
+    //                .get()
+    //                .getVersions()
+    //                .forEach(
+    //                    version -> {
+    //                      // We use fhir url to interact with VSAC FHIR Term Service.
+    //                      // Goal here is to look for fhir version, then give users
+    //                      // viewing QDM measures a display version that looks like
+    //                      // svs vsac because that's what they expect.
+    //                      if (version.getFhir().equals(codeSystem.getVersion())
+    //                          && version.getVsac() != null) {
+    //                        codeSystem.setQdmDisplayVersion(version.getVsac());
+    //                        log.debug(
+    //                            "CodeSystem title {} , version: {} was found in mapping document",
+    //                            codeSystem.getTitle(),
+    //                            codeSystem.getVersion());
+    //                      }
+    //                    });
+    //          } else {
+    //            // it was not found, we log that it's not located within vsac.
+    //            log.debug(
+    //                "CodeSystem title {} , version: {} was NOT found in mapping document",
+    //                codeSystem.getTitle(),
+    //                codeSystem.getName());
+    //          }
+    //        });
     return codeSystems;
   }
 
@@ -399,12 +409,15 @@ public class FhirTerminologyService {
       return null;
     }
 
+    // I think this expects the CS to be in VSAC
     CodeSystem codeSystem =
         codeSystemRepository.findByNameAndVersion(codeSystemName, version).orElse(null);
     if (codeSystem == null) {
       return null;
     }
 
+    // Mapping document Code Systems may not be in VSAC. So, this method is constraining
+    // results to only those in VSAC by ensuring it has an oid.
     List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
     Optional<CodeSystemEntry.Version> codeSystemVersion =
         getCodeSystemEntryVersion(version, codeSystem.getOid(), codeSystemEntries);

@@ -58,65 +58,58 @@ class FhirTerminologyServiceTest {
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
   private final String mockManifestResource =
-      "{\n"
-          + "              \"resourceType\": \"Bundle\",\n"
-          + "              \"id\": \"library-search\",\n"
-          + "              \"meta\":\n"
-          + "              {\n"
-          + "                \"lastUpdated\": \"2024-03-14T14:04:52.456-04:00\"\n"
-          + "              },\n"
-          + "              \"type\": \"searchset\",\n"
-          + "              \"total\": 25,\n"
-          + "              \"link\":\n"
-          + "              [\n"
-          + "                {\n"
-          + "                  \"relation\": \"self\",\n"
-          + "                  \"url\": \"https://uat-cts.nlm.nih.gov/fhir/Library\"\n"
-          + "                }\n"
-          + "              ],\n"
-          + "              \"entry\":\n"
-          + "              [\n"
-          + "                {\n"
-          + "                  \"fullUrl\": \"http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\n"
-          + "                  \"resource\":\n"
-          + "                  {\n"
-          + "                    \"resourceType\": \"Library\",\n"
-          + "                    \"id\": \"ecqm-update-4q2017-eh\",\n"
-          + "                    \"meta\":\n"
-          + "                    {\n"
-          + "                      \"profile\":\n"
-          + "                      [\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm\",\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm\"\n"
-          + "                      ]\n"
-          + "                    },\n"
-          + "                    \"url\": \"http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\n"
-          + "                    \"version\": \"2017-09-15\",\n"
-          + "                    \"title\": \"Ecqm Update 4q2017 EH\",\n"
-          + "                    \"status\": \"active\"\n"
-          + "                  }\n"
-          + "                },\n"
-          + "                {\n"
-          + "                  \"fullUrl\": \"http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\n"
-          + "                  \"resource\":\n"
-          + "                  {\n"
-          + "                    \"resourceType\": \"Library\",\n"
-          + "                    \"id\": \"mu2-update-2012-10-25\",\n"
-          + "                    \"meta\":\n"
-          + "                    {\n"
-          + "                      \"profile\":\n"
-          + "                      [\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm\",\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm\"\n"
-          + "                      ]\n"
-          + "                    },\n"
-          + "                    \"url\": \"http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\n"
-          + "                    \"version\": \"2012-10-25\",\n"
-          + "                    \"status\": \"active\"\n"
-          + "                  }\n"
-          + "                }\n"
-          + "              ]\n"
-          + "            }";
+      """
+      {
+        "resourceType": "Bundle",
+        "id": "library-search",
+        "meta": {
+          "lastUpdated": "2024-03-14T14:04:52.456-04:00"
+        },
+        "type": "searchset",
+        "total": 25,
+        "link": [
+          {
+            "relation": "self",
+            "url": "https://uat-cts.nlm.nih.gov/fhir/Library"
+          }
+        ],
+        "entry": [
+          {
+            "fullUrl": "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh",
+            "resource": {
+              "resourceType": "Library",
+              "id": "ecqm-update-4q2017-eh",
+              "meta": {
+                "profile": [
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm",
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm"
+                ]
+              },
+              "url": "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh",
+              "version": "2017-09-15",
+              "title": "Ecqm Update 4q2017 EH",
+              "status": "active"
+            }
+          },
+          {
+            "fullUrl": "http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25",
+            "resource": {
+              "resourceType": "Library",
+              "id": "mu2-update-2012-10-25",
+              "meta": {
+                "profile": [
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm",
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm"
+                ]
+              },
+              "url": "http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25",
+              "version": "2012-10-25",
+              "status": "active"
+            }
+          }
+        ]
+      }
+      """;
   private final String mockCodeSystemsResource =
       "{\"resourceType\":\"Bundle\",\"id\":\"codesystem-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},\"type\":\"searchset\",\"total\":831,\"link\":[{\"relation\":\"self\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=500&_count=2\"},{\"relation\":\"first\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=2\"},{\"relation\":\"previous\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=498&_count=2\"},{\"relation\":\"last\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=829&_count=2\"}],\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-04-15T00:00:00-04:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}},{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1305437570\",\"lastUpdated\":\"2020-01-16T00:00:00.000-05:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-12-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-12-27T00:00:00-05:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}}]}";
 
