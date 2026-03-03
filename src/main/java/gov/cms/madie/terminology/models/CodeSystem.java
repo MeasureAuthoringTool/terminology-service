@@ -27,4 +27,8 @@ public class CodeSystem {
   private String oid; // identifier[0].value oid of identifier List
   private Instant lastUpdated; // when queried
   private Date lastUpdatedUpstream; // when was resource last updated on vsac end
+  private boolean fhir;
+  private boolean qdm;
+  private boolean vsacSearchable;
+  private boolean isLatestVersion;
 }
