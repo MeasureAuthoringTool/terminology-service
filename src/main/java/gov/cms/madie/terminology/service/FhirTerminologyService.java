@@ -497,28 +497,29 @@ public class FhirTerminologyService {
               Optional<CodeSystem> codeSystemVersion =
                   getCodeSystemVersion(codeDetails.get("version"), oid, codeSystems);
 
-              if(codeSystemVersion.isEmpty()
-                || StringUtils.isEmpty(codeName)
-                || StringUtils.isEmpty(codeSystemName)
-                || StringUtils.isEmpty(codeSystemVersion.get().getVersion().getFhirVersion())) {
+              if (codeSystemVersion.isEmpty()
+                  || StringUtils.isEmpty(codeName)
+                  || StringUtils.isEmpty(codeSystemName)
+                  || StringUtils.isEmpty(codeSystemVersion.get().getVersion().getFhirVersion())) {
                 return null;
               }
 
               Code code =
                   retrieveCodes(
-                    codeName,
-                    codeSystemName,
-                    codeSystemVersion.get().getVersion().getVsacVersion(),
-                    codeSystemVersion.get().getVersion().getFhirVersion(),
-                    codeSystemVersion.get(),
-                    apiKey);
+                      codeName,
+                      codeSystemName,
+                      codeSystemVersion.get().getVersion().getVsacVersion(),
+                      codeSystemVersion.get().getVersion().getFhirVersion(),
+                      codeSystemVersion.get(),
+                      apiKey);
               code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
               return code;
             })
         .collect(Collectors.toList());
   }
 
-  private Optional<CodeSystem> getCodeSystemVersion(String version, String oid, List<CodeSystem> codeSystems) {
+  private Optional<CodeSystem> getCodeSystemVersion(
+      String version, String oid, List<CodeSystem> codeSystems) {
     if (oid == null) {
       return Optional.empty();
     }
@@ -542,7 +543,8 @@ public class FhirTerminologyService {
               .filter(
                   codeSystemVersion ->
                       StringUtils.equals(codeSystemVersion.getVersion().getVsacVersion(), version)
-                          || StringUtils.equals(codeSystemVersion.getVersion().getFhirVersion(), version))
+                          || StringUtils.equals(
+                              codeSystemVersion.getVersion().getFhirVersion(), version))
               .findFirst();
     }
 
