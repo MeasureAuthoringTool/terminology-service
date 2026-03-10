@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
-import io.flamingock.api.annotations.Apply;
-import io.flamingock.api.annotations.Change;
-import io.flamingock.api.annotations.Rollback;
-import io.flamingock.api.annotations.TargetSystem;
+import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
+import io.mongock.api.annotations.ChangeUnit;
+import io.mongock.api.annotations.Execution;
+import io.mongock.api.annotations.RollbackExecution;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -17,15 +17,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-@TargetSystem(id = "terminology")
-@Change(id = "load-code-system-mapping-from-doc", author = "madie-dev", transactional = false)
+@ChangeUnit(id = "load-code-system-mapping-from-doc", order = "1", author = "madie-dev")
 @Slf4j
-public class _0001__LoadCodeSystemMappingData {
+public class LoadCodeSystemMappingData {
 
   private final String CODE_SYSTEM_ENTRY_FILE_PATH = "src/main/resources/code-system-entry.json";
   private final List<CodeSystem> originalCodeSystems = new ArrayList<>();
 
-  @Apply
+  @Execution
   public void apply(
       MongoTemplate mongoTemplate,
       CodeSystemRepository codeSystemRepository,
@@ -104,7 +103,7 @@ public class _0001__LoadCodeSystemMappingData {
     }
   }
 
-  @Rollback
+  @RollbackExecution
   public void rollback(MongoTemplate mongoTemplate, CodeSystemRepository codeSystemRepository) {
     if (CollectionUtils.isEmpty(originalCodeSystems)) {
       log.warn("No original code systems found for rollback. Skipping rollback.");
