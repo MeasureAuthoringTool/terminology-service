@@ -568,8 +568,6 @@ class FhirTerminologyServiceTest {
             .build();
 
     when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
-    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
-        .thenReturn(Optional.ofNullable(codeSystem));
     when(fhirTerminologyServiceWebClient.getCodeResource(anyString(), any(), any()))
         .thenReturn(codeJson);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());

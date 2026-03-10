@@ -493,48 +493,40 @@ public class FhirTerminologyService {
                       ? codeDetails.get("oid").replaceAll("'|'", "")
                       : null;
 
-              Optional<CodeSystem.Version> codeSystemVersion =
-                  getCodeSystemVersion(codeDetails.get("version"), oid);
+              List<CodeSystem> codeSystems = codeSystemRepository.findAllByOid(oid);
+              Optional<CodeSystem> codeSystemVersion =
+                  getCodeSystemVersion(codeDetails.get("version"), oid, codeSystems);
 
-              if (codeSystemVersion.isPresent()) {
-                String vsacVersion = codeSystemVersion.get().getVsacVersion();
-                String fhirVersion = codeSystemVersion.get().getFhirVersion();
-
-                if (StringUtils.isEmpty(codeName)
-                    || StringUtils.isEmpty(codeSystemName)
-                    || StringUtils.isEmpty(fhirVersion)) {
-                  return null;
-                }
-
-                CodeSystem codeSystem =
-                    codeSystemRepository
-                        .findByOidAndVersionFhirVersion(oid, fhirVersion)
-                        .orElse(null);
-                if (codeSystem == null) {
-                  return null;
-                }
-
-                Code code =
-                    retrieveCodes(
-                        codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
-                code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
-                return code;
+              if(codeSystemVersion.isEmpty()
+                || StringUtils.isEmpty(codeName)
+                || StringUtils.isEmpty(codeSystemName)
+                || StringUtils.isEmpty(codeSystemVersion.get().getVersion().getFhirVersion())) {
+                return null;
               }
-              return null;
+
+              Code code =
+                  retrieveCodes(
+                    codeName,
+                    codeSystemName,
+                    codeSystemVersion.get().getVersion().getVsacVersion(),
+                    codeSystemVersion.get().getVersion().getFhirVersion(),
+                    codeSystemVersion.get(),
+                    apiKey);
+              code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
+              return code;
             })
         .collect(Collectors.toList());
   }
 
-  private Optional<CodeSystem.Version> getCodeSystemVersion(String version, String oid) {
+  private Optional<CodeSystem> getCodeSystemVersion(String version, String oid, List<CodeSystem> codeSystems) {
     if (oid == null) {
       return Optional.empty();
     }
 
-    List<CodeSystem> codeSystems = codeSystemRepository.findAllByOid(oid);
     if (CollectionUtils.isEmpty(codeSystems)) {
       return Optional.empty();
     }
-    Optional<CodeSystem.Version> result;
+    Optional<CodeSystem> result;
     if (version == null) {
       result =
           codeSystems.stream()
@@ -542,18 +534,15 @@ public class FhirTerminologyService {
                   codeSystemEntry ->
                       StringUtils.equals(codeSystemEntry.getOid(), oid)
                           && codeSystemEntry.isLatestVersion())
-              .map(CodeSystem::getVersion)
               .findFirst();
     } else {
       result =
           codeSystems.stream()
               .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
-              .map(CodeSystem::getVersion)
-              // depending on the version type suitable mapping is done
               .filter(
                   codeSystemVersion ->
-                      StringUtils.equals(codeSystemVersion.getVsacVersion(), version)
-                          || StringUtils.equals(codeSystemVersion.getFhirVersion(), version))
+                      StringUtils.equals(codeSystemVersion.getVersion().getVsacVersion(), version)
+                          || StringUtils.equals(codeSystemVersion.getVersion().getFhirVersion(), version))
               .findFirst();
     }
 
