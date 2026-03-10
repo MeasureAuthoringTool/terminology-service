@@ -28,76 +28,68 @@ public class LoadCodeSystemMappingData {
   public void apply(
       MongoTemplate mongoTemplate,
       CodeSystemRepository codeSystemRepository,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      UpdateCodeSystemTask updateCodeSystemTask) {
+
+    // Drop the existing codeSystem collection to allow for model changes.
+    mongoTemplate.dropCollection("codeSystem");
+
+    // Run the Code System refresh task to update the existing CS entries with the updated model.
+    updateCodeSystemTask.updateCodeSystems();
+
     List<CodeSystem> codeSystems = codeSystemRepository.findAll();
 
     // Store a copy of the original code system for potential rollback
     codeSystems.forEach(
         codeSystem -> {
-          // Builder is sufficient since all fields in CodeSystem are either primitives
-          // or immutable objects (String, boolean, etc.)
+          // Duplication with Builder is sufficient since all fields in CodeSystem
+          // are either primitives or immutable (String, boolean, etc.)
           originalCodeSystems.add(codeSystem.toBuilder().build());
         });
-
-    // All existing documents are FHIR Value Sets, set fhir to true.
-    codeSystems.forEach(codeSystem -> codeSystem.setFhir(true));
-    codeSystemRepository.saveAll(codeSystems);
 
     List<CodeSystemEntry> codeSystemEntries = deserializeFromFile(objectMapper);
 
     for (CodeSystemEntry entry : codeSystemEntries) {
-      boolean isLastestVersion = true;
+      boolean isLastestVersion = true; // First version in the list is the latest.
       for (CodeSystemEntry.Version version : entry.getVersions()) {
-        Optional<CodeSystem> newFhirCodeSystem = Optional.empty();
-        Optional<CodeSystem> newQdmCodeSystem = Optional.empty();
-        Optional<CodeSystem> existingCodeSystem = Optional.empty();
+        Optional<CodeSystem> newCsVersion = Optional.empty();
+        Optional<CodeSystem> existingCsVersion = Optional.empty();
 
-        // FHIR Version
+        // If FHIR, check for existing Code System.
         if (StringUtils.isNotBlank(version.getFhir())) {
-          // Update Existing Code System if FHIR version matches any existing.
-          // Assumption: Code Systems already in the DB are searchable in VSAC.
-          existingCodeSystem =
+          // Update Existing Code System if FHIR version matches any existing CS.
+          existingCsVersion =
               codeSystems.stream()
                   .filter(
                       cs ->
                           Objects.equals(cs.getFullUrl(), entry.getUrl())
-                              && Objects.equals(cs.getVersion().getFhirVersion(), version.getFhir()))
+                              && Objects.equals(
+                                  cs.getVersion().getFhirVersion(), version.getFhir()))
                   .findFirst();
-          // Add new Code System if FHIR version does not match any existing.
-          if (existingCodeSystem.isEmpty()) {
-            newFhirCodeSystem = Optional.of(new CodeSystem());
-            // ID is a composite of Title and Version, but the mapping document
-            // does not store the title, so using name instead.
-            newFhirCodeSystem.get().setId(entry.getName() + version.getFhir());
-            newFhirCodeSystem.get().setOid(entry.getOid());
-            newFhirCodeSystem.get().setName(entry.getName());
-            newFhirCodeSystem.get().setFullUrl(entry.getUrl());
-            newFhirCodeSystem.get().setFhir(true);
-            newFhirCodeSystem.get().setLatestVersion(isLastestVersion);
-            newFhirCodeSystem.get().setVersion(CodeSystem.Version.builder().fhirVersion(version.getFhir()).vsacVersion(version.getVsac()).build());
-          } else {
-            existingCodeSystem.get().setLatestVersion(isLastestVersion);
-            existingCodeSystem.get().setVsacSearchable(true);
+          if (existingCsVersion.isPresent()) {
+            existingCsVersion.get().setLatestVersion(isLastestVersion);
+            existingCsVersion.get().getVersion().setVsacVersion(version.getVsac());
           }
         }
 
-        // QDM Only Version
-        if (StringUtils.isNotBlank(version.getVsac())
-            && existingCodeSystem.isEmpty()
-            && newFhirCodeSystem.isEmpty()) {
-          newQdmCodeSystem = Optional.of(new CodeSystem());
-          newQdmCodeSystem.get().setId(entry.getName() + version.getVsac());
-          newQdmCodeSystem.get().setOid(entry.getOid());
-          newQdmCodeSystem.get().setName(entry.getName());
-          newQdmCodeSystem.get().setVersion(CodeSystem.Version.builder().vsacVersion(version.getVsac()).build());
-          newQdmCodeSystem.get().setQdm(true);
-          newQdmCodeSystem.get().setVsacSearchable(true);
-          newQdmCodeSystem.get().setLatestVersion(isLastestVersion);
+        // New Code System
+        if (existingCsVersion.isEmpty()) {
+          newCsVersion = Optional.of(new CodeSystem());
+          newCsVersion.get().setOid(entry.getOid());
+          newCsVersion.get().setName(entry.getName());
+          newCsVersion.get().setFullUrl(entry.getUrl());
+          newCsVersion.get().setLatestVersion(isLastestVersion);
+          newCsVersion
+              .get()
+              .setVersion(
+                  CodeSystem.Version.builder()
+                      .fhirVersion(version.getFhir())
+                      .vsacVersion(version.getVsac())
+                      .build());
         }
 
-        existingCodeSystem.ifPresent(codeSystemRepository::save);
-        newFhirCodeSystem.ifPresent(codeSystemRepository::save);
-        newQdmCodeSystem.ifPresent(codeSystemRepository::save);
+        existingCsVersion.ifPresent(codeSystemRepository::save);
+        newCsVersion.ifPresent(codeSystemRepository::save);
         isLastestVersion = false; // First version in the list is the latest.
       }
     }

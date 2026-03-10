@@ -1,18 +1,11 @@
 package gov.cms.madie.terminology.mapper;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.List;
-import java.util.Map;
-
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
-
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList;
+import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList.Concept;
+import gov.cms.madie.models.mapping.CodeSystemEntry;
+import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
@@ -24,19 +17,19 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList;
-import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList.Concept;
-import gov.cms.madie.models.mapping.CodeSystemEntry;
-import gov.cms.madie.terminology.service.MappingService;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
 public class VsacToFhirValueSetMapperTest {
 
   @InjectMocks private VsacToFhirValueSetMapper mapper;
 
-  @Mock MappingService mappingService;
+  @Mock CodeSystemRepository codeSystemRepository;
 
   private DescribedValueSet describedValueSet;
   private static final String TEST_ID = "testId";
@@ -133,15 +126,15 @@ public class VsacToFhirValueSetMapperTest {
 
     vs = mapper.setFhirMainAttributes(vs, describedValueSet, TEST);
 
-    assertEquals(vs.getId(), TEST_ID);
-    assertEquals(vs.getName(), TEST);
-    assertEquals(vs.getTitle(), TEST);
-    assertEquals(vs.getVersion(), TEST);
-    assertEquals(vs.getStatus().getDisplay(), "Active");
-    assertEquals(vs.getPublisher(), TEST);
-    assertEquals(vs.getDescription(), TEST);
-    assertEquals(vs.getPurpose(), TEST);
-    assertEquals(vs.getDate(), today);
+    assertEquals(TEST_ID, vs.getId());
+    assertEquals(TEST, vs.getName());
+    assertEquals(TEST, vs.getTitle());
+    assertEquals(TEST, vs.getVersion());
+    assertEquals("Active", vs.getStatus().getDisplay());
+    assertEquals(TEST, vs.getPublisher());
+    assertEquals(TEST, vs.getDescription());
+    assertEquals(TEST, vs.getPurpose());
+    assertEquals(today, vs.getDate());
   }
 
   @Test
@@ -164,17 +157,17 @@ public class VsacToFhirValueSetMapperTest {
   public void testGetVsacConceptListByCode() {
     List<Concept> result =
         mapper.getVsacConceptListByCode("2.16.840.1.113883.6.96", vsacConceptList);
-    assertEquals(result.size(), 3);
+    assertEquals(3, result.size());
     result = mapper.getVsacConceptListByCode("2.16.840.1.113883.6.12", vsacConceptList);
-    assertEquals(result.size(), 2);
+    assertEquals(2, result.size());
     result = mapper.getVsacConceptListByCode(TEST, vsacConceptList);
-    assertEquals(result.size(), 0);
+    assertEquals(0, result.size());
   }
 
   @Test
   public void testGetVsacVersionMap() {
     Map<String, String> vsacVersionMap = mapper.getVsacVersionMap(vsacConceptList);
-    assertEquals(vsacVersionMap.size(), 2);
+    assertEquals(2, vsacVersionMap.size());
   }
 
   @Test
@@ -182,38 +175,38 @@ public class VsacToFhirValueSetMapperTest {
     List<Concept> conceptListByCodeAndVersion =
         mapper.getVsacConceptListByCodeAndVersion(
             "2.16.840.1.113883.6.96", "2022-03", vsacConceptList);
-    assertEquals(conceptListByCodeAndVersion.size(), 3);
+    assertEquals(3, conceptListByCodeAndVersion.size());
 
     conceptListByCodeAndVersion =
         mapper.getVsacConceptListByCodeAndVersion(
             "2.16.840.1.113883.6.12", "2021", vsacConceptList);
-    assertEquals(conceptListByCodeAndVersion.size(), 2);
+    assertEquals(2, conceptListByCodeAndVersion.size());
 
     conceptListByCodeAndVersion =
         mapper.getVsacConceptListByCodeAndVersion(
             "2.16.840.1.113883.6.12", "2022-03", vsacConceptList);
-    assertEquals(conceptListByCodeAndVersion.size(), 0);
+    assertEquals(0, conceptListByCodeAndVersion.size());
   }
 
   @Test
   public void testGetConceptMapByCodeAndVersion() {
     Map<String, List<Concept>> conceptListMap =
         mapper.getConceptMapByCodeAndVersion(vsacConceptList);
-    assertEquals(conceptListMap.size(), 2);
+    assertEquals(2, conceptListMap.size());
   }
 
   @Test
   public void testCreateFhirConceptSetComponent() {
     ConceptReferenceComponent result = mapper.createFhirConceptSetComponent(vsacConcept1);
-    assertEquals(result.getCode(), "185460008");
-    assertEquals(result.getDisplay(), "Home visit request by patient (procedure)");
+    assertEquals("185460008", result.getCode());
+    assertEquals("Home visit request by patient (procedure)", result.getDisplay());
   }
 
   @Test
   public void testCreateFhirConceptReferenceComponents() {
     List<ConceptReferenceComponent> result =
         mapper.createFhirConceptReferenceComponents(vsacConceptList);
-    assertEquals(result.size(), 5);
+    assertEquals(5, result.size());
   }
 
   @Test
@@ -228,7 +221,7 @@ public class VsacToFhirValueSetMapperTest {
 
     mapper.createFhirConceptSetComponents(conceptListMap, fhirValueSetComposeComponent);
 
-    assertEquals(fhirValueSet.getCompose().getInclude().size(), 2);
+    assertEquals(2, fhirValueSet.getCompose().getInclude().size());
   }
 
   @Test
@@ -237,7 +230,7 @@ public class VsacToFhirValueSetMapperTest {
 
     mapper.addFhirValueSetComposeComponent(vsacConceptList, fhirValueSet);
 
-    assertEquals(fhirValueSet.getCompose().getInclude().size(), 2);
+    assertEquals(2, fhirValueSet.getCompose().getInclude().size());
   }
 
   @Test
@@ -256,17 +249,17 @@ public class VsacToFhirValueSetMapperTest {
 
     ValueSet fhirValueSet = mapper.convertToFHIRValueSet(vsacValuesetResponse);
 
-    assertEquals(fhirValueSet.getId(), TEST_ID);
-    assertEquals(fhirValueSet.getName(), TEST);
-    assertEquals(fhirValueSet.getTitle(), TEST);
-    assertEquals(fhirValueSet.getVersion(), TEST);
-    assertEquals(fhirValueSet.getStatus().getDisplay(), "Active");
-    assertEquals(fhirValueSet.getPublisher(), TEST);
-    assertEquals(fhirValueSet.getDescription(), TEST);
-    assertEquals(fhirValueSet.getPurpose(), TEST);
+    assertEquals(TEST_ID, fhirValueSet.getId());
+    assertEquals(TEST, fhirValueSet.getName());
+    assertEquals(TEST, fhirValueSet.getTitle());
+    assertEquals(TEST, fhirValueSet.getVersion());
+    assertEquals("Active", fhirValueSet.getStatus().getDisplay());
+    assertEquals(TEST, fhirValueSet.getPublisher());
+    assertEquals(TEST, fhirValueSet.getDescription());
+    assertEquals(TEST, fhirValueSet.getPurpose());
     assertEquals(fhirValueSet.getDate(), today);
 
-    assertEquals(fhirValueSet.getCompose().getInclude().size(), 2);
+    assertEquals(2, fhirValueSet.getCompose().getInclude().size());
   }
 
   private Concept getVsacConcept(
@@ -282,36 +275,5 @@ public class VsacToFhirValueSetMapperTest {
     vsacConcept.setCodeSystemVersion(codeSystemVersion);
     vsacConcept.setDisplayName(displayName);
     return vsacConcept;
-  }
-
-  @Test
-  public void testGetUrlByOidFOUND() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-
-    String url = mapper.getUrlByOid(TEST_OID);
-
-    assertEquals(url, TEST_URL);
-  }
-
-  @Test
-  public void testGetUrlByOidNOTFOUND() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-
-    String url = mapper.getUrlByOid(TEST);
-
-    assertEquals(url, TEST);
-  }
-
-  @Test
-  public void testGetUrlByOidWithSimilarMatches() {
-    CodeSystemEntry substringOid =
-        CodeSystemEntry.builder().name(TEST).oid(TEST_OID).url(TEST_URL).build();
-    CodeSystemEntry fullOid =
-        CodeSystemEntry.builder().oid(TEST_OID + "1").url(TEST_URL + "/1").name(TEST + "1").build();
-    List<CodeSystemEntry> codeSystemList = List.of(fullOid, substringOid);
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemList);
-
-    String url = mapper.getUrlByOid(TEST_OID);
-    assertEquals(TEST_URL, url);
   }
 }

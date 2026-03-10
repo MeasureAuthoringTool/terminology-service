@@ -1,20 +1,19 @@
 package gov.cms.madie.terminology.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okta.commons.lang.Collections;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madie.models.cql.terminology.CqlCode;
 import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.cql.terminology.VsacCode.VsacError;
-import gov.cms.madie.models.mapping.CodeSystemEntry;
 
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.helpers.TestHelpers;
+import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
+import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.repositories.UmlsUserRepository;
 import gov.cms.madie.terminology.webclient.TerminologyServiceWebClient;
 
@@ -52,7 +51,7 @@ class VsacServiceTest {
 
   @Mock TerminologyServiceWebClient terminologyServiceWebClient;
 
-  @Mock MappingService mappingService;
+  @Mock CodeSystemRepository codeSystemRepository;
 
   @Mock UmlsUserRepository umlsUserRepository;
 
@@ -60,7 +59,7 @@ class VsacServiceTest {
 
   List<CqlCode> cqlCodes;
   VsacCode vsacCode;
-  List<CodeSystemEntry> codeSystemEntries;
+  List<CodeSystem> codeSystems;
   private ValueSetsSearchCriteria valueSetsSearchCriteria;
   private RetrieveMultipleValueSetsResponse svsValueSet;
   private UmlsUser umlsUser;
@@ -89,18 +88,15 @@ class VsacServiceTest {
     vsacCode.setMessage("This is a valid code");
     vsacCode.setStatus("ok");
 
-    codeSystemEntries = new ArrayList<>();
-    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2.3");
-    version.setFhir("2.3");
-    var codeSystemEntry =
-        CodeSystemEntry.builder()
+    codeSystems = new ArrayList<>();
+    var codeSystem =
+        CodeSystem.builder()
             .name("ActPriority")
             .oid("urn:oid:1.2.3.4.5.6.7.8.9")
-            .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
-            .versions(Collections.toList(version))
+            .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .version(CodeSystem.Version.builder().vsacVersion("2.3").fhirVersion("2.3").build())
             .build();
-    codeSystemEntries.add(codeSystemEntry);
+    codeSystems.add(codeSystem);
 
     File file = TestHelpers.getTestResourceFile("/value-sets/svs_office_visit.xml");
     JAXBContext jaxbContext = JAXBContext.newInstance(RetrieveMultipleValueSetsResponse.class);
@@ -121,7 +117,7 @@ class VsacServiceTest {
 
   @Test
   void testAValidCodeFromVsac() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
         .thenReturn(vsacCode);
@@ -131,7 +127,7 @@ class VsacServiceTest {
 
   @Test
   void testCodeSystemNotFoundFromVsac() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -148,7 +144,7 @@ class VsacServiceTest {
 
   @Test
   void testCodeSystemVersionNotFoundFromVsac() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -165,7 +161,7 @@ class VsacServiceTest {
 
   @Test
   void testCodeNotFoundFromVsac() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -182,7 +178,7 @@ class VsacServiceTest {
 
   @Test
   void testVsacCommunicationError() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
     VsacCode badRequest = new VsacCode();
     badRequest.setStatus(
         "400"); // VSAC's response to using the updated Basic Authn scheme on code validation.
@@ -196,14 +192,12 @@ class VsacServiceTest {
 
   @Test
   void testIfCqlCodesListIsEmpty() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<CqlCode> result = vsacService.validateCodes(new ArrayList<>(), umlsUser, FHIR_MODEL);
     assertEquals(0, result.size());
   }
 
   @Test
   void testIfCqlCodeDoesNotContainOid() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     cqlCodes.get(0).getCodeSystem().setOid(null);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
@@ -212,8 +206,7 @@ class VsacServiceTest {
 
   @Test
   void testIfThereIsNoAssociatedCodeSystemEntry() {
-    codeSystemEntries.get(0).setUrl("test-Url");
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of());
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals("Invalid Code system", result.get(0).getCodeSystem().getErrorMessage());
@@ -221,8 +214,14 @@ class VsacServiceTest {
 
   @Test
   void testIfCodeSystemIsNotInVsac() {
-    codeSystemEntries.get(0).setOid("NOT.IN.VSAC");
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    var notInVsacCodeSystem =
+        CodeSystem.builder()
+            .name("ActPriority")
+            .oid("NOT.IN.VSAC")
+            .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .version(CodeSystem.Version.builder().vsacVersion("2.3").fhirVersion("2.3").build())
+            .build();
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(notInVsacCodeSystem));
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertTrue(result.get(0).isValid());
   }
@@ -230,7 +229,7 @@ class VsacServiceTest {
   @Test
   void testIfCodeIdIsNotProvided() {
     cqlCodes.get(0).setCodeId(null);
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).isValid());
     assertEquals("Code Id is required", result.get(0).getErrorMessage());
@@ -239,8 +238,14 @@ class VsacServiceTest {
   @Test
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsNotProvided() {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
-    codeSystemEntries.get(0).setVersions(null);
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    var codeSystemNoVersion =
+        CodeSystem.builder()
+            .name("ActPriority")
+            .oid("urn:oid:1.2.3.4.5.6.7.8.9")
+            .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .version(null)
+            .build();
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystemNoVersion));
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals(
@@ -250,8 +255,14 @@ class VsacServiceTest {
   @Test
   void testIfCodeSystemEntryHasAKnownVersionButTheVsacValueIsNull() {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
-    codeSystemEntries.get(0).getVersions().get(0).setVsac(null);
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    var codeSystemNullVsac =
+        CodeSystem.builder()
+            .name("ActPriority")
+            .oid("urn:oid:1.2.3.4.5.6.7.8.9")
+            .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .version(CodeSystem.Version.builder().fhirVersion("2.3").vsacVersion(null).build())
+            .build();
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystemNullVsac));
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals(
@@ -260,8 +271,14 @@ class VsacServiceTest {
 
   @Test
   void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsProvided() {
-    codeSystemEntries.get(0).setVersions(null);
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    var codeSystemNoVersion =
+        CodeSystem.builder()
+            .name("ActPriority")
+            .oid("urn:oid:1.2.3.4.5.6.7.8.9")
+            .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .version(null)
+            .build();
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystemNoVersion));
 
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
@@ -287,7 +304,7 @@ class VsacServiceTest {
   }
 
   @Test
-  public void testVersionMapping() throws JsonProcessingException {
+  public void testVersionMapping() {
     CqlCode snomedCode =
         CqlCode.builder()
             .name("37687000")
@@ -300,21 +317,18 @@ class VsacServiceTest {
                     .build())
             .build();
 
-    String snomedMapping =
-        "{"
-            + "\"oid\": \"urn:oid:2.16.840.1.113883.6.96\","
-            + "\"url\": \"http://snomed.info/sct\","
-            + "\"name\": \"SNOMEDCT\","
-            + "\"versions\": ["
-            + "  {"
-            + "    \"vsac\": \"2022-03\","
-            + "        \"fhir\": \"http://snomed.info/sct/731000124108/version/20220301\""
-            + "  }"
-            + "]"
-            + "}";
-    ObjectMapper objectMapper = new ObjectMapper();
-    CodeSystemEntry snomedCsEntry = objectMapper.readValue(snomedMapping, CodeSystemEntry.class);
-    when(mappingService.getCodeSystemEntries()).thenReturn(List.of(snomedCsEntry));
+    var snomedCodeSystem =
+        CodeSystem.builder()
+            .name("SNOMEDCT")
+            .oid("urn:oid:2.16.840.1.113883.6.96")
+            .fullUrl("http://snomed.info/sct")
+            .version(
+                CodeSystem.Version.builder()
+                    .vsacVersion("2022-03")
+                    .fhirVersion("http://snomed.info/sct/731000124108/version/20220301")
+                    .build())
+            .build();
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(snomedCodeSystem));
 
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
@@ -357,7 +371,7 @@ class VsacServiceTest {
   }
 
   @Test
-  public void testValidateCodesForQDMFormat() throws JsonProcessingException {
+  public void testValidateCodesForQDMFormat() {
     CqlCode snomedCode =
         CqlCode.builder()
             .name("37687000")
@@ -370,21 +384,18 @@ class VsacServiceTest {
                     .build())
             .build();
 
-    String snomedMapping =
-        "{"
-            + "\"oid\": \"urn:oid:2.16.840.1.113883.6.96\","
-            + "\"url\": \"http://snomed.info/sct\","
-            + "\"name\": \"SNOMEDCT\","
-            + "\"versions\": ["
-            + "  {"
-            + "    \"vsac\": \"2022-03\","
-            + "        \"fhir\": \"http://snomed.info/sct/731000124108/version/20220301\""
-            + "  }"
-            + "]"
-            + "}";
-    ObjectMapper objectMapper = new ObjectMapper();
-    CodeSystemEntry snomedCsEntry = objectMapper.readValue(snomedMapping, CodeSystemEntry.class);
-    when(mappingService.getCodeSystemEntries()).thenReturn(List.of(snomedCsEntry));
+    var snomedCodeSystem =
+        CodeSystem.builder()
+            .name("SNOMEDCT")
+            .oid("urn:oid:2.16.840.1.113883.6.96")
+            .fullUrl("http://snomed.info/sct")
+            .version(
+                CodeSystem.Version.builder()
+                    .vsacVersion("2022-03")
+                    .fhirVersion("http://snomed.info/sct/731000124108/version/20220301")
+                    .build())
+            .build();
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(snomedCodeSystem));
 
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
@@ -422,7 +433,7 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeSystemMappingAbsent() {
-    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(null);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of());
     assertThat(
         vsacService.getCodeStatus(
             Code.builder().codeSystemOid("oid").fhirVersion("version").build(), TEST_API_KEY),
@@ -431,18 +442,16 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeSystemNotInSvs() {
-    var cse = CodeSystemEntry.builder().oid("NOT.IN.VSAC1").build();
-    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
     assertThat(
         vsacService.getCodeStatus(
-            Code.builder().codeSystemOid("oid").fhirVersion("version").build(), TEST_API_KEY),
+            Code.builder().codeSystemOid("NOT.IN.VSAC1").fhirVersion("version").build(),
+            TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
   }
 
   @Test
   void testGetCodeStatusIfCodeSystemVersionEmpty() {
-    var cse = CodeSystemEntry.builder().oid("1.1.1.1").versions(List.of()).build();
-    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of());
     assertThat(
         vsacService.getCodeStatus(Code.builder().codeSystemOid("oid").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
@@ -450,11 +459,16 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeSystemVersionForVsacIsNull() {
-    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac(null);
-    version.setFhir("https://fhir-version");
-    var cse = CodeSystemEntry.builder().oid("1.1.1.1").versions(List.of(version)).build();
-    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
+    var codeSystem =
+        CodeSystem.builder()
+            .oid("1.1.1.1")
+            .version(
+                CodeSystem.Version.builder()
+                    .fhirVersion("https://fhir-version")
+                    .vsacVersion(null)
+                    .build())
+            .build();
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
     assertThat(
         vsacService.getCodeStatus(Code.builder().codeSystemOid("oid").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
@@ -462,21 +476,12 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusActive() {
-    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2023-09");
-    version.setFhir("abc.info/20230901");
-    var codeSystemEntry =
-        CodeSystemEntry.builder()
-            .name("ABC")
-            .oid("urn:oid:1.2.3.4.96")
-            .url("abc.info")
-            .versions(Collections.toList(version))
-            .build();
     Code code =
         Code.builder()
             .name("1222766008")
             .codeSystem("ABC")
             .fhirVersion("abc.info/20230901")
+            .svsVersion("2023-09")
             .display("American Joint Committee on Cancer stage IIA")
             .codeSystemOid("1.2.3.4.96")
             .build();
@@ -487,7 +492,6 @@ class VsacServiceTest {
     VsacCode vsacCode = new VsacCode();
     vsacCode.setStatus("ok");
     vsacCode.setData(codeData);
-    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(codeSystemEntry);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.ACTIVE)));
@@ -495,21 +499,12 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusInactive() {
-    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2023-09");
-    version.setFhir("abc.info/20230901");
-    var codeSystemEntry =
-        CodeSystemEntry.builder()
-            .name("ABC")
-            .oid("urn:oid:1.2.3.4.96")
-            .url("abc.info")
-            .versions(Collections.toList(version))
-            .build();
     Code code =
         Code.builder()
             .name("1222766008")
             .codeSystem("ABC")
             .fhirVersion("abc.info/20230901")
+            .svsVersion("2023-09")
             .display("American Joint Committee on Cancer stage IIA")
             .codeSystemOid("1.2.3.4.96")
             .build();
@@ -520,7 +515,6 @@ class VsacServiceTest {
     VsacCode vsacCode = new VsacCode();
     vsacCode.setStatus("ok");
     vsacCode.setData(codeData);
-    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(codeSystemEntry);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.INACTIVE)));
@@ -528,21 +522,12 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeNotFoundInSvs() {
-    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2023-09");
-    version.setFhir("abc.info/20230901");
-    var codeSystemEntry =
-        CodeSystemEntry.builder()
-            .name("ABC")
-            .oid("urn:oid:1.2.3.4.96")
-            .url("abc.info")
-            .versions(Collections.toList(version))
-            .build();
     Code code =
         Code.builder()
             .name("1222766008")
             .codeSystem("ABC")
             .fhirVersion("abc.info/20230901")
+            .svsVersion("2023-09")
             .display("American Joint Committee on Cancer stage IIA")
             .codeSystemOid("1.2.3.4.96")
             .build();
@@ -553,7 +538,6 @@ class VsacServiceTest {
     VsacCode vsacCode = new VsacCode();
     vsacCode.setStatus("non-ok");
     vsacCode.setData(codeData);
-    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(codeSystemEntry);
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     CodeStatus status = vsacService.getCodeStatus(code, TEST_API_KEY);
     assertThat(status, is(equalTo(CodeStatus.NA)));

@@ -3,13 +3,13 @@ package gov.cms.madie.terminology.mapper;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet;
 import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.DescribedValueSet.ConceptList.Concept;
-import gov.cms.madie.models.mapping.CodeSystemEntry;
-import gov.cms.madie.terminology.service.MappingService;
+import gov.cms.madie.terminology.models.CodeSystem;
+import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
-import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VsacToFhirValueSetMapper {
 
-  private final MappingService mappingService;
+  private final CodeSystemRepository codeSystemRepository;
 
   public ValueSet convertToFHIRValueSet(RetrieveMultipleValueSetsResponse vsacValueSetResponse) {
     DescribedValueSet vsacDescribedValueSet = vsacValueSetResponse.getDescribedValueSet();
@@ -174,16 +173,11 @@ public class VsacToFhirValueSetMapper {
   }
 
   protected String getUrlByOid(String oid) {
-    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
+    List<CodeSystem> codeSystemVersions = codeSystemRepository.findAllByOid(oid);
 
-    if (!StringUtils.isBlank(oid)) {
-      Optional<CodeSystemEntry> codeSystemEntry =
-          codeSystemEntries.stream()
-              .filter(cse -> cse.getOid().replace("urn:oid:", "").equals(oid))
-              .findFirst();
-      if (codeSystemEntry.isPresent()) {
-        return codeSystemEntry.get().getUrl();
-      }
+    if (!CollectionUtils.isEmpty(codeSystemVersions)
+        && StringUtils.isNotBlank(codeSystemVersions.get(0).getFullUrl())) {
+      return codeSystemVersions.get(0).getFullUrl();
     }
     return oid;
   }

@@ -7,7 +7,6 @@ import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -30,8 +29,7 @@ class LoadCodeSystemMappingDataTest {
 
   @Captor public ArgumentCaptor<List<CodeSystem>> codeSystemListCaptor;
 
-  @InjectMocks
-  private final LoadCodeSystemMappingData migration = new LoadCodeSystemMappingData();
+  @InjectMocks private final LoadCodeSystemMappingData migration = new LoadCodeSystemMappingData();
 
   @Mock private MongoTemplate mongoTemplateMock;
   @Mock private CodeSystemRepository codeSystemRepositoryMock;
@@ -154,8 +152,7 @@ class LoadCodeSystemMappingDataTest {
     assertTrue(codeSystemSaves.get(0).isQdm());
     assertTrue(codeSystemSaves.get(0).isLatestVersion());
 
-    assertEquals(existingCodeSystem.getTitle(),
-      codeSystemSaves.get(1).getTitle());
+    assertEquals(existingCodeSystem.getTitle(), codeSystemSaves.get(1).getTitle());
     assertEquals(
         mappingDocEntry.getVersions().get(1).getVsac(),
         codeSystemSaves.get(1).getVersion().getVsacVersion());

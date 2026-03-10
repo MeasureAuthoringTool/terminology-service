@@ -147,7 +147,12 @@ public class FhirTerminologyServiceWebClient {
   public String getCodeResource(String code, CodeSystem codeSystem, String apiKey) {
     Map<String, String> params =
         Map.of(
-            "fullUrl", codeSystem.getFullUrl(), "code", code, "version", codeSystem.getVersion().getFhirVersion());
+            "fullUrl",
+            codeSystem.getFullUrl(),
+            "code",
+            code,
+            "version",
+            codeSystem.getVersion().getFhirVersion());
     URI uri =
         UriComponentsBuilder.fromUriString(codeLookupsUrl).buildAndExpand(params).encode().toUri();
     return fetchResourceFromVsac(uri.toString(), apiKey, "Code");
