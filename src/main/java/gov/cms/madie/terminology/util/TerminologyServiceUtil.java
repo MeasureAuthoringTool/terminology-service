@@ -84,7 +84,7 @@ public class TerminologyServiceUtil {
   }
 
   public static String sanitizeInput(String input) {
-    return input.replaceAll("'", "");
+    return StringUtils.isBlank(input) ? "" : StringUtils.remove(input, "'");
   }
 
   public static String removeUrnOidSubString(String oid) {
