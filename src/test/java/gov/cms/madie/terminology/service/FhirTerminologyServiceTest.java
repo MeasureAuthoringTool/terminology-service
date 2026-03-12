@@ -416,7 +416,9 @@ class FhirTerminologyServiceTest {
     c4.setOid("NOT.IN.VSAC");
     c4.setFullUrl("http://example.com/cs4");
     c4.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("fhirOnly").build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("fhirOnly")
+            .build());
 
     List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3, c4);
     when(codeSystemRepository.findAll()).thenReturn(codeSystems);

@@ -182,7 +182,7 @@ public class FhirTerminologyService {
     return fhirValueSets.stream()
         .map(
             fhirValueSet -> {
-              List<QdmValueSet.Concept> concepts = getValueSetConcepts(fhirValueSet, "QDM");
+              List<QdmValueSet.Concept> concepts = getValueSetConcepts(fhirValueSet);
               return QdmValueSet.builder()
                   .oid(fhirValueSet.getIdPart())
                   .displayName(fhirValueSet.getName())
@@ -197,10 +197,10 @@ public class FhirTerminologyService {
    * @param valueSet resource from FHIR Terminology Server
    * @return a List of QdmValueSet.Concept if the valueSet has expansions. Also, valueSet resource
    *     only has CodeSystem URL info for its expansions, so we use codeSystem entries to find its
-   *     appropriate OID If associated OID is not found, we return the original FHIR URL of the code
-   *     system.
+   *     appropriate OID. If associated OID is not found, we return the original FHIR URL of the
+   *     code system.
    */
-  private List<QdmValueSet.Concept> getValueSetConcepts(ValueSet valueSet, String model) {
+  private List<QdmValueSet.Concept> getValueSetConcepts(ValueSet valueSet) {
     if (valueSet.getExpansion() != null && valueSet.getExpansion().getTotal() > 0) {
       return valueSet.getExpansion().getContains().stream()
           .map(
@@ -208,23 +208,24 @@ public class FhirTerminologyService {
                 Optional<CodeSystem> codeSystemOptional =
                     codeSystemRepository.findByFullUrlAndVersionFhirVersion(
                         concept.getSystem(), concept.getVersion());
-                String codeSystemOid = concept.getSystem();
-                String codeSystem = concept.getSystem();
-                String codeSystemVersion = concept.getVersion();
                 if (codeSystemOptional.isPresent()) {
-                  codeSystemOid = codeSystemOptional.get().getOid();
-                  codeSystem = codeSystemOptional.get().getName();
-                  codeSystemVersion =
-                      model.contains("QDM")
-                          ? codeSystemOptional.get().getVersion().getVsacVersion()
-                          : codeSystemOptional.get().getVersion().getFhirVersion();
+                  CodeSystem codeSystem = codeSystemOptional.get();
+                  return QdmValueSet.Concept.builder()
+                      .code(concept.getCode())
+                      .displayName(concept.getDisplay())
+                      .codeSystemName(codeSystem.getName())
+                      .codeSystemVersion(codeSystem.getVersion().getVsacVersion())
+                      .codeSystemOid(
+                          TerminologyServiceUtil.removeUrnOidSubString(codeSystem.getOid()))
+                      .build();
                 }
                 return QdmValueSet.Concept.builder()
                     .code(concept.getCode())
                     .displayName(concept.getDisplay())
-                    .codeSystemName(codeSystem)
-                    .codeSystemVersion(codeSystemVersion)
-                    .codeSystemOid(TerminologyServiceUtil.removeUrnOidSubString(codeSystemOid))
+                    .codeSystemName(concept.getSystem())
+                    .codeSystemVersion(concept.getVersion())
+                    .codeSystemOid(
+                        TerminologyServiceUtil.removeUrnOidSubString(concept.getSystem()))
                     .build();
               })
           .toList();
@@ -337,8 +338,7 @@ public class FhirTerminologyService {
   }
 
   public List<CodeSystem> getAllCodeSystems() {
-    return codeSystemRepository.findAll().stream()
-        .filter(CodeSystem::isVsacSearchable).toList();
+    return codeSystemRepository.findAll().stream().filter(CodeSystem::isVsacSearchable).toList();
   }
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
