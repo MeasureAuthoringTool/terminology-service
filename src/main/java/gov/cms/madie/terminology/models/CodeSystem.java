@@ -34,7 +34,7 @@ public class CodeSystem {
   }
 
   public boolean isQdm() {
-    return version != null && StringUtils.isNotBlank(version.getVsacVersion());
+    return version != null && StringUtils.isNotBlank(version.getVsacVersion()) && oid != null;
   }
 
   public boolean isVsacSearchable() {
