@@ -205,7 +205,7 @@ class VsacServiceTest {
   }
 
   @Test
-  void testIfThereIsNoAssociatedCodeSystemEntry() {
+  void testIfThereIsNoAssociatedCodeSystem() {
     when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of());
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
@@ -229,14 +229,13 @@ class VsacServiceTest {
   @Test
   void testIfCodeIdIsNotProvided() {
     cqlCodes.get(0).setCodeId(null);
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).isValid());
     assertEquals("Code Id is required", result.get(0).getErrorMessage());
   }
 
   @Test
-  void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsNotProvided() {
+  void testIfCodeSystemDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsNotProvided() {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
     var codeSystemNoVersion =
         CodeSystem.builder()
@@ -253,7 +252,7 @@ class VsacServiceTest {
   }
 
   @Test
-  void testIfCodeSystemEntryHasAKnownVersionButTheVsacValueIsNull() {
+  void testIfCodeSystemHasAKnownVersionButTheVsacValueIsNull() {
     cqlCodes.get(0).getCodeSystem().setVersion(null);
     var codeSystemNullVsac =
         CodeSystem.builder()
@@ -270,7 +269,7 @@ class VsacServiceTest {
   }
 
   @Test
-  void testIfCodeSystemEntryDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsProvided() {
+  void testIfCodeSystemDoesNotHaveAnyKnownVersionsWhenCqlCodeSystemVersionIsProvided() {
     var codeSystemNoVersion =
         CodeSystem.builder()
             .name("ActPriority")
@@ -433,7 +432,6 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeSystemMappingAbsent() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of());
     assertThat(
         vsacService.getCodeStatus(
             Code.builder().codeSystemOid("oid").fhirVersion("version").build(), TEST_API_KEY),
@@ -451,7 +449,6 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeSystemVersionEmpty() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of());
     assertThat(
         vsacService.getCodeStatus(Code.builder().codeSystemOid("oid").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));
@@ -459,16 +456,6 @@ class VsacServiceTest {
 
   @Test
   void testGetCodeStatusIfCodeSystemVersionForVsacIsNull() {
-    var codeSystem =
-        CodeSystem.builder()
-            .oid("1.1.1.1")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("https://fhir-version")
-                    .vsacVersion(null)
-                    .build())
-            .build();
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
     assertThat(
         vsacService.getCodeStatus(Code.builder().codeSystemOid("oid").build(), TEST_API_KEY),
         is(equalTo(CodeStatus.NA)));

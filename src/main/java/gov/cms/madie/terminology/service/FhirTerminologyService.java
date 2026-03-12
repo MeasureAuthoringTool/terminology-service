@@ -364,18 +364,10 @@ public class FhirTerminologyService {
                 codeSystemRepository
                     .findByNameAndVersionVsacVersion(codeSystemName, version)
                     .orElse(null));
-    if (codeSystem == null
-        || codeSystem.getOid() == null
-        || codeSystem.getOid().contains("NOT.IN.VSAC")) {
+    if (codeSystem == null || !codeSystem.isVsacSearchable()) {
       return null;
     }
-    return retrieveCodes(
-        codeName,
-        codeSystemName,
-        codeSystem.getVersion().getVsacVersion(),
-        codeSystem.getVersion().getFhirVersion(),
-        codeSystem,
-        apiKey);
+    return retrieveCodes(codeName, codeSystemName, codeSystem, apiKey);
   }
 
   private void recursiveRetrieveCodeSystems(
@@ -422,10 +414,10 @@ public class FhirTerminologyService {
   private String parseOidFromIdentifier(List<Identifier> identifiers) {
     for (Identifier identifier : identifiers) {
       if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
-        // HCPCS contains two OIDs, which VSAC returns as comma delimited String.
-        // MADiE is only concerned with the Level 2 OID ending in .285 as it
-        // CMS's custom codes. Level 1 is a duplicate of CPT, and
-        // users should be utilizing CPT directly.
+        // HCPCS contains two OIDs, which VSAC returns as a comma-delimited String.
+        // MADiE is only concerned with the Level 2 OID ending in .285 as
+        // it contains CMS's custom codes. Level 1 is a duplicate of CPT,
+        // and users should be utilizing CPT directly.
         if (StringUtils.equalsIgnoreCase(
             StringUtils.deleteWhitespace(identifier.getValue()),
             "urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285")) {
@@ -460,7 +452,7 @@ public class FhirTerminologyService {
           existingCodeSystem.setTitle(codeSystem.getTitle());
           existingCodeSystem.setFullUrl(codeSystem.getFullUrl());
           existingCodeSystem.setName(codeSystem.getName());
-          existingCodeSystem.setVersion(codeSystem.getVersion());
+          existingCodeSystem.getVersion().setFhirVersion(codeSystem.getVersion().getFhirVersion());
           existingCodeSystem.setVersionId(codeSystem.getVersionId());
           existingCodeSystem.setOid(codeSystem.getOid());
           existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
@@ -495,18 +487,11 @@ public class FhirTerminologyService {
               if (codeSystemVersion.isEmpty()
                   || StringUtils.isEmpty(codeName)
                   || StringUtils.isEmpty(codeSystemName)
-                  || StringUtils.isEmpty(codeSystemVersion.get().getVersion().getFhirVersion())) {
+                  || !codeSystemVersion.get().isFhir()) {
                 return null;
               }
 
-              Code code =
-                  retrieveCodes(
-                      codeName,
-                      codeSystemName,
-                      codeSystemVersion.get().getVersion().getVsacVersion(),
-                      codeSystemVersion.get().getVersion().getFhirVersion(),
-                      codeSystemVersion.get(),
-                      apiKey);
+              Code code = retrieveCodes(codeName, codeSystemName, codeSystemVersion.get(), apiKey);
               code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
               return code;
             })
@@ -547,12 +532,7 @@ public class FhirTerminologyService {
   }
 
   private Code retrieveCodes(
-      String codeName,
-      String codeSystemName,
-      String vsacVersion,
-      String fhirVersion,
-      CodeSystem codeSystem,
-      String apiKey) {
+      String codeName, String codeSystemName, CodeSystem codeSystem, String apiKey) {
     String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
 
     Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
@@ -560,8 +540,8 @@ public class FhirTerminologyService {
         Code.builder()
             .name(codeName)
             .codeSystem(codeSystemName)
-            .fhirVersion(fhirVersion)
-            .svsVersion(vsacVersion)
+            .fhirVersion(codeSystem.getVersion().getFhirVersion())
+            .svsVersion(codeSystem.getVersion().getVsacVersion())
             .codeSystemUrl(codeSystem.getFullUrl())
             .display(parameters.getParameter("display").getValue().toString())
             .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
