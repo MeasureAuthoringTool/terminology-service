@@ -407,12 +407,18 @@ class FhirTerminologyServiceTest {
             .build());
     var c3 = new gov.cms.madie.terminology.models.CodeSystem();
     c3.setTitle("t3");
-    c3.setOid("NOT.IN.VSAC");
+    c3.setOid("fakeoid3");
     c3.setFullUrl("http://example.com/cs3");
     c3.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
+    var c4 = new gov.cms.madie.terminology.models.CodeSystem();
+    c4.setTitle("t4");
+    c4.setOid("NOT.IN.VSAC");
+    c4.setFullUrl("http://example.com/cs4");
+    c4.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("fhirOnly").build());
 
-    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3);
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3, c4);
     when(codeSystemRepository.findAll()).thenReturn(codeSystems);
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.getAllCodeSystems();
@@ -420,9 +426,17 @@ class FhirTerminologyServiceTest {
     verify(codeSystemRepository).findAll();
     assertEquals(3, result.size());
     assertEquals("t1", result.get(0).getTitle());
+    assertEquals("1.0", result.get(0).getVersion().getFhirVersion());
+    assertEquals("1", result.get(0).getVersion().getVsacVersion());
+
     assertEquals("t2", result.get(1).getTitle());
-    // Verify FHIR only Code Systems with NOT.IN.VSAC oid appear in the result set
+    assertEquals("2.0", result.get(1).getVersion().getFhirVersion());
+    assertEquals("2", result.get(1).getVersion().getVsacVersion());
+
+    // Verify FHIR only Code Systems appear in the result set
     assertEquals("t3", result.get(2).getTitle());
+    assertEquals("2024", result.get(2).getVersion().getFhirVersion());
+    assertNull(result.get(2).getVersion().getVsacVersion());
   }
 
   @Test

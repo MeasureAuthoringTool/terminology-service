@@ -337,13 +337,8 @@ public class FhirTerminologyService {
   }
 
   public List<CodeSystem> getAllCodeSystems() {
-    List<CodeSystem> codeSystems =
-        codeSystemRepository.findAll().stream()
-            .filter(
-                codeSystem ->
-                    codeSystem.getOid().contains("NOT.IN.VSAC") || codeSystem.isVsacSearchable())
-            .toList();
-    return codeSystems;
+    return codeSystemRepository.findAll().stream()
+        .filter(CodeSystem::isVsacSearchable).toList();
   }
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
