@@ -1,0 +1,6265 @@
+[
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.4",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "name": "ActCode",
+        "versions": [
+            {
+                "vsac": "9.0.0",
+                "fhir": "9.0.0"
+            },
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1001",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ActMood",
+        "name": "ActMood",
+        "versions": [
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2012-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC1",
+        "url": "http://hl7.org/fhir/address-type",
+        "name": "AddressType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-AdministrativeGender",
+        "name": "AdministrativeGender",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC2",
+        "url": "http://terminology.hl7.org/CodeSystem/admit-source",
+        "name": "AdmitSource",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC3",
+        "url": "http://hl7.org/fhir/adverse-event-actuality",
+        "name": "AdverseEventActuality",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC4",
+        "url": "http://terminology.hl7.org/CodeSystem/adverse-event-category",
+        "name": "AdverseEventCategory",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC5",
+        "url": "http://terminology.hl7.org/CodeSystem/adverse-event-causality-assess",
+        "name": "AdverseEventCausalityAssessment",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC6",
+        "url": "http://terminology.hl7.org/CodeSystem/adverse-event-causality-method",
+        "name": "AdverseEventCausalityMethod",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC7",
+        "url": "http://terminology.hl7.org/CodeSystem/adverse-event-outcome",
+        "name": "AdverseEventOutcome",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC8",
+        "url": "http://terminology.hl7.org/CodeSystem/adverse-event-seriousness",
+        "name": "AdverseEventSeriousness",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC9",
+        "url": "http://terminology.hl7.org/CodeSystem/adverse-event-severity",
+        "name": "AdverseEventSeverity",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC10",
+        "url": "https://cancerstaging.org",
+        "name": "TNM",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "9"
+            },
+            {
+                "vsac": null,
+                "fhir": "8"
+            },
+            {
+                "vsac": null,
+                "fhir": "7"
+            },
+            {
+                "vsac": null,
+                "fhir": "6"
+            },
+            {
+                "vsac": null,
+                "fhir": "5"
+            },
+            {
+                "vsac": null,
+                "fhir": "4"
+            },
+            {
+                "vsac": null,
+                "fhir": "3"
+            },
+            {
+                "vsac": null,
+                "fhir": "2"
+            },
+            {
+                "vsac": null,
+                "fhir": "1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC11",
+        "url": "http://hl7.org/fhir/allergy-intolerance-category",
+        "name": "AllergyIntoleranceCategory",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC12",
+        "url": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "name": "AllergyIntoleranceClinicalStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.5.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC13",
+        "url": "http://hl7.org/fhir/allergy-intolerance-criticality",
+        "name": "AllergyIntoleranceCriticality",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC14",
+        "url": "http://hl7.org/fhir/reaction-event-severity",
+        "name": "AllergyIntoleranceSeverity",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC15",
+        "url": "http://hl7.org/fhir/allergy-intolerance-type",
+        "name": "AllergyIntoleranceType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC16",
+        "url": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "name": "AllergyIntoleranceVerificationStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.5.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC17",
+        "url": "http://hl7.org/fhir/care-plan-activity-status",
+        "name": "CarePlanActivityStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC18",
+        "url": "http://hl7.org/fhir/care-team-status",
+        "name": "CareTeamStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.277",
+        "url": "https://www.cdc.gov/nhsn/cdaportal/terminology/codesystem/cdcnhsn.html",
+        "name": "CDCNHSN",
+        "versions": [
+            {
+                "vsac": "2023-04",
+                "fhir": "2023-04"
+            },
+            {
+                "vsac": "2020-11",
+                "fhir": "2020-11"
+            },
+            {
+                "vsac": "2020-07",
+                "fhir": "2020-07"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.238",
+        "url": "urn:oid:2.16.840.1.113883.6.238",
+        "name": "CDCREC",
+        "versions": [
+            {
+                "vsac": "1.3",
+                "fhir": "1.3"
+            },
+            {
+                "vsac": "1.2",
+                "fhir": "1.2"
+            },
+            {
+                "vsac": "1.1",
+                "fhir": "1.1"
+            },
+            {
+                "vsac": "1.0",
+                "fhir": "1.0"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.13",
+        "url": "http://www.ada.org/cdt",
+        "name": "CDT",
+        "versions": [
+            {
+                "vsac": "2025",
+                "fhir": "2025"
+            },
+            {
+                "vsac": "2023",
+                "fhir": "2023"
+            },
+            {
+                "vsac": "2022",
+                "fhir": "2022"
+            },
+            {
+                "vsac": "2021",
+                "fhir": "2021"
+            },
+            {
+                "vsac": "2020",
+                "fhir": "2020"
+            },
+            {
+                "vsac": "2019",
+                "fhir": "2019"
+            },
+            {
+                "vsac": "2018",
+                "fhir": "2018"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "2016"
+            },
+            {
+                "vsac": "2015",
+                "fhir": "2015"
+            },
+            {
+                "vsac": "2014",
+                "fhir": "2014"
+            },
+            {
+                "vsac": "2013",
+                "fhir": "2013"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC19",
+        "url": "http://terminology.hl7.org/CodeSystem/claimcareteamrole",
+        "name": "ClaimCareTeamRoleCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC20",
+        "url": "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+        "name": "ClaimInformationCategoryCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC21",
+        "url": "http://terminology.hl7.org/CodeSystem/payeetype",
+        "name": "ClaimPayeeTypeCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.2.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC22",
+        "url": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "name": "ClaimTypeCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC23",
+        "url": "http://terminology.hl7.org/CodeSystem/communication-category",
+        "name": "CommunicationCategory",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC24",
+        "url": "http://terminology.hl7.org/CodeSystem/communication-not-done-reason",
+        "name": "CommunicationNotDoneReason",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC25",
+        "url": "http://terminology.hl7.org/CodeSystem/communication-topic",
+        "name": "CommunicationTopic",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC26",
+        "url": "http://terminology.hl7.org/CodeSystem/condition-category",
+        "name": "ConditionCategoryCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.5.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC27",
+        "url": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        "name": "ConditionClinicalStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.5.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC28",
+        "url": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+        "name": "ConditionVerificationStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.5.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC29",
+        "url": "http://terminology.hl7.org/CodeSystem/contactentity-type",
+        "name": "ContactEntityType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.5.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC30",
+        "url": "http://hl7.org/fhir/contact-point-system",
+        "name": "ContactPointSystem",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC31",
+        "url": "http://hl7.org/fhir/contact-point-use",
+        "name": "ContactPointUse",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC32",
+        "url": "http://terminology.hl7.org/CodeSystem/coverage-class",
+        "name": "CoverageClassCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.12",
+        "url": "http://www.ama-assn.org/go/cpt",
+        "name": "CPT",
+        "versions": [
+            {
+                "vsac": "2026",
+                "fhir": "2026"
+            },
+            {
+                "vsac": "2025",
+                "fhir": "2025"
+            },
+            {
+                "vsac": "2024",
+                "fhir": "2024"
+            },
+            {
+                "vsac": "2023",
+                "fhir": "2023"
+            },
+            {
+                "vsac": "2022",
+                "fhir": "2022"
+            },
+            {
+                "vsac": "2021",
+                "fhir": "2021"
+            },
+            {
+                "vsac": "2020",
+                "fhir": "2020"
+            },
+            {
+                "vsac": "2019",
+                "fhir": "2019"
+            },
+            {
+                "vsac": "2018",
+                "fhir": "2018"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "2016"
+            },
+            {
+                "vsac": "2015",
+                "fhir": "2015"
+            },
+            {
+                "vsac": "2014",
+                "fhir": "2014"
+            },
+            {
+                "vsac": "2013",
+                "fhir": "2013"
+            },
+            {
+                "vsac": "2012",
+                "fhir": "2012"
+            },
+            {
+                "vsac": "2006",
+                "fhir": "2006"
+            },
+            {
+                "vsac": "1998",
+                "fhir": "1998"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.12.292",
+        "url": "http://hl7.org/fhir/sid/cvx",
+        "name": "CVX",
+        "versions": [
+            {
+                "vsac": "2025-11-19",
+                "fhir": "20251119"
+            },
+            {
+                "vsac": "2025-09-09",
+                "fhir": "20250909"
+            },
+            {
+                "vsac": "2025-07-15",
+                "fhir": "20250715"
+            },
+            {
+                "vsac": "2025-07-03",
+                "fhir": "20250703"
+            },
+            {
+                "vsac": "2025-05-02",
+                "fhir": "20250502"
+            },
+            {
+                "vsac": "2025-03-18",
+                "fhir": "20250318"
+            },
+            {
+                "vsac": "2024-12-16",
+                "fhir": "20241216"
+            },
+            {
+                "vsac": "2024-09-05",
+                "fhir": "20240905"
+            },
+            {
+                "vsac": "2024-09-03",
+                "fhir": "20240903"
+            },
+            {
+                "vsac": "2024-07-29",
+                "fhir": "20240729"
+            },
+            {
+                "vsac": "2024-06-12",
+                "fhir": "20240612"
+            },
+            {
+                "vsac": "2024-05-15",
+                "fhir": "20240515"
+            },
+            {
+                "vsac": "2024-03-15",
+                "fhir": "20240315"
+            },
+            {
+                "vsac": "2024-01-25",
+                "fhir": "20240125"
+            },
+            {
+                "vsac": "2023-12-14",
+                "fhir": "20231214"
+            },
+            {
+                "vsac": "2023-11-02",
+                "fhir": "20231102"
+            },
+            {
+                "vsac": "2023-09-20",
+                "fhir": "20230920"
+            },
+            {
+                "vsac": "2023-09-13",
+                "fhir": "20230913"
+            },
+            {
+                "vsac": "2023-07-25",
+                "fhir": "20230725"
+            },
+            {
+                "vsac": "2023-06-06",
+                "fhir": "20230606"
+            },
+            {
+                "vsac": "2023-03-14",
+                "fhir": "20230314"
+            },
+            {
+                "vsac": "2023-01-17",
+                "fhir": "20230117"
+            },
+            {
+                "vsac": "2022-12-19",
+                "fhir": "20221219"
+            },
+            {
+                "vsac": "2022-11-30",
+                "fhir": "20221130"
+            },
+            {
+                "vsac": "2022-10-19",
+                "fhir": "20221019"
+            },
+            {
+                "vsac": "2022-09-07",
+                "fhir": "20220907"
+            },
+            {
+                "vsac": "2022-08-17",
+                "fhir": "20220817"
+            },
+            {
+                "vsac": "2022-06-15",
+                "fhir": "20220615"
+            },
+            {
+                "vsac": "2022-04-12",
+                "fhir": "20220412"
+            },
+            {
+                "vsac": "2022-03-10",
+                "fhir": "20220310"
+            },
+            {
+                "vsac": "2022-02-14",
+                "fhir": "20220214"
+            },
+            {
+                "vsac": "2021-11-09",
+                "fhir": "20211109"
+            },
+            {
+                "vsac": "2021-09-13",
+                "fhir": "20210913"
+            },
+            {
+                "vsac": "2021-08-23",
+                "fhir": "20210823"
+            },
+            {
+                "vsac": "2021-07-27",
+                "fhir": "20210727"
+            },
+            {
+                "vsac": "2021-04-06",
+                "fhir": "20210406"
+            },
+            {
+                "vsac": "2021-01-26",
+                "fhir": "20210126"
+            },
+            {
+                "vsac": "2020-12-22",
+                "fhir": "20201222"
+            },
+            {
+                "vsac": "2020-12",
+                "fhir": "20201201"
+            },
+            {
+                "vsac": "2020-09",
+                "fhir": "20200901"
+            },
+            {
+                "vsac": "2020-08",
+                "fhir": "20200801"
+            },
+            {
+                "vsac": "2020-05",
+                "fhir": "20200501"
+            },
+            {
+                "vsac": "2020-03",
+                "fhir": "20200301"
+            },
+            {
+                "vsac": "2020-01",
+                "fhir": "20200101"
+            },
+            {
+                "vsac": "2019-12",
+                "fhir": "20191201"
+            },
+            {
+                "vsac": "2019-10",
+                "fhir": "20191001"
+            },
+            {
+                "vsac": "2019-09",
+                "fhir": "20190901"
+            },
+            {
+                "vsac": "2019-07",
+                "fhir": "20190701"
+            },
+            {
+                "vsac": "2019-04",
+                "fhir": "20190401"
+            },
+            {
+                "vsac": "2018-11",
+                "fhir": "20181101"
+            },
+            {
+                "vsac": "2018-10",
+                "fhir": "20181001"
+            },
+            {
+                "vsac": "2018-09",
+                "fhir": "20180901"
+            },
+            {
+                "vsac": "2018-07",
+                "fhir": "20180701"
+            },
+            {
+                "vsac": "2018-02",
+                "fhir": "20180201"
+            },
+            {
+                "vsac": "2017-11",
+                "fhir": "20171101"
+            },
+            {
+                "vsac": "2017-08",
+                "fhir": "20170801"
+            },
+            {
+                "vsac": "2017-04",
+                "fhir": "20170401"
+            },
+            {
+                "vsac": "2016-09",
+                "fhir": "20160901"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "20160101"
+            },
+            {
+                "vsac": "2015",
+                "fhir": "20150101"
+            },
+            {
+                "vsac": "2014",
+                "fhir": "20140101"
+            },
+            {
+                "vsac": "2013",
+                "fhir": "20130101"
+            },
+            {
+                "vsac": "2012",
+                "fhir": "20120101"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.4.642.4.1048",
+        "url": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
+        "name": "DataAbsentReason",
+        "versions": [
+            {
+                "vsac": "1.0.0",
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": "0.1.0",
+                "fhir": "0.1.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC34",
+        "url": "http://hl7.org/fhir/days-of-week",
+        "name": "DaysOfWeek",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC35",
+        "url": "http://hl7.org/fhir/device-nametype",
+        "name": "DeviceNameType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC36",
+        "url": "http://hl7.org/fhir/device-statement-status",
+        "name": "DeviceUseStatementStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC38",
+        "url": "http://terminology.hl7.org/CodeSystem/diagnosis-role",
+        "name": "DiagnosisRole",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.1"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC39",
+        "url": "http://hl7.org/fhir/diagnostic-report-status",
+        "name": "DiagnosticReportStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC40",
+        "url": "http://terminology.hl7.org/CodeSystem/diet",
+        "name": "Diet",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.12.112",
+        "url": "https://terminology.hl7.org/CodeSystem/v2-0112",
+        "name": "DischargeDisposition",
+        "versions": [
+            {
+                "vsac": "HL7V2.5",
+                "fhir": "HL7V2.5"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC41",
+        "url": "http://terminology.hl7.org/CodeSystem/discharge-disposition",
+        "name": "DischargeDisposition",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC42",
+        "url": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+        "name": "DoseAndRateType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC43",
+        "url": "http://hl7.org/fhir/encounter-location-status",
+        "name": "EncounterLocationStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC44",
+        "url": "http://hl7.org/fhir/encounter-status",
+        "name": "EncounterStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC45",
+        "url": "http://terminology.hl7.org/CodeSystem/entformula-additive",
+        "name": "EnteralFormulaAdditiveTypeCode",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC46",
+        "url": "http://hl7.org/fhir/event-status",
+        "name": "EventStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.4.642.1.76",
+        "url": "http://hl7.org/fhir/event-timing",
+        "name": "EventTiming",
+        "versions": [
+            {
+                "vsac": "5.0.0",
+                "fhir": "5.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC48",
+        "url": "http://terminology.hl7.org/CodeSystem/claim-exception",
+        "name": "ExceptionCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC49",
+        "url": "http://terminology.hl7.org/CodeSystem/history-absent-reason",
+        "name": "FamilyHistoryAbsentReason",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC50",
+        "url": "http://hl7.org/fhir/history-status",
+        "name": "FamilyHistoryStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC51",
+        "url": "http://hl7.org/fhir/device-status",
+        "name": "FHIRDeviceStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC52",
+        "url": "http://terminology.hl7.org/CodeSystem/device-status-reason",
+        "name": "FHIRDeviceStatusReason",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC53",
+        "url": "http://hl7.org/fhir/substance-status",
+        "name": "FHIRSubstanceStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC54",
+        "url": "http://hl7.org/fhir/fm-status",
+        "name": "FinancialResourceStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC55",
+        "url": "http://terminology.hl7.org/CodeSystem/flag-category",
+        "name": "FlagCategory",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC56",
+        "url": "http://hl7.org/fhir/flag-status",
+        "name": "FlagStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC57",
+        "url": "http://terminology.hl7.org/CodeSystem/fundsreserve",
+        "name": "Funds Reservation Codes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC58",
+        "url": "http://terminology.hl7.org/CodeSystem/goal-achievement",
+        "name": "GoalAchievementStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC59",
+        "url": "http://terminology.hl7.org/CodeSystem/goal-category",
+        "name": "GoalCategory",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC60",
+        "url": "http://hl7.org/fhir/goal-status",
+        "name": "GoalLifecycleStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC61",
+        "url": "http://terminology.hl7.org/CodeSystem/goal-priority",
+        "name": "GoalPriority",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC62",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-GTSAbbreviation",
+        "name": "GTSAbbreviation",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2018-08-12"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.285",
+        "url": "http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets",
+        "name": "HCPCS",
+        "versions": [
+            {
+                "vsac": "2026",
+                "fhir": "2026"
+            },
+            {
+                "vsac": "2025",
+                "fhir": "2025"
+            },
+            {
+                "vsac": "2024",
+                "fhir": "2024"
+            },
+            {
+                "vsac": "2023",
+                "fhir": "2023"
+            },
+            {
+                "vsac": "2022",
+                "fhir": "2022"
+            },
+            {
+                "vsac": "2021",
+                "fhir": "2021"
+            },
+            {
+                "vsac": "2020",
+                "fhir": "2020"
+            },
+            {
+                "vsac": "2019",
+                "fhir": "2019"
+            },
+            {
+                "vsac": "2018",
+                "fhir": "2018"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "2016"
+            },
+            {
+                "vsac": "2015",
+                "fhir": "2015"
+            },
+            {
+                "vsac": "2014",
+                "fhir": "2014"
+            },
+            {
+                "vsac": "2013",
+                "fhir": "2013"
+            },
+            {
+                "vsac": "2012",
+                "fhir": "2012"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.259",
+        "url": "https://www.cdc.gov/nhsn/cdaportal/terminology/codesystem/hsloc.html",
+        "name": "HSLOC",
+        "versions": [
+            {
+                "vsac": "2022",
+                "fhir": "2022"
+            },
+            {
+                "vsac": "2020",
+                "fhir": "2020"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2010",
+                "fhir": "2010"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC63",
+        "url": "http://hl7.org/fhir/sid/icd-10",
+        "name": "ICD10",
+        "versions": [
+            {
+                "vsac": "2026",
+                "fhir": "2026"
+            },
+            {
+                "vsac": "2025",
+                "fhir": "2025"
+            },
+            {
+                "vsac": "2024",
+                "fhir": "2024"
+            },
+            {
+                "vsac": "2023",
+                "fhir": "2023"
+            },
+            {
+                "vsac": "2022",
+                "fhir": "2022"
+            },
+            {
+                "vsac": "2021",
+                "fhir": "2021"
+            },
+            {
+                "vsac": "2020",
+                "fhir": "2020"
+            },
+            {
+                "vsac": "2019",
+                "fhir": "2019"
+            },
+            {
+                "vsac": "2018",
+                "fhir": "2018"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "2016"
+            },
+            {
+                "vsac": "2015",
+                "fhir": "2015"
+            },
+            {
+                "vsac": "2014",
+                "fhir": "2014"
+            },
+            {
+                "vsac": "2013",
+                "fhir": "2013"
+            },
+            {
+                "vsac": "2012",
+                "fhir": "2012"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.90",
+        "url": "http://hl7.org/fhir/sid/icd-10-cm",
+        "name": "Icd10CM",
+        "versions": [
+            {
+                "vsac": "2026",
+                "fhir": "2026"
+            },
+            {
+                "vsac": "2025",
+                "fhir": "2025"
+            },
+            {
+                "vsac": "2024",
+                "fhir": "2024"
+            },
+            {
+                "vsac": "2023",
+                "fhir": "2023"
+            },
+            {
+                "vsac": "2022",
+                "fhir": "2022"
+            },
+            {
+                "vsac": "2021",
+                "fhir": "2021"
+            },
+            {
+                "vsac": "2020",
+                "fhir": "2020"
+            },
+            {
+                "vsac": "2019",
+                "fhir": "2019"
+            },
+            {
+                "vsac": "2018",
+                "fhir": "2018"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "2016"
+            },
+            {
+                "vsac": "2015",
+                "fhir": "2015"
+            },
+            {
+                "vsac": "2014",
+                "fhir": "2014"
+            },
+            {
+                "vsac": "2013",
+                "fhir": "2013"
+            },
+            {
+                "vsac": "2012",
+                "fhir": "2012"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.4",
+        "url": "http://www.cms.gov/Medicare/Coding/ICD10",
+        "name": "Icd10PCS",
+        "versions": [
+            {
+                "vsac": "2026",
+                "fhir": "2026"
+            },
+            {
+                "vsac": "2025",
+                "fhir": "2025"
+            },
+            {
+                "vsac": "2024",
+                "fhir": "2024"
+            },
+            {
+                "vsac": "2023",
+                "fhir": "2023"
+            },
+            {
+                "vsac": "2022",
+                "fhir": "2022"
+            },
+            {
+                "vsac": "2021",
+                "fhir": "2021"
+            },
+            {
+                "vsac": "2020",
+                "fhir": "2020"
+            },
+            {
+                "vsac": "2019",
+                "fhir": "2019"
+            },
+            {
+                "vsac": "2018",
+                "fhir": "2018"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "2016"
+            },
+            {
+                "vsac": "2015",
+                "fhir": "2015"
+            },
+            {
+                "vsac": "2014",
+                "fhir": "2014"
+            },
+            {
+                "vsac": "2013",
+                "fhir": "2013"
+            },
+            {
+                "vsac": "2012",
+                "fhir": "2012"
+            }
+        ]
+    },
+    {
+        "oid": "2.16.840.1.113883.6.42",
+        "url": "http://hl7.org/fhir/sid/icd-9-cm",
+        "name": "Icd9CM",
+        "versions": [
+            {
+                "vsac": "2013",
+                "fhir": "2013"
+            },
+            {
+                "vsac": "2012",
+                "fhir": "2012"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC64",
+        "url": "http://hl7.org/fhir/identifier-use",
+        "name": "IdentifierUse",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC65",
+        "url": "http://hl7.org/fhir/imagingstudy-status",
+        "name": "ImagingStudyStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC66",
+        "url": "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status",
+        "name": "ImmunizationEvaluationDoseStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC67",
+        "url": "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status-reason",
+        "name": "ImmunizationEvaluationDoseStatusReasonCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC68",
+        "url": "http://terminology.hl7.org/CodeSystem/immunization-funding-source",
+        "name": "ImmunizationFundingSource",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC69",
+        "url": "http://terminology.hl7.org/CodeSystem/immunization-origin",
+        "name": "ImmunizationOriginCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC70",
+        "url": "http://terminology.hl7.org/CodeSystem/immunization-program-eligibility",
+        "name": "ImmunizationProgramEligibility",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC71",
+        "url": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status",
+        "name": "ImmunizationRecommendationStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC72",
+        "url": "http://terminology.hl7.org/CodeSystem/immunization-subpotent-reason",
+        "name": "ImmunizationSubpotentReason",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC73",
+        "url": "http://hl7.org/fhir/link-type",
+        "name": "LinkType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC74",
+        "url": "http://hl7.org/fhir/location-mode",
+        "name": "LocationMode",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC75",
+        "url": "http://hl7.org/fhir/location-status",
+        "name": "LocationStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC76",
+        "url": "http://terminology.hl7.org/CodeSystem/location-physical-type",
+        "name": "LocationType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.1",
+        "url": "http://loinc.org",
+        "name": "LOINC",
+        "versions": [
+            {
+                "vsac": "2.81",
+                "fhir": "2.81"
+            },
+            {
+                "vsac": "2.80",
+                "fhir": "2.80"
+            },
+            {
+                "vsac": "2.78",
+                "fhir": "2.78"
+            },
+            {
+                "vsac": "2.77",
+                "fhir": "2.77"
+            },
+            {
+                "vsac": "2.76",
+                "fhir": "2.76"
+            },
+            {
+                "vsac": "2.75",
+                "fhir": "2.75"
+            },
+            {
+                "vsac": "2.74",
+                "fhir": "2.74"
+            },
+            {
+                "vsac": "2.73",
+                "fhir": "2.73"
+            },
+            {
+                "vsac": "2.72",
+                "fhir": "2.72"
+            },
+            {
+                "vsac": "2.71",
+                "fhir": "2.71"
+            },
+            {
+                "vsac": "2.70",
+                "fhir": "2.70"
+            },
+            {
+                "vsac": "2.69",
+                "fhir": "2.69"
+            },
+            {
+                "vsac": "2.68",
+                "fhir": "2.68"
+            },
+            {
+                "vsac": "2.67",
+                "fhir": "2.67"
+            },
+            {
+                "vsac": "2.66",
+                "fhir": "2.66"
+            },
+            {
+                "vsac": "2.65",
+                "fhir": "2.65"
+            },
+            {
+                "vsac": "2.64",
+                "fhir": "2.64"
+            },
+            {
+                "vsac": "2.63",
+                "fhir": "2.63"
+            },
+            {
+                "vsac": "2.61",
+                "fhir": "2.61"
+            },
+            {
+                "vsac": "2.58",
+                "fhir": "2.58"
+            },
+            {
+                "vsac": "2.56",
+                "fhir": "2.56"
+            },
+            {
+                "vsac": "2.54",
+                "fhir": "2.54"
+            },
+            {
+                "vsac": "2.52",
+                "fhir": "2.52"
+            },
+            {
+                "vsac": "2.50",
+                "fhir": "2.50"
+            },
+            {
+                "vsac": "2.48",
+                "fhir": "2.48"
+            },
+            {
+                "vsac": "2.46",
+                "fhir": "2.46"
+            },
+            {
+                "vsac": "2.44",
+                "fhir": "2.44"
+            },
+            {
+                "vsac": "2.42",
+                "fhir": "2.42"
+            },
+            {
+                "vsac": "2.40",
+                "fhir": "2.40"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.345",
+        "url": "http://va.gov/terminology/medrt",
+        "name": "MED-RT",
+        "versions": [
+            {
+                "vsac": "2025-07",
+                "fhir": "2025-07"
+            },
+            {
+                "vsac": "2025-03",
+                "fhir": "2025-03"
+            },
+            {
+                "vsac": "2024-09",
+                "fhir": "2024-09"
+            },
+            {
+                "vsac": "2024-04",
+                "fhir": "2024-04"
+            },
+            {
+                "vsac": "2023-09",
+                "fhir": "2023-09"
+            },
+            {
+                "vsac": "2023-03",
+                "fhir": "2023-03"
+            },
+            {
+                "vsac": "2022-09",
+                "fhir": "2022-09"
+            },
+            {
+                "vsac": "2022-03",
+                "fhir": "2022-03"
+            },
+            {
+                "vsac": "2021-09",
+                "fhir": "2021-09"
+            },
+            {
+                "vsac": "2021-03",
+                "fhir": "2021-03"
+            },
+            {
+                "vsac": "2020-09",
+                "fhir": "2020-09"
+            },
+            {
+                "vsac": "2020-03",
+                "fhir": "2020-03"
+            },
+            {
+                "vsac": "2019-09",
+                "fhir": "2019-09"
+            },
+            {
+                "vsac": "2019-03",
+                "fhir": "2019-03"
+            },
+            {
+                "vsac": "2018-09",
+                "fhir": "2018-09"
+            },
+            {
+                "vsac": "2018-07",
+                "fhir": "2018-07"
+            },
+            {
+                "vsac": "2018-03",
+                "fhir": "2018-03"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.79",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-mediaType",
+        "name": "MediaType",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-11",
+                "fhir": "2019-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2018-01",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC77",
+        "url": "http://terminology.hl7.org/CodeSystem/medication-admin-category",
+        "name": "MedicationAdministrationCategoryCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC78",
+        "url": "http://terminology.hl7.org/CodeSystem/med-admin-perform-function",
+        "name": "MedicationAdministrationPerformerFunctionCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC79",
+        "url": "http://terminology.hl7.org/CodeSystem/medication-admin-status",
+        "name": "MedicationAdministrationStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC80",
+        "url": "http://terminology.hl7.org/fhir/CodeSystem/medicationdispense-category",
+        "name": "MedicationDispenseCategoryCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC81",
+        "url": "http://terminology.hl7.org/CodeSystem/medicationdispense-performer-function",
+        "name": "MedicationDispensePerformerFunctionCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC82",
+        "url": "http://terminology.hl7.org/CodeSystem/medicationdispense-status",
+        "name": "MedicationDispenseStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC83",
+        "url": "http://terminology.hl7.org/fhir/CodeSystem/medicationdispense-status-reason",
+        "name": "MedicationDispenseStatusReasonCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC84",
+        "url": "http://terminology.hl7.org/CodeSystem/medicationrequest-category",
+        "name": "MedicationRequestCategory",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC85",
+        "url": "http://terminology.hl7.org/CodeSystem/medicationrequest-course-of-therapy",
+        "name": "MedicationRequestCourseOfTherapyCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC86",
+        "url": "http://hl7.org/fhir/CodeSystem/medicationrequest-intent",
+        "name": "MedicationRequestIntent",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC87",
+        "url": "http://hl7.org/fhir/CodeSystem/medicationrequest-status",
+        "name": "MedicationRequestStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC88",
+        "url": "http://terminology.hl7.org/CodeSystem/medicationrequest-status-reason",
+        "name": "MedicationRequestStatusReasonCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC89",
+        "url": "http://hl7.org/fhir/CodeSystem/medication-statement-status",
+        "name": "MedicationStatementStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC90",
+        "url": "http://hl7.org/fhir/CodeSystem/medication-status",
+        "name": "MedicationStatusCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC91",
+        "url": "http://terminology.hl7.org/CodeSystem/medication-statement-category",
+        "name": "MedicationUsageCategoryCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC92",
+        "url": "http://terminology.hl7.org/CodeSystem/missingtoothreason",
+        "name": "MissingToothReasonCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC93",
+        "url": "http://terminology.hl7.org/CodeSystem/modifiers",
+        "name": "ModifierTypeCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC94",
+        "url": "http://hl7.org/fhir/name-use",
+        "name": "NameUse",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.3.26.1.1",
+        "url": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl",
+        "name": "NCI",
+        "versions": [
+            {
+                "vsac": "2025-08",
+                "fhir": "2025-08"
+            },
+            {
+                "vsac": "2025-04",
+                "fhir": "2025-04"
+            },
+            {
+                "vsac": "2024-10",
+                "fhir": "2024-10"
+            },
+            {
+                "vsac": "2024-03",
+                "fhir": "2024-03"
+            },
+            {
+                "vsac": "2023-09",
+                "fhir": "2023-09"
+            },
+            {
+                "vsac": "2023-03",
+                "fhir": "2023-03"
+            },
+            {
+                "vsac": "2022-09",
+                "fhir": "2022-09"
+            },
+            {
+                "vsac": "2022-04",
+                "fhir": "2022-04"
+            },
+            {
+                "vsac": "2021-09",
+                "fhir": "2021-09"
+            },
+            {
+                "vsac": "2021-02",
+                "fhir": "2021-02"
+            },
+            {
+                "vsac": "2020-09",
+                "fhir": "2020-09"
+            },
+            {
+                "vsac": "2020-02",
+                "fhir": "2020-02"
+            },
+            {
+                "vsac": "2019-08",
+                "fhir": "2019-08"
+            },
+            {
+                "vsac": "2019-03",
+                "fhir": "2019-03"
+            },
+            {
+                "vsac": "2018-08",
+                "fhir": "2018-08"
+            },
+            {
+                "vsac": "2018-03",
+                "fhir": "2018-03"
+            },
+            {
+                "vsac": "2017-09",
+                "fhir": "2017-09"
+            },
+            {
+                "vsac": "2017",
+                "fhir": "2017"
+            },
+            {
+                "vsac": "2016",
+                "fhir": "2016"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.3.26.1.5",
+        "url": "http://hl7.org/fhir/ndfrt",
+        "name": "NDFRT",
+        "versions": [
+            {
+                "vsac": "2018-03",
+                "fhir": "20180301"
+            },
+            {
+                "vsac": "2018-02",
+                "fhir": "20180201"
+            },
+            {
+                "vsac": "2018-01",
+                "fhir": "20180101"
+            },
+            {
+                "vsac": "2017-11",
+                "fhir": "20171101"
+            },
+            {
+                "vsac": "2017-10",
+                "fhir": "20171001"
+            },
+            {
+                "vsac": "2017-03",
+                "fhir": "20170301"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.101",
+        "url": "http://nucc.org/provider-taxonomy",
+        "name": "HealthCareProviderTaxonomy",
+        "versions": [
+            {
+                "vsac": "25.1",
+                "fhir": "25.1"
+            },
+            {
+                "vsac": "24.1",
+                "fhir": "24.1"
+            },
+            {
+                "vsac": "23.1",
+                "fhir": "23.1"
+            },
+            {
+                "vsac": "22.1",
+                "fhir": "22.1"
+            },
+            {
+                "vsac": "21.1",
+                "fhir": "21.1"
+            },
+            {
+                "vsac": "20.1",
+                "fhir": "20.1"
+            },
+            {
+                "vsac": "20.0",
+                "fhir": "20.0"
+            },
+            {
+                "vsac": "19.1",
+                "fhir": "19.1"
+            },
+            {
+                "vsac": "18.1",
+                "fhir": "18.1"
+            },
+            {
+                "vsac": "17.1",
+                "fhir": "17.1"
+            },
+            {
+                "vsac": "16.1",
+                "fhir": "16.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC95",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ObservationCategory",
+        "name": "ObservationCategory",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2018-08-12"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC96",
+        "url": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "name": "ObservationCategoryCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC97",
+        "url": "http://terminology.hl7.org/CodeSystem/referencerange-meaning",
+        "name": "ObservationReferenceRangeMeaningCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC98",
+        "url": "http://hl7.org/fhir/observation-status",
+        "name": "ObservationStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC99",
+        "url": "http://terminology.hl7.org/CodeSystem/organization-type",
+        "name": "OrganizationType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC100",
+        "url": "http://terminology.hl7.org/CodeSystem/participant-type",
+        "name": "ParticipantType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.5.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.301.11",
+        "url": "https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/HospitalAcqCond/Coding",
+        "name": "PresentOnAdmission",
+        "versions": [
+            {
+                "vsac": "2021",
+                "fhir": "07/14/2020"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC101",
+        "url": "http://terminology.hl7.org/CodeSystem/processpriority",
+        "name": "ProcessPriorityCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1076",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ReligiousAffiliation",
+        "name": "ReligiousAffiliation",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2019-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC102",
+        "url": "http://hl7.org/fhir/request-intent",
+        "name": "RequestIntent",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC103",
+        "url": "http://hl7.org/fhir/request-priority",
+        "name": "RequestPriority",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC104",
+        "url": "http://hl7.org/fhir/request-status",
+        "name": "RequestStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC105",
+        "url": "http://hl7.org/fhir/resource-types",
+        "name": "ResourceType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.110",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-RoleClass",
+        "name": "RoleClass",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2021-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.111",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+        "name": "RoleCode",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2021-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1068",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-RoleStatus",
+        "name": "RoleStatus",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2021-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.88",
+        "url": "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "name": "RxNORM",
+        "versions": [
+            {
+                "vsac": "2026-01",
+                "fhir": "01052026"
+            },
+            {
+                "vsac": "2025-12",
+                "fhir": "12012025"
+            },
+            {
+                "vsac": "2025-09",
+                "fhir": "09022025"
+            },
+            {
+                "vsac": "2025-08",
+                "fhir": "08042025"
+            },
+            {
+                "vsac": "2025-07",
+                "fhir": "07072025"
+            },
+            {
+                "vsac": "2025-06",
+                "fhir": "06022025"
+            },
+            {
+                "vsac": "2025-05",
+                "fhir": "05052025"
+            },
+            {
+                "vsac": "2025-04",
+                "fhir": "04072025"
+            },
+            {
+                "vsac": "2025-03",
+                "fhir": "03032025"
+            },
+            {
+                "vsac": "2025-02",
+                "fhir": "02032025"
+            },
+            {
+                "vsac": "2025-01",
+                "fhir": "01062025"
+            },
+            {
+                "vsac": "2024-12",
+                "fhir": "12022024"
+            },
+            {
+                "vsac": "2024-11",
+                "fhir": "11042024"
+            },
+            {
+                "vsac": "2024-10",
+                "fhir": "10072024"
+            },
+            {
+                "vsac": "2024-09",
+                "fhir": "09032024"
+            },
+            {
+                "vsac": "2024-08",
+                "fhir": "08052024"
+            },
+            {
+                "vsac": "2024-07",
+                "fhir": "07012024"
+            },
+            {
+                "vsac": "2024-06",
+                "fhir": "06032024"
+            },
+            {
+                "vsac": "2024-05",
+                "fhir": "05062024"
+            },
+            {
+                "vsac": "2024-04",
+                "fhir": "04012024"
+            },
+            {
+                "vsac": "2024-03",
+                "fhir": "03042024"
+            },
+            {
+                "vsac": "2024-02",
+                "fhir": "02052024"
+            },
+            {
+                "vsac": "2024-01",
+                "fhir": "01022024"
+            },
+            {
+                "vsac": "2023-12",
+                "fhir": "12042023"
+            },
+            {
+                "vsac": "2023-11",
+                "fhir": "11062023"
+            },
+            {
+                "vsac": "2023-10",
+                "fhir": "10022023"
+            },
+            {
+                "vsac": "2023-09",
+                "fhir": "09052023"
+            },
+            {
+                "vsac": "2023-08",
+                "fhir": "08072023"
+            },
+            {
+                "vsac": "2023-07",
+                "fhir": "07032023"
+            },
+            {
+                "vsac": "2023-06",
+                "fhir": "06052023"
+            },
+            {
+                "vsac": "2023-05",
+                "fhir": "05012023"
+            },
+            {
+                "vsac": "2023-04",
+                "fhir": "04032023"
+            },
+            {
+                "vsac": "2023-03",
+                "fhir": "03062023"
+            },
+            {
+                "vsac": "2023-02",
+                "fhir": "02062023"
+            },
+            {
+                "vsac": "2023-01",
+                "fhir": "01032023"
+            },
+            {
+                "vsac": "2022-12",
+                "fhir": "12072022"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "11072022"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "10032022"
+            },
+            {
+                "vsac": "2022-09",
+                "fhir": "09062022"
+            },
+            {
+                "vsac": "2022-08",
+                "fhir": "08012022"
+            },
+            {
+                "vsac": "2022-07",
+                "fhir": "07142022"
+            },
+            {
+                "vsac": "2022-06",
+                "fhir": "06062022"
+            },
+            {
+                "vsac": "2022-05",
+                "fhir": "05022022"
+            },
+            {
+                "vsac": "2022-04",
+                "fhir": "04042022"
+            },
+            {
+                "vsac": "2022-03",
+                "fhir": "03072022"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "02072022"
+            },
+            {
+                "vsac": "2022-01",
+                "fhir": "01032022"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "12062021"
+            },
+            {
+                "vsac": "2021-11",
+                "fhir": "11012021"
+            },
+            {
+                "vsac": "2021-10",
+                "fhir": "10042021"
+            },
+            {
+                "vsac": "2021-09",
+                "fhir": "09072021"
+            },
+            {
+                "vsac": "2021-08",
+                "fhir": "08022021"
+            },
+            {
+                "vsac": "2021-07",
+                "fhir": "07062021"
+            },
+            {
+                "vsac": "2021-06",
+                "fhir": "06072021"
+            },
+            {
+                "vsac": "2021-05",
+                "fhir": "05032021"
+            },
+            {
+                "vsac": "2021-04",
+                "fhir": "04052021"
+            },
+            {
+                "vsac": "2021-03",
+                "fhir": "03012021"
+            },
+            {
+                "vsac": "2021-02",
+                "fhir": "02012021"
+            },
+            {
+                "vsac": "2021-01",
+                "fhir": "01042021"
+            },
+            {
+                "vsac": "2020-12",
+                "fhir": "12072020"
+            },
+            {
+                "vsac": "2020-11",
+                "fhir": "11022020"
+            },
+            {
+                "vsac": "2020-10",
+                "fhir": "10052020"
+            },
+            {
+                "vsac": "2020-09",
+                "fhir": "09082020"
+            },
+            {
+                "vsac": "2020-08",
+                "fhir": "08032020"
+            },
+            {
+                "vsac": "2020-07",
+                "fhir": "07062020"
+            },
+            {
+                "vsac": "2020-06",
+                "fhir": "06012020"
+            },
+            {
+                "vsac": "2020-05",
+                "fhir": "05042020"
+            },
+            {
+                "vsac": "2020-04",
+                "fhir": "04062020"
+            },
+            {
+                "vsac": "2020-03",
+                "fhir": "03022020"
+            },
+            {
+                "vsac": "2020-02",
+                "fhir": "02032020"
+            },
+            {
+                "vsac": "2020-01",
+                "fhir": "01062020"
+            },
+            {
+                "vsac": "2019-12",
+                "fhir": "12022019"
+            },
+            {
+                "vsac": "2019-11",
+                "fhir": "11042019"
+            },
+            {
+                "vsac": "2019-10",
+                "fhir": "10072019"
+            },
+            {
+                "vsac": "2019-09",
+                "fhir": "09032019"
+            },
+            {
+                "vsac": "2019-08",
+                "fhir": "08052019"
+            },
+            {
+                "vsac": "2019-07",
+                "fhir": "07012019"
+            },
+            {
+                "vsac": "2019-06",
+                "fhir": "06032019"
+            },
+            {
+                "vsac": "2019-05",
+                "fhir": "05062019"
+            },
+            {
+                "vsac": "2019-04",
+                "fhir": "04012019"
+            },
+            {
+                "vsac": "2019-03",
+                "fhir": "03042019"
+            },
+            {
+                "vsac": "2019-02",
+                "fhir": "02042019"
+            },
+            {
+                "vsac": "2019-01",
+                "fhir": "01072019"
+            },
+            {
+                "vsac": "2018-12",
+                "fhir": "12032018"
+            },
+            {
+                "vsac": "2018-11",
+                "fhir": "11052018"
+            },
+            {
+                "vsac": "2018-10",
+                "fhir": "10012018"
+            },
+            {
+                "vsac": "2018-09",
+                "fhir": "09042018"
+            },
+            {
+                "vsac": "2018-08",
+                "fhir": "08062018"
+            },
+            {
+                "vsac": "2018-07",
+                "fhir": "07022018"
+            },
+            {
+                "vsac": "2018-06",
+                "fhir": "06042018"
+            },
+            {
+                "vsac": "2018-05",
+                "fhir": "05072018"
+            },
+            {
+                "vsac": "2018-04",
+                "fhir": "04022018"
+            },
+            {
+                "vsac": "2018-03",
+                "fhir": "03052018"
+            },
+            {
+                "vsac": "2018-02",
+                "fhir": "02052018"
+            },
+            {
+                "vsac": "2018-01",
+                "fhir": "01022018"
+            },
+            {
+                "vsac": "2017-12",
+                "fhir": "12042017"
+            },
+            {
+                "vsac": "2017-11",
+                "fhir": "11062017"
+            },
+            {
+                "vsac": "2017-10",
+                "fhir": "10022017"
+            },
+            {
+                "vsac": "2017-09",
+                "fhir": "09052017"
+            },
+            {
+                "vsac": "2017-08",
+                "fhir": "08072017"
+            },
+            {
+                "vsac": "2017-07",
+                "fhir": "07032017"
+            },
+            {
+                "vsac": "2017-06",
+                "fhir": "06052017"
+            },
+            {
+                "vsac": "2017-05",
+                "fhir": "05012017"
+            },
+            {
+                "vsac": "2017-04",
+                "fhir": "04032017"
+            },
+            {
+                "vsac": "2017-03",
+                "fhir": "03062017"
+            },
+            {
+                "vsac": "2017-02",
+                "fhir": "02062017"
+            },
+            {
+                "vsac": "2017-01",
+                "fhir": "01032017"
+            },
+            {
+                "vsac": "2016-12",
+                "fhir": "12052016"
+            },
+            {
+                "vsac": "2016-11",
+                "fhir": "11072016"
+            },
+            {
+                "vsac": "2016-10",
+                "fhir": "10032016"
+            },
+            {
+                "vsac": "2016-09",
+                "fhir": "09062016"
+            },
+            {
+                "vsac": "2016-08",
+                "fhir": "08012016"
+            },
+            {
+                "vsac": "2016-07",
+                "fhir": "07052016"
+            },
+            {
+                "vsac": "2016-06",
+                "fhir": "06062016"
+            },
+            {
+                "vsac": "2016-05",
+                "fhir": "05022016"
+            },
+            {
+                "vsac": "2016-04",
+                "fhir": "04042016"
+            },
+            {
+                "vsac": "2016-03",
+                "fhir": "03072016"
+            },
+            {
+                "vsac": "2016-02",
+                "fhir": "02012016"
+            },
+            {
+                "vsac": "2016-01",
+                "fhir": "01042016"
+            },
+            {
+                "vsac": "2015-12",
+                "fhir": "12072015"
+            },
+            {
+                "vsac": "2015-11",
+                "fhir": "11022015"
+            },
+            {
+                "vsac": "2015-10",
+                "fhir": "10052015"
+            },
+            {
+                "vsac": "2015-09",
+                "fhir": "09082015"
+            },
+            {
+                "vsac": "2015-08",
+                "fhir": "08032015"
+            },
+            {
+                "vsac": "2015-07",
+                "fhir": "07062015"
+            },
+            {
+                "vsac": "2015-06",
+                "fhir": "06012015"
+            },
+            {
+                "vsac": "2015-05",
+                "fhir": "05042015"
+            },
+            {
+                "vsac": "2015-04",
+                "fhir": "04062015"
+            },
+            {
+                "vsac": "2015-03",
+                "fhir": "03022015"
+            },
+            {
+                "vsac": "2015-02",
+                "fhir": "02022015"
+            },
+            {
+                "vsac": "2015-01",
+                "fhir": "01052015"
+            },
+            {
+                "vsac": "2014-12",
+                "fhir": "12012014"
+            },
+            {
+                "vsac": "2014-11",
+                "fhir": "11032014"
+            },
+            {
+                "vsac": "2014-10",
+                "fhir": "10062014"
+            },
+            {
+                "vsac": "2014-09",
+                "fhir": "09022014"
+            },
+            {
+                "vsac": "2014-08",
+                "fhir": "08042014"
+            },
+            {
+                "vsac": "2014-07",
+                "fhir": "07072014"
+            },
+            {
+                "vsac": "2014-03",
+                "fhir": "03032014"
+            },
+            {
+                "vsac": "2014-02",
+                "fhir": "02032014"
+            },
+            {
+                "vsac": "2014-04",
+                "fhir": "04072014"
+            },
+            {
+                "vsac": "2014-06",
+                "fhir": "06022014"
+            },
+            {
+                "vsac": "2014-05",
+                "fhir": "05052014"
+            },
+            {
+                "vsac": "2014-01",
+                "fhir": "01062014"
+            },
+            {
+                "vsac": "2013-12",
+                "fhir": "12022013"
+            },
+            {
+                "vsac": "2013-11",
+                "fhir": "11042013"
+            },
+            {
+                "vsac": "2013-10",
+                "fhir": "10072013"
+            },
+            {
+                "vsac": "2013-02",
+                "fhir": "02042013"
+            },
+            {
+                "vsac": "2012-08",
+                "fhir": "08062012"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC106",
+        "url": "http://terminology.hl7.org/CodeSystem/service-type",
+        "name": "ServiceType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.96",
+        "url": "http://snomed.info/sct",
+        "name": "SNOMEDCT",
+        "versions": [
+            {
+                "vsac": "2025-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20250901"
+            },
+            {
+                "vsac": "2025-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20250301"
+            },
+            {
+                "vsac": "2024-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20240901"
+            },
+            {
+                "vsac": "2024-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20240301"
+            },
+            {
+                "vsac": "2023-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20230901"
+            },
+            {
+                "vsac": "2023-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20230301"
+            },
+            {
+                "vsac": "2022-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20220901"
+            },
+            {
+                "vsac": "2022-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20220301"
+            },
+            {
+                "vsac": "2021-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20210901"
+            },
+            {
+                "vsac": "2021-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20210301"
+            },
+            {
+                "vsac": "2020-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20200901"
+            },
+            {
+                "vsac": "2020-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20200301"
+            },
+            {
+                "vsac": "2019-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20190901"
+            },
+            {
+                "vsac": "2019-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20190301"
+            },
+            {
+                "vsac": "2018-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20180901"
+            },
+            {
+                "vsac": "2018-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20180301"
+            },
+            {
+                "vsac": "2017-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20170901"
+            },
+            {
+                "vsac": "2017-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20170301"
+            },
+            {
+                "vsac": "2016-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20160901"
+            },
+            {
+                "vsac": "2016-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20160301"
+            },
+            {
+                "vsac": "2015-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20150901"
+            },
+            {
+                "vsac": "2015-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20150301"
+            },
+            {
+                "vsac": "2014-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20140901"
+            },
+            {
+                "vsac": "2014-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20140301"
+            },
+            {
+                "vsac": "2013-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20130901"
+            },
+            {
+                "vsac": "2013-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20130301"
+            },
+            {
+                "vsac": "2013-01",
+                "fhir": "http://snomed.info/sct/731000124108/version/20130101"
+            },
+            {
+                "vsac": "2012-09",
+                "fhir": "http://snomed.info/sct/731000124108/version/20120901"
+            },
+            {
+                "vsac": "2012-07",
+                "fhir": "http://snomed.info/sct/731000124108/version/20120701"
+            },
+            {
+                "vsac": "2012-03",
+                "fhir": "http://snomed.info/sct/731000124108/version/20120301"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.3.221.5",
+        "url": "https://nahdo.org/sopt",
+        "name": "SOP",
+        "versions": [
+            {
+                "vsac": "9.2",
+                "fhir": "9.2"
+            },
+            {
+                "vsac": "9.0",
+                "fhir": "9.0"
+            },
+            {
+                "vsac": "8.0",
+                "fhir": "8.0"
+            },
+            {
+                "vsac": "7.0",
+                "fhir": "7.0"
+            },
+            {
+                "vsac": "6.0",
+                "fhir": "6.0"
+            },
+            {
+                "vsac": "5.0",
+                "fhir": "5.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC107",
+        "url": "http://terminology.hl7.org/CodeSystem/encounter-special-arrangements",
+        "name": "SpecialArrangements",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC108",
+        "url": "http://hl7.org/fhir/specimen-status",
+        "name": "SpecimenStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC109",
+        "url": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+        "name": "SubscriberRelationshipCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC110",
+        "url": "http://terminology.hl7.org/CodeSystem/substance-category",
+        "name": "SubstanceCategoryCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "1.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "0.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC111",
+        "url": "http://hl7.org/fhir/CodeSystem/task-code",
+        "name": "TaskCode",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC112",
+        "url": "http://hl7.org/fhir/task-intent",
+        "name": "TaskIntent",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC113",
+        "url": "http://hl7.org/fhir/task-status",
+        "name": "TaskStatus",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.8",
+        "url": "http://unitsofmeasure.org",
+        "name": "UCUM",
+        "versions": [
+            {
+                "vsac": "1.5",
+                "fhir": "1.5"
+            },
+            {
+                "vsac": "1.4",
+                "fhir": "1.4"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC114",
+        "url": "http://hl7.org/fhir/udi-entry-type",
+        "name": "UDIEntryType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.6.86",
+        "url": "http://www.nlm.nih.gov/research/umls",
+        "name": "UMLS",
+        "versions": [
+            {
+                "vsac": "2024AB",
+                "fhir": "2024AB"
+            },
+            {
+                "vsac": "2024AA",
+                "fhir": "2024AA"
+            },
+            {
+                "vsac": "2023AB",
+                "fhir": "2023AB"
+            },
+            {
+                "vsac": "2023AA",
+                "fhir": "2023AA"
+            },
+            {
+                "vsac": "2022AB",
+                "fhir": "2021AB"
+            },
+            {
+                "vsac": "2022AA",
+                "fhir": "2021AA"
+            },
+            {
+                "vsac": "2021AB",
+                "fhir": "2021AB"
+            },
+            {
+                "vsac": "2021AA",
+                "fhir": "2021AA"
+            },
+            {
+                "vsac": "2020AB",
+                "fhir": "2021AB"
+            },
+            {
+                "vsac": "2020AA",
+                "fhir": "2020AA"
+            },
+            {
+                "vsac": "2019AB",
+                "fhir": "2019AB"
+            },
+            {
+                "vsac": "2019AA",
+                "fhir": "2019AA"
+            },
+            {
+                "vsac": "2018AB",
+                "fhir": "2018AB"
+            },
+            {
+                "vsac": "2018AA",
+                "fhir": "2018AA"
+            },
+            {
+                "vsac": "2017AB",
+                "fhir": "2017AB"
+            },
+            {
+                "vsac": "2017AA",
+                "fhir": "2017AA"
+            },
+            {
+                "vsac": "2016AB",
+                "fhir": "2016AB"
+            },
+            {
+                "vsac": "2016AA",
+                "fhir": "2016AA"
+            },
+            {
+                "vsac": "2015AB",
+                "fhir": "2015AB"
+            },
+            {
+                "vsac": "2015AA",
+                "fhir": "2015AA"
+            },
+            {
+                "vsac": "2014AB",
+                "fhir": "2014AB"
+            },
+            {
+                "vsac": "2014AA",
+                "fhir": "2014AA"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.4.9",
+        "url": "http://fdasis.nlm.nih.gov",
+        "name": "UNII",
+        "versions": [
+            {
+                "vsac": "2025-07",
+                "fhir": "20250701"
+            },
+            {
+                "vsac": "2024-12",
+                "fhir": "20241201"
+            },
+            {
+                "vsac": "2024-05",
+                "fhir": "20240501"
+            },
+            {
+                "vsac": "2024-01",
+                "fhir": "20240101"
+            },
+            {
+                "vsac": "2023-04",
+                "fhir": "2023-04"
+            },
+            {
+                "vsac": "2022-05",
+                "fhir": "20220501"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "20211213"
+            },
+            {
+                "vsac": "2021-04",
+                "fhir": "20210412"
+            },
+            {
+                "vsac": "2020-12",
+                "fhir": "20201214"
+            },
+            {
+                "vsac": "2020-05",
+                "fhir": "20200526"
+            },
+            {
+                "vsac": "2020-01",
+                "fhir": "20200112"
+            },
+            {
+                "vsac": "2019-03",
+                "fhir": "20190307"
+            },
+            {
+                "vsac": "2018-10",
+                "fhir": "20181025"
+            },
+            {
+                "vsac": "2017-11",
+                "fhir": "20171115"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC115",
+        "url": "http://hl7.org/fhir/claim-use",
+        "name": "Use",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC116",
+        "url": "http://terminology.hl7.org/CodeSystem/v2-0131",
+        "name": "ContactRole2",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC117",
+        "url": "http://terminology.hl7.org/CodeSystem/v2-0203",
+        "name": "IdentifierType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "4.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.9.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC118",
+        "url": "http://terminology.hl7.org/CodeSystem/v2-0443",
+        "name": "ProviderRole",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.3.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.18.2",
+        "url": "http://terminology.hl7.org/CodeSystem/v2-0001",
+        "name": "AdministrativeSex",
+        "versions": [
+            {
+                "vsac": "2.0.0",
+                "fhir": "2.0.0"
+            },
+            {
+                "vsac": "HL7V2.5",
+                "fhir": "2.5"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC119",
+        "url": "http://terminology.hl7.org/CodeSystem/v2-0373",
+        "name": "Treatment",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.7",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ActPriority",
+        "name": "ActPriority",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.83",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+        "name": "ActReason",
+        "versions": [
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1002",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ActRelationshipType",
+        "name": "ActRelationshipType",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "4.0.0",
+                "fhir": "4.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2018-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC120",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ActSite",
+        "name": "ActSite",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.14",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ActStatus",
+        "name": "ActStatus",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.25",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-Confidentiality",
+        "name": "Confidentiality",
+        "versions": [
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC121",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-EncounterSpecialCourtesy",
+        "name": "EncounterSpecialCourtesy",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:.16.840.1.113883.5.43",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-EntityNamePartQualifier",
+        "name": "EntityNamePartQualifier",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2018-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.45",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-EntityNameUse",
+        "name": "EntityNameUse",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.60",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-LanguageAbilityMode",
+        "name": "LanguageAbilityMode",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.61",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-LanguageAbilityProficiency",
+        "name": "LanguageAbilityProficiency",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.63",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-LivingArrangement",
+        "name": "LivingArrangement",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.2",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+        "name": "MaritalStatus",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1008",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-NullFlavor",
+        "name": "NullFlavor",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.83",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        "name": "ObservationInterpretation",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1063",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+        "name": "ObservationValue",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-12-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.88",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ParticipationFunction",
+        "name": "ParticipationFunction",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-02-01"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.1064",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ParticipationMode",
+        "name": "ParticipationMode",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-11-02"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "4.0.0",
+                "fhir": "4.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2015-07",
+                "fhir": "2015-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2014-08",
+                "fhir": "2014-08-01"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.90",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+        "name": "ParticipationType",
+        "versions": [
+            {
+                "vsac": "2023-02",
+                "fhir": "2023-02-01"
+            },
+            {
+                "vsac": "2022-11",
+                "fhir": "2022-11-01"
+            },
+            {
+                "vsac": "2022-02",
+                "fhir": "2022-11-02"
+            },
+            {
+                "vsac": "2021-12",
+                "fhir": "2021-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2021-03",
+                "fhir": "2021-03-01"
+            },
+            {
+                "vsac": "HL7V3.0_2020-11",
+                "fhir": "2020-11-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-12",
+                "fhir": "2019-12-01"
+            },
+            {
+                "vsac": "HL7V3.0_2019-03",
+                "fhir": "2019-03-01"
+            },
+            {
+                "vsac": "5.0.0",
+                "fhir": "5.0.0"
+            },
+            {
+                "vsac": "HL7V3.0_2018-08",
+                "fhir": "2018-08-01"
+            },
+            {
+                "vsac": "HL7V3.0_2017-07",
+                "fhir": "2017-07-01"
+            },
+            {
+                "vsac": "HL7V3.0_2016-07",
+                "fhir": "2016-07-01"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC122",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-Race",
+        "name": "Race",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "4.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2018-08-12"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC123",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration",
+        "name": "RouteOfAdministration",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "3.0.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "urn:oid:2.16.840.1.113883.5.139",
+        "url": "http://terminology.hl7.org/CodeSystem/v3-TimingEvent",
+        "name": "TimingEvent",
+        "versions": [
+            {
+                "vsac": "3.0.0",
+                "fhir": "3.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC125",
+        "url": "http://hl7.org/fhir/us/core/CodeSystem/us-core-observation-category",
+        "name": "USCoreObservationCategoryExtensionCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "6.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "5.0.1"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.1.0"
+            },
+            {
+                "vasc": null,
+                "fhir": "3.1.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC126",
+        "url": "http://hl7.org/fhir/us/core/CodeSystem/condition-category",
+        "name": "USCoreConditionCategoryExtensionCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "6.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "5.0.1"
+            },
+            {
+                "vsac": null,
+                "fhir": "4.1.0"
+            },
+            {
+                "vsac": null,
+                "fhir": "3.1.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC127",
+        "url": "http://www.nlm.nih.gov/research/umls/hcpcs",
+        "name": "HCPCS",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "202407"
+            },
+            {
+                "vsac": null,
+                "fhir": "202404"
+            },
+            {
+                "vsac": null,
+                "fhir": "202401"
+            },
+            {
+                "vsac": null,
+                "fhir": "202310"
+            },
+            {
+                "vsac": null,
+                "fhir": "202307"
+            },
+            {
+                "vsac": null,
+                "fhir": "202304"
+            },
+            {
+                "vsac": null,
+                "fhir": "202301"
+            },
+            {
+                "vsac": null,
+                "fhir": "202210"
+            },
+            {
+                "vsac": null,
+                "fhir": "202207"
+            },
+            {
+                "vsac": null,
+                "fhir": "202204"
+            },
+            {
+                "vsac": null,
+                "fhir": "202201"
+            },
+            {
+                "vsac": null,
+                "fhir": "202110"
+            },
+            {
+                "vsac": null,
+                "fhir": "202107"
+            },
+            {
+                "vsac": null,
+                "fhir": "202104"
+            },
+            {
+                "vsac": null,
+                "fhir": "202101"
+            },
+            {
+                "vsac": null,
+                "fhir": "202010"
+            },
+            {
+                "vsac": null,
+                "fhir": "202007"
+            },
+            {
+                "vsac": null,
+                "fhir": "202004"
+            },
+            {
+                "vsac": null,
+                "fhir": "202001"
+            },
+            {
+                "vsac": null,
+                "fhir": "201910"
+            },
+            {
+                "vsac": null,
+                "fhir": "201907"
+            },
+            {
+                "vsac": null,
+                "fhir": "201904"
+            },
+            {
+                "vsac": null,
+                "fhir": "201901"
+            },
+            {
+                "vsac": null,
+                "fhir": "201810"
+            },
+            {
+                "vsac": null,
+                "fhir": "201807"
+            },
+            {
+                "vsac": null,
+                "fhir": "201804"
+            },
+            {
+                "vsac": null,
+                "fhir": "201801"
+            },
+            {
+                "vsac": null,
+                "fhir": "201710"
+            },
+            {
+                "vsac": null,
+                "fhir": "201707"
+            },
+            {
+                "vsac": null,
+                "fhir": "201704"
+            },
+            {
+                "vsac": null,
+                "fhir": "201701"
+            },
+            {
+                "vsac": null,
+                "fhir": "201610"
+            },
+            {
+                "vsac": null,
+                "fhir": "201607"
+            },
+            {
+                "vsac": null,
+                "fhir": "201604"
+            },
+            {
+                "vsac": null,
+                "fhir": "201601"
+            },
+            {
+                "vsac": null,
+                "fhir": "201510"
+            },
+            {
+                "vsac": null,
+                "fhir": "201507"
+            },
+            {
+                "vsac": null,
+                "fhir": "201504"
+            },
+            {
+                "vsac": null,
+                "fhir": "201501"
+            },
+            {
+                "vsac": null,
+                "fhir": "201410"
+            },
+            {
+                "vsac": null,
+                "fhir": "201407"
+            },
+            {
+                "vsac": null,
+                "fhir": "201404"
+            },
+            {
+                "vsac": null,
+                "fhir": "201401"
+            },
+            {
+                "vsac": null,
+                "fhir": "201310"
+            },
+            {
+                "vsac": null,
+                "fhir": "201307"
+            },
+            {
+                "vsac": null,
+                "fhir": "201304"
+            },
+            {
+                "vsac": null,
+                "fhir": "201301"
+            },
+            {
+                "vsac": null,
+                "fhir": "201210"
+            },
+            {
+                "vsac": null,
+                "fhir": "201207"
+            },
+            {
+                "vsac": null,
+                "fhir": "201204"
+            },
+            {
+                "vsac": null,
+                "fhir": "201201"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC128",
+        "url": "http://hl7.org/fhir/administrative-gender",
+        "name": "FHIR-AdministrativeGender",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "5.0.0"
+            },
+            {
+                "vasc": null,
+                "fhir": "4.3.0"
+            },
+            {
+                "vasc": null,
+                "fhir": "4.0.1"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC129",
+        "url": "http://terminology.hl7.org/CodeSystem/sex-parameter-for-clinical-use",
+        "name": "FHIR-SexParameterForClinicalUseCS",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.0.0"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC130",
+        "url": "http://www.genenames.org",
+        "name": "HGNCGenes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2024-12-06"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC132",
+        "url": "http://terminology.hl7.org/CodeSystem/ex-diagnosistype",
+        "name": "ExampleDiagnosisTypeCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2025-01-22"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC133",
+        "url": "http://terminology.hl7.org/CodeSystem/ex-procedure-type",
+        "name": "ExampleProcedureTypeCodes",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2025-01-22"
+            }
+        ]
+    },
+    {
+        "oid": "NOT.IN.VSAC134",
+        "url": "http://hl7.org/fhir/us/carin-bb/CodeSystem/C4BBClaimProcedureType",
+        "name": "C4BBClaimProcedureType",
+        "versions": [
+            {
+                "vsac": null,
+                "fhir": "2.1.0"
+            }
+        ]
+    }
+]

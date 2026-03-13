@@ -1,7 +1,6 @@
 package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
-import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
@@ -48,75 +47,66 @@ class FhirTerminologyServiceTest {
 
   @Mock FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   @Mock FhirContext fhirContext;
-  @Mock MappingService mappingService;
   @Mock CodeSystemRepository codeSystemRepository;
   @Mock VsacService vsacService;
   @InjectMocks FhirTerminologyService fhirTerminologyService;
 
-  List<CodeSystemEntry> codeSystemEntries;
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
   private final String mockManifestResource =
-      "{\n"
-          + "              \"resourceType\": \"Bundle\",\n"
-          + "              \"id\": \"library-search\",\n"
-          + "              \"meta\":\n"
-          + "              {\n"
-          + "                \"lastUpdated\": \"2024-03-14T14:04:52.456-04:00\"\n"
-          + "              },\n"
-          + "              \"type\": \"searchset\",\n"
-          + "              \"total\": 25,\n"
-          + "              \"link\":\n"
-          + "              [\n"
-          + "                {\n"
-          + "                  \"relation\": \"self\",\n"
-          + "                  \"url\": \"https://uat-cts.nlm.nih.gov/fhir/Library\"\n"
-          + "                }\n"
-          + "              ],\n"
-          + "              \"entry\":\n"
-          + "              [\n"
-          + "                {\n"
-          + "                  \"fullUrl\": \"http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\n"
-          + "                  \"resource\":\n"
-          + "                  {\n"
-          + "                    \"resourceType\": \"Library\",\n"
-          + "                    \"id\": \"ecqm-update-4q2017-eh\",\n"
-          + "                    \"meta\":\n"
-          + "                    {\n"
-          + "                      \"profile\":\n"
-          + "                      [\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm\",\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm\"\n"
-          + "                      ]\n"
-          + "                    },\n"
-          + "                    \"url\": \"http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh\",\n"
-          + "                    \"version\": \"2017-09-15\",\n"
-          + "                    \"title\": \"Ecqm Update 4q2017 EH\",\n"
-          + "                    \"status\": \"active\"\n"
-          + "                  }\n"
-          + "                },\n"
-          + "                {\n"
-          + "                  \"fullUrl\": \"http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\n"
-          + "                  \"resource\":\n"
-          + "                  {\n"
-          + "                    \"resourceType\": \"Library\",\n"
-          + "                    \"id\": \"mu2-update-2012-10-25\",\n"
-          + "                    \"meta\":\n"
-          + "                    {\n"
-          + "                      \"profile\":\n"
-          + "                      [\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm\",\n"
-          + "                        \"http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm\"\n"
-          + "                      ]\n"
-          + "                    },\n"
-          + "                    \"url\": \"http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25\",\n"
-          + "                    \"version\": \"2012-10-25\",\n"
-          + "                    \"status\": \"active\"\n"
-          + "                  }\n"
-          + "                }\n"
-          + "              ]\n"
-          + "            }";
+      """
+      {
+        "resourceType": "Bundle",
+        "id": "library-search",
+        "meta": {
+          "lastUpdated": "2024-03-14T14:04:52.456-04:00"
+        },
+        "type": "searchset",
+        "total": 25,
+        "link": [
+          {
+            "relation": "self",
+            "url": "https://uat-cts.nlm.nih.gov/fhir/Library"
+          }
+        ],
+        "entry": [
+          {
+            "fullUrl": "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh",
+            "resource": {
+              "resourceType": "Library",
+              "id": "ecqm-update-4q2017-eh",
+              "meta": {
+                "profile": [
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm",
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm"
+                ]
+              },
+              "url": "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-4q2017-eh",
+              "version": "2017-09-15",
+              "title": "Ecqm Update 4q2017 EH",
+              "status": "active"
+            }
+          },
+          {
+            "fullUrl": "http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25",
+            "resource": {
+              "resourceType": "Library",
+              "id": "mu2-update-2012-10-25",
+              "meta": {
+                "profile": [
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/publishable-library-cqfm",
+                  "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/quality-program-cqfm"
+                ]
+              },
+              "url": "http://cts.nlm.nih.gov/fhir/Library/mu2-update-2012-10-25",
+              "version": "2012-10-25",
+              "status": "active"
+            }
+          }
+        ]
+      }
+      """;
   private final String mockCodeSystemsResource =
       "{\"resourceType\":\"Bundle\",\"id\":\"codesystem-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},\"type\":\"searchset\",\"total\":831,\"link\":[{\"relation\":\"self\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=500&_count=2\"},{\"relation\":\"first\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=2\"},{\"relation\":\"previous\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=498&_count=2\"},{\"relation\":\"last\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=829&_count=2\"}],\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-04-15T00:00:00-04:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}},{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1305437570\",\"lastUpdated\":\"2020-01-16T00:00:00.000-05:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-12-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-12-27T00:00:00-05:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}}]}";
 
@@ -141,18 +131,6 @@ class FhirTerminologyServiceTest {
     mockValueSetWithNoResource =
         FileUtils.readFileToString(
             Objects.requireNonNull(fileWithNoResource), Charset.defaultCharset());
-    codeSystemEntries = new ArrayList<>();
-    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2022-05");
-    version.setFhir("2022");
-    var codeSystemEntry =
-        CodeSystemEntry.builder()
-            .name("Icd10CM")
-            .oid("urn:oid:2.16.840.1.113883.6.90")
-            .url("http://hl7.org/fhir/sid/icd-10-cm")
-            .versions(List.of(version))
-            .build();
-    codeSystemEntries.add(codeSystemEntry);
   }
 
   @Test
@@ -192,7 +170,21 @@ class FhirTerminologyServiceTest {
     when(fhirTerminologyServiceWebClient.getValueSetResources(anyString(), any()))
         .thenReturn(mockValueSetResourceWithCodes);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(
+            Optional.of(
+                gov.cms.madie.terminology.models.CodeSystem.builder()
+                    .fullUrl("http://hl7.org/fhir/sid/icd-10-cm")
+                    .title("ICD10CM")
+                    .name("Icd10CM")
+                    .version(
+                        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                            .fhirVersion("2022")
+                            .vsacVersion("2022-05")
+                            .build())
+                    .versionId("vid")
+                    .oid("urn:oid:2.16.840.1.113883.6.90")
+                    .build()));
     List<QdmValueSet> result =
         fhirTerminologyService.getValueSetsExpansionsForQdm(valueSetsSearchCriteria, umlsUser);
     assertEquals(1, result.size());
@@ -229,7 +221,6 @@ class FhirTerminologyServiceTest {
     when(fhirTerminologyServiceWebClient.getValueSetResources(
             anyString(), any(ValueSetsSearchCriteria.class)))
         .thenReturn(mockValueSetResourceWithNoCodes);
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result =
         fhirTerminologyService.getValueSetsExpansionsForQdm(valueSetsSearchCriteria, umlsUser);
     assertEquals(1, result.size());
@@ -261,7 +252,6 @@ class FhirTerminologyServiceTest {
     when(fhirTerminologyServiceWebClient.getValueSetResources(anyString(), any()))
         .thenReturn(mockValueSetWithNoResource);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
 
     VsacParseBatchValueSetExpansionException ex =
         assertThrows(
@@ -283,7 +273,6 @@ class FhirTerminologyServiceTest {
   @Test
   void getsValueSetsExpansionsForQdmIfSearchCriteriaIsEmpty() {
     var valueSetsSearchCriteria = ValueSetsSearchCriteria.builder().build();
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result =
         fhirTerminologyService.getValueSetsExpansionsForQdm(valueSetsSearchCriteria, umlsUser);
     assertEquals(0, result.size());
@@ -291,7 +280,6 @@ class FhirTerminologyServiceTest {
 
   @Test
   void getsValueSetsExpansionsForQdmIfSearchCriteriaIsNull() {
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
     List<QdmValueSet> result = fhirTerminologyService.getValueSetsExpansionsForQdm(null, umlsUser);
     assertEquals(0, result.size());
   }
@@ -339,7 +327,8 @@ class FhirTerminologyServiceTest {
     bundle.addEntry(t);
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(mockCodeSystemsResource);
-    when(codeSystemRepository.findById(anyString())).thenReturn(Optional.empty());
+    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.empty());
 
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
@@ -377,14 +366,17 @@ class FhirTerminologyServiceTest {
             .id("titleversion")
             .title("title")
             .name("name1")
-            .version("version")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("version")
+                    .build())
             .versionId("vid")
             .oid("codeUrl")
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build();
 
-    when(codeSystemRepository.findById(anyString()))
+    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.ofNullable(existingCodeSystem));
 
     List<gov.cms.madie.terminology.models.CodeSystem> result =
@@ -398,44 +390,55 @@ class FhirTerminologyServiceTest {
     var c1 = new gov.cms.madie.terminology.models.CodeSystem();
     c1.setTitle("t1");
     c1.setOid("fakeoid1");
-    c1.setVersion("1.0");
+    c1.setFullUrl("http://example.com/cs1");
+    c1.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("1.0")
+            .vsacVersion("1")
+            .build());
     var c2 = new gov.cms.madie.terminology.models.CodeSystem();
     c2.setTitle("t2");
     c2.setOid("fakeoid2");
-    c2.setVersion("2.0");
+    c2.setFullUrl("http://example.com/cs2");
+    c2.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("2.0")
+            .vsacVersion("2")
+            .build());
     var c3 = new gov.cms.madie.terminology.models.CodeSystem();
     c3.setTitle("t3");
     c3.setOid("fakeoid3");
-    c3.setVersion("2024");
+    c3.setFullUrl("http://example.com/cs3");
+    c3.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
+    var c4 = new gov.cms.madie.terminology.models.CodeSystem();
+    c4.setTitle("t4");
+    c4.setOid("NOT.IN.VSAC");
+    c4.setFullUrl("http://example.com/cs4");
+    c4.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("fhirOnly")
+            .build());
 
-    CodeSystemEntry.Version cv1 =
-        new CodeSystemEntry.Version().toBuilder().fhir("1.0").vsac("1").build();
-    CodeSystemEntry.Version cv2 =
-        new CodeSystemEntry.Version().toBuilder().fhir("2.0").vsac("2").build();
-    CodeSystemEntry.Version cv3 = new CodeSystemEntry.Version().toBuilder().fhir("latest").build();
-    var ce1 = new CodeSystemEntry().toBuilder().versions(List.of(cv1)).oid("fakeoid1").build();
-    var ce2 = new CodeSystemEntry().toBuilder().versions(List.of(cv2)).oid("fakeoid2").build();
-    var ce3 = new CodeSystemEntry().toBuilder().versions(List.of(cv3)).oid("NOT.IN.VSAC").build();
-
-    List<CodeSystemEntry> codeSystemEntries = Arrays.asList(ce1, ce2, ce3);
-    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3);
-    when(mappingService.getCodeSystemEntries()).thenAnswer(invocation -> codeSystemEntries);
-    when(codeSystemRepository.findAll()).thenAnswer(invocation -> codeSystems);
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3, c4);
+    when(codeSystemRepository.findAll()).thenReturn(codeSystems);
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.getAllCodeSystems();
 
     verify(codeSystemRepository).findAll();
     assertEquals(3, result.size());
     assertEquals("t1", result.get(0).getTitle());
-    assertEquals("1", result.get(0).getQdmDisplayVersion());
+    assertEquals("1.0", result.get(0).getVersion().getFhirVersion());
+    assertEquals("1", result.get(0).getVersion().getVsacVersion());
 
     assertEquals("t2", result.get(1).getTitle());
-    assertEquals("2", result.get(1).getQdmDisplayVersion());
+    assertEquals("2.0", result.get(1).getVersion().getFhirVersion());
+    assertEquals("2", result.get(1).getVersion().getVsacVersion());
 
     // Verify FHIR only Code Systems appear in the result set
     assertEquals("t3", result.get(2).getTitle());
-    assertEquals("2024", result.get(2).getVersion());
-    assertNull(result.get(2).getQdmDisplayVersion());
+    assertEquals("2024", result.get(2).getVersion().getFhirVersion());
+    assertNull(result.get(2).getVersion().getVsacVersion());
   }
 
   @Test
@@ -470,7 +473,9 @@ class FhirTerminologyServiceTest {
     String codeName = "1963-8";
     String codeSystem = "LOINC";
     String version = "2.40";
-    when(codeSystemRepository.findByNameAndVersion(codeSystem, version))
+    when(codeSystemRepository.findByNameAndVersionFhirVersion(codeSystem, version))
+        .thenReturn(Optional.empty());
+    when(codeSystemRepository.findByNameAndVersionVsacVersion(codeSystem, version))
         .thenReturn(Optional.empty());
     assertThat(
         fhirTerminologyService.retrieveCode(codeName, codeSystem, version, TEST_API_KEY),
@@ -499,30 +504,21 @@ class FhirTerminologyServiceTest {
             + "    \"valueString\": \"2.16.840.1.113883.6.1\"\n"
             + "  } ]\n"
             + "}";
-    codeSystemEntries = new ArrayList<>();
-    CodeSystemEntry.Version versions = new CodeSystemEntry.Version();
-    versions.setVsac("2.40");
-    versions.setFhir("2.40");
-    var codeSystemEntry =
-        CodeSystemEntry.builder()
-            .name("1963-8")
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .url("http://loinc.org")
-            .versions(List.of(versions))
-            .build();
-    codeSystemEntries.add(codeSystemEntry);
 
     var codeSystem =
         gov.cms.madie.terminology.models.CodeSystem.builder()
             .fullUrl("http://loinc.org")
             .title("LOINC")
             .name("LOINC")
-            .version("2.40")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .vsacVersion("2.40")
+                    .build())
             .versionId("2084800774")
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .build();
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    when(codeSystemRepository.findByNameAndVersion(anyString(), anyString()))
+    when(codeSystemRepository.findByNameAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
     when(fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, TEST_API_KEY))
         .thenReturn(codeJson);
@@ -569,35 +565,25 @@ class FhirTerminologyServiceTest {
             + "  } ]\n"
             + "}";
 
-    codeSystemEntries = new ArrayList<>();
-    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
-    version.setVsac("2.40");
-    version.setFhir("2.40");
-    var codeSystemEntry =
-        CodeSystemEntry.builder()
-            .name("8462-4")
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .url("http://loinc.org")
-            .versions(List.of(version))
-            .build();
-    codeSystemEntries.add(codeSystemEntry);
-
     gov.cms.madie.terminology.models.CodeSystem codeSystem =
         gov.cms.madie.terminology.models.CodeSystem.builder()
             .id("LOINC2.40")
             .fullUrl("http://loinc.org")
             .title("LOINC")
             .name("LOINC")
-            .version("2.40")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .vsacVersion("2.40")
+                    .build())
             .versionId("404676818")
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .lastUpdated(Instant.parse("2024-04-30T20:18:48.706Z"))
             .lastUpdatedUpstream(new Date("Fri Apr 01 00:00:00 EDT 2022"))
+            .isLatestVersion(true)
             .build();
 
-    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
-    when(codeSystemRepository.findByOidAndVersion(anyString(), anyString()))
-        .thenReturn(Optional.ofNullable(codeSystem));
+    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
     when(fhirTerminologyServiceWebClient.getCodeResource(anyString(), any(), any()))
         .thenReturn(codeJson);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());

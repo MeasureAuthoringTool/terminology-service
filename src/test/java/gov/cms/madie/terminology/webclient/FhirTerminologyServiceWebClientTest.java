@@ -232,7 +232,11 @@ class FhirTerminologyServiceWebClientTest {
   void testGetCodeResource() throws InterruptedException {
     String codeName = "1963-8";
     CodeSystem codeSystem =
-        CodeSystem.builder().fullUrl("http://loinc.org").name("LOINC").version("2.40").build();
+        CodeSystem.builder()
+            .fullUrl("http://loinc.org")
+            .name("LOINC")
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
+            .build();
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(200)

@@ -4,9 +4,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
-import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import org.apache.commons.lang3.StringUtils;
@@ -85,22 +83,8 @@ public class TerminologyServiceUtil {
         + "/Info";
   }
 
-  public static Optional<CodeSystemEntry> getCodeSystemEntry(
-      List<CodeSystemEntry> codeSystemEntries, String cqlCodeSystemOid, String model) {
-    return codeSystemEntries.stream()
-        .filter(cse -> isCodeSystemMatch(cse, cqlCodeSystemOid, model))
-        .findFirst();
-  }
-
-  private static boolean isCodeSystemMatch(CodeSystemEntry cse, String oid, String model) {
-    if ("QDM".equals(model)) {
-      return cse.getOid().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
-    }
-    return cse.getUrl().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
-  }
-
   public static String sanitizeInput(String input) {
-    return input.replaceAll("'", "");
+    return StringUtils.isBlank(input) ? "" : StringUtils.remove(input, "'");
   }
 
   public static String removeUrnOidSubString(String oid) {
@@ -144,29 +128,5 @@ public class TerminologyServiceUtil {
     }
 
     return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
-  }
-
-  /**
-   * Returns model specific code system version
-   *
-   * @param codeSystem
-   * @param fhirCsVersion
-   * @param model
-   * @return code system version string
-   */
-  public static String getCodeSystemVersion(
-      CodeSystemEntry codeSystem, String fhirCsVersion, String model) {
-    if ("QDM".equals(model) && codeSystem != null && StringUtils.isNotBlank(fhirCsVersion)) {
-      CodeSystemEntry.Version csv =
-          codeSystem.getVersions().stream()
-              .filter(version -> fhirCsVersion.equals(version.getFhir()))
-              .findFirst()
-              .orElse(null);
-      if (csv == null) {
-        return null;
-      }
-      return csv.getVsac();
-    }
-    return fhirCsVersion;
   }
 }
