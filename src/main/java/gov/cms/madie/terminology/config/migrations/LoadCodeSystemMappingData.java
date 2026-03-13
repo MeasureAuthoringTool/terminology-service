@@ -13,15 +13,15 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.*;
 
 @ChangeUnit(id = "load-code-system-mapping-from-doc", order = "1", author = "madie-dev")
 @Slf4j
 public class LoadCodeSystemMappingData {
 
-  private final String CODE_SYSTEM_ENTRY_FILE_PATH = "src/main/resources/code-system-entry.json";
   private final List<CodeSystem> originalCodeSystems = new ArrayList<>();
 
   @Execution
@@ -30,6 +30,13 @@ public class LoadCodeSystemMappingData {
       CodeSystemRepository codeSystemRepository,
       ObjectMapper objectMapper,
       UpdateCodeSystemTask updateCodeSystemTask) {
+
+    // Load code-mapping-entry.json
+    List<CodeSystemEntry> codeSystemEntries = deserializeFromFile(objectMapper);
+    if (CollectionUtils.isEmpty(codeSystemEntries)) {
+      log.error("Unable to load code system mapping doc.");
+      throw new UncheckedIOException(new IOException("Unable to load code system mapping doc."));
+    }
 
     // Drop the existing codeSystem collection to allow for model changes.
     mongoTemplate.dropCollection("codeSystem");
@@ -42,12 +49,15 @@ public class LoadCodeSystemMappingData {
     // Store a copy of the original code system for potential rollback
     codeSystems.forEach(
         codeSystem -> {
-          // Duplication with Builder is sufficient since all fields in CodeSystem
-          // are either primitives or immutable (String, boolean, etc.)
-          originalCodeSystems.add(codeSystem.toBuilder().build());
+          originalCodeSystems.add(
+              codeSystem.toBuilder()
+                  .version(
+                      CodeSystem.Version.builder()
+                          .fhirVersion(codeSystem.getVersion().getFhirVersion())
+                          .vsacVersion(codeSystem.getVersion().getVsacVersion())
+                          .build())
+                  .build());
         });
-
-    List<CodeSystemEntry> codeSystemEntries = deserializeFromFile(objectMapper);
 
     for (CodeSystemEntry entry : codeSystemEntries) {
       boolean isLastestVersion = true; // First version in the list is the latest.
@@ -105,7 +115,7 @@ public class LoadCodeSystemMappingData {
   }
 
   /**
-   * Deserialize code-system-entry.json from a file path into a List of CodeSystemEntry objects.
+   * Deserialize code-system-entry.json from Resource into a List of CodeSystemEntry objects.
    *
    * @param objectMapper the ObjectMapper to use for deserialization. Exposed as a parameter for
    *     easier testing.
@@ -113,19 +123,30 @@ public class LoadCodeSystemMappingData {
    */
   private List<CodeSystemEntry> deserializeFromFile(ObjectMapper objectMapper) {
     try {
-      CodeSystemEntry[] entries =
-          objectMapper.readValue(new File(CODE_SYSTEM_ENTRY_FILE_PATH), CodeSystemEntry[].class);
+      CodeSystemEntry[] entries = objectMapper.readValue(loadMappingDoc(), CodeSystemEntry[].class);
       if (entries != null) {
         log.info(
             "Successfully deserialized {} CodeSystemEntry objects from file: {}",
             entries.length,
-            CODE_SYSTEM_ENTRY_FILE_PATH);
+            "/code-system-entry.json");
         return Arrays.asList(entries);
       }
     } catch (IOException e) {
-      log.error(
-          "Error deserializing CodeSystemEntry from file: {}", CODE_SYSTEM_ENTRY_FILE_PATH, e);
+      log.error("Error deserializing CodeSystemEntry from file: {}", "/code-system-entry.json", e);
     }
     return Collections.emptyList();
+  }
+
+  private String loadMappingDoc() {
+    try (InputStream inputStream =
+        LoadCodeSystemMappingData.class.getResourceAsStream("/code-system-entry.json")) {
+      if (inputStream == null) {
+        throw new UncheckedIOException(
+            new IOException("Unable to read resource /code-system-entry.json"));
+      }
+      return new String(inputStream.readAllBytes());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }
