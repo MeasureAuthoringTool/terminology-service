@@ -4,6 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
+import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -467,6 +468,51 @@ public class FhirTerminologyService {
             e.getMessage());
       }
     }
+  }
+
+  public CodeSystem createCodeSystem(CodeSystem codeSystem) {
+    if (codeSystemRepository
+        .findByOidAndVersionFhirVersion(
+            codeSystem.getOid(), codeSystem.getVersion().getFhirVersion())
+        .isPresent()) {
+      throw new IllegalArgumentException(
+          "CodeSystem with name ["
+              + codeSystem.getName()
+              + "] and version ["
+              + codeSystem.getVersion().getFhirVersion()
+              + "] already exists");
+    }
+    codeSystem.setLastUpdated(Instant.now());
+    CodeSystem saved = codeSystemRepository.save(codeSystem);
+    log.info("New CodeSystem created by admin: {}", saved);
+    return saved;
+  }
+
+  public CodeSystem updateCodeSystem(String id, CodeSystem codeSystem) {
+    CodeSystem existing =
+        codeSystemRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new CodeSystemNotFoundException("CodeSystem not found for id: " + id));
+    existing.setFullUrl(codeSystem.getFullUrl());
+    existing.setTitle(codeSystem.getTitle());
+    existing.setName(codeSystem.getName());
+    existing.setVersion(codeSystem.getVersion());
+    existing.setVersionId(codeSystem.getVersionId());
+    existing.setOid(codeSystem.getOid());
+    existing.setLastUpdated(Instant.now());
+    existing.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
+    CodeSystem updated = codeSystemRepository.save(existing);
+    log.info("CodeSystem updated by admin: {}", updated);
+    return updated;
+  }
+
+  public void deleteCodeSystem(String id) {
+    if (!codeSystemRepository.existsById(id)) {
+      throw new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
+    }
+    codeSystemRepository.deleteById(id);
+    log.info("CodeSystem deleted by admin, id: {}", id);
   }
 
   public List<Code> retrieveCodesAndCodeSystems(List<Map<String, String>> codeList, String apiKey) {
