@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.config.migrations;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -9,15 +10,10 @@ import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -62,16 +58,15 @@ class LoadCodeSystemMappingDataTest {
                 List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("1.0.0").build()))
             .build();
 
-    doNothing().when(mongoTemplateMock).dropCollection(anyString());
-    doNothing().when(updateCodeSystemTaskMock).updateCodeSystems();
+    lenient().doNothing().when(mongoTemplateMock).dropCollection(anyString());
+    lenient().doNothing().when(updateCodeSystemTaskMock).updateCodeSystems();
   }
 
   @Test
-  void testExistingCodeSystemWithMatchingFhirAndVsacVersions() throws IOException {
-
+  void testExistingCodeSystemWithMatchingFhirAndVsacVersions() throws JsonProcessingException {
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
 
     migration.apply(
@@ -94,13 +89,14 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMatchingFhirAndDifferingVsacVersions() throws IOException {
+  void testExistingCodeSystemWithMatchingFhirAndDifferingVsacVersions()
+      throws JsonProcessingException {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     migration.apply(
         mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
@@ -121,7 +117,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMultipleVersions() throws IOException {
+  void testExistingCodeSystemWithMultipleVersions() throws JsonProcessingException {
     mappingDocEntry.setVersions(
         List.of(
             // Latest first
@@ -130,7 +126,7 @@ class LoadCodeSystemMappingDataTest {
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     migration.apply(
         mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
@@ -165,12 +161,12 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithOnlyVsacVersions() throws IOException {
+  void testExistingCodeSystemWithOnlyVsacVersions() throws JsonProcessingException {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     migration.apply(
         mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
@@ -187,11 +183,11 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithOnlyFhirVersions() throws IOException {
+  void testExistingCodeSystemWithOnlyFhirVersions() throws JsonProcessingException {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").build()));
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     migration.apply(
         mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
@@ -210,12 +206,12 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithMatchingFhirAndVsacVersions() throws IOException {
+  void testNewCodeSystemWithMatchingFhirAndVsacVersions() throws JsonProcessingException {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("1.0.0").build()));
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
 
     migration.apply(
@@ -237,13 +233,13 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithDifferingFhirAndVsacVersions() throws IOException {
+  void testNewCodeSystemWithDifferingFhirAndVsacVersions() throws JsonProcessingException {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     migration.apply(
         mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
@@ -266,12 +262,12 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithOnlyVsacVersions() throws IOException {
+  void testNewCodeSystemWithOnlyVsacVersions() throws JsonProcessingException {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
 
     migration.apply(
@@ -294,12 +290,12 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithOnlyFhirVersions() throws IOException {
+  void testNewCodeSystemWithOnlyFhirVersions() throws JsonProcessingException {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").build()));
     mappingDocEntry.setOid("NOT.IN.VSAC.TEST");
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
 
-    when(objectMapperMock.readValue(any(File.class), eq(CodeSystemEntry[].class)))
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     migration.apply(
         mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
@@ -320,7 +316,9 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testRollbackUsesOriginalCodeSystems() {
+  void testRollbackUsesOriginalCodeSystems() throws JsonProcessingException {
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
+        .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
     // Deterministic values
@@ -340,5 +338,22 @@ class LoadCodeSystemMappingDataTest {
     assertFalse(rolledBackCodeSystems.get(0).isQdm());
     assertFalse(rolledBackCodeSystems.get(0).isLatestVersion());
     assertTrue(rolledBackCodeSystems.get(0).isVsacSearchable());
+  }
+
+  @Test
+  void testRollbackDoesNothingIfMappingDocFailsParsing() throws JsonProcessingException {
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
+        .thenThrow(new JsonProcessingException("Test Exception") {});
+    assertThrows(
+        RuntimeException.class,
+        () ->
+            migration.apply(
+                mongoTemplateMock,
+                codeSystemRepositoryMock,
+                objectMapperMock,
+                updateCodeSystemTaskMock));
+    migration.rollback(mongoTemplateMock, codeSystemRepositoryMock);
+
+    verify(codeSystemRepositoryMock, never()).saveAll(anyList());
   }
 }
