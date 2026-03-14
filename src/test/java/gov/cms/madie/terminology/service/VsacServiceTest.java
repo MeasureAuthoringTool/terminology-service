@@ -8,6 +8,7 @@ import gov.cms.madie.models.cql.terminology.CqlCode;
 import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.cql.terminology.VsacCode.VsacError;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
+import org.hl7.fhir.r4.model.ValueSet;
 
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
@@ -40,6 +41,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,6 +55,8 @@ class VsacServiceTest {
   @Mock TerminologyServiceWebClient terminologyServiceWebClient;
 
   @Mock MappingService mappingService;
+
+  @Mock gov.cms.madie.terminology.mapper.VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
 
   @Mock UmlsUserRepository umlsUserRepository;
 
@@ -571,5 +575,231 @@ class VsacServiceTest {
     when(umlsUserRepository.deleteByHarpId(anyString())).thenReturn(Optional.empty());
     boolean loggedOut = vsacService.logoutUMLSUser(umlsUser.getHarpId());
     assertFalse(loggedOut);
+  }
+
+  /* branch test on validateUmlsInformation(), line 49:
+   * return umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey());
+   */
+  @Test
+  public void testValidateUmlsInformationWhenUmlsApiKeyIsAvailable() {
+    // return the pre-built umlsUser from setUp which has TEST_API_KEY
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUser));
+    assertTrue(vsacService.validateUmlsInformation(umlsUser.getHarpId()));
+  }
+
+  /* branch test on validateUmlsInformation(), line 49:
+   * when !umlsUser.isPresent()
+   */
+  @Test
+  void validateUmlsInformationUmlsUserNotFound() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.empty());
+    boolean isValid = vsacService.validateUmlsInformation(umlsUser.getHarpId());
+    assertFalse(isValid);
+  }
+
+  /* covers convertToFHIRValueSet(), line 65:
+   * return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValueSetResponse);
+   */
+  @Test
+  void convertToFHIRValueSet() {
+    ValueSet valueSet = vsacService.convertToFHIRValueSet(svsValueSet);
+    assertNull(valueSet);
+  }
+
+  /* covers buildCodeSystemVersion(), line 238:
+   * ? cqlCodeSystemVersion (when optionalCodeSystemVersion.get().getVsac() == null)
+   */
+  @Test
+  void testCqlProvidedVersionMatchesFhirButVsacNull_usesCqlVersion() {
+    CqlCode cqlCode =
+        CqlCode.builder()
+            .name("preop")
+            .codeId("'P'")
+            .codeSystem(
+                CqlCode.CqlCodeSystem.builder()
+                    .oid("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+                    .name("ActPriority:HL7V3.0_2021-03")
+                    .version("'HL7V3.0_2021-03'")
+                    .build())
+            .build();
+
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac(null);
+    version.setFhir("HL7V3.0_2021-03");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("ActPriority")
+            .oid("urn:oid:1.2.3.4.5.6.7.8.9")
+            .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .versions(Collections.toList(version))
+            .build();
+
+    when(mappingService.getCodeSystemEntries()).thenReturn(List.of(codeSystemEntry));
+
+    VsacCode ok = new VsacCode();
+    ok.setStatus("ok");
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(ok);
+
+    List<CqlCode> result = vsacService.validateCodes(List.of(cqlCode), umlsUser, FHIR_MODEL);
+    assertTrue(result.get(0).isValid());
+
+    // verify the generated path used the CQL-supplied version (sanitized, without quotes)
+    ArgumentCaptor<String> pathCaptor = ArgumentCaptor.forClass(String.class);
+    verify(terminologyServiceWebClient).getCode(pathCaptor.capture(), anyString());
+    String usedPath = pathCaptor.getValue();
+    assertTrue(usedPath.contains("/Version/HL7V3.0_2021-03/"));
+  }
+
+  /* covers buildCodeSystemVersion(), line 255:
+   * return codeSystemEntryVersion.get(0).getVsac();
+   */
+  @Test
+  void testWhenCqlVersionMissing_usesFirstVersionVsac() {
+    // CQL code has no version provided
+    CqlCode cqlCode =
+        CqlCode.builder()
+            .name("preop")
+            .codeId("'P'")
+            .codeSystem(
+                CqlCode.CqlCodeSystem.builder()
+                    .oid("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+                    .name("ActPriority:HL7V3.0_2021-03")
+                    .version(null)
+                    .build())
+            .build();
+
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2.3");
+    version.setFhir("2.3");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("ActPriority")
+            .oid("urn:oid:1.2.3.4.5.6.7.8.9")
+            .url("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
+            .versions(Collections.toList(version))
+            .build();
+
+    when(mappingService.getCodeSystemEntries()).thenReturn(List.of(codeSystemEntry));
+
+    VsacCode ok = new VsacCode();
+    ok.setStatus("ok");
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(ok);
+
+    List<CqlCode> result = vsacService.validateCodes(List.of(cqlCode), umlsUser, FHIR_MODEL);
+    assertTrue(result.get(0).isValid());
+
+    ArgumentCaptor<String> pathCaptor = ArgumentCaptor.forClass(String.class);
+    verify(terminologyServiceWebClient).getCode(pathCaptor.capture(), anyString());
+    String usedPath = pathCaptor.getValue();
+    assertTrue(usedPath.contains("/Version/2.3/"));
+  }
+
+  /* covers private void buildVsacErrorMessage(),
+   * lines 291 - 295, and line 285:
+   * if !(StringUtils.isNumeric(vsacCode.getStatus()))
+   */
+  @Test
+  void testUncaughtVsacErrorSetsInvalid() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+
+    VsacCode bad = new VsacCode();
+    bad.setStatus("NON_NUMERIC_STATUS");
+    VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
+    vsacErrorResultSet.setErrCode("NOT_NUM");
+    vsacErrorResultSet.setErrDesc("Some weird error");
+    VsacError vsacError = new VsacError();
+    vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
+    bad.setErrors(vsacError);
+
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(bad);
+
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
+    assertFalse(result.get(0).isValid());
+  }
+
+  /* branch coverage for private void buildVsacErrorMessage(), line 278:
+   * if !(errorCode == 802)
+   */
+  @Test
+  void testNumericButUnknownVsacErrorCodeDoesNotSetInvalid() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+
+    VsacCode bad = new VsacCode();
+    bad.setStatus("error");
+    VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
+    vsacErrorResultSet.setErrCode("999");
+    vsacErrorResultSet.setErrDesc("Some numeric but unknown error");
+    VsacError vsacError = new VsacError();
+    vsacError.setResultSet((Collections.toList(vsacErrorResultSet)));
+    bad.setErrors(vsacError);
+
+    when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(bad);
+
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
+    // current implementation does not mark the CQL code invalid for unknown numeric error codes
+    assertTrue(result.get(0).isValid());
+  }
+
+  /* branch coverage for validateCodes(), line 108:
+   * if (codeId == null || TerminologyServiceUtil.sanitizeInput(codeId).isBlank()) {
+   */
+  @Test
+  void testCodeIdSanitizedBlankSetsError() {
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    // simulate code id that becomes blank after sanitize (e.g., "''")
+    cqlCodes.get(0).setCodeId("''");
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
+    assertFalse(result.get(0).isValid());
+    assertEquals("Code Id is required", result.get(0).getErrorMessage());
+  }
+
+  /* branch coverage for validateCodes(), line 96:
+   * if !(cqlCode.getCodeSystem() != null)
+   */
+  @Test
+  void validateCodesCodeSystemNull() {
+    cqlCodes = new ArrayList<>();
+    CqlCode cqlCode = CqlCode.builder().name("preop").codeId("'P'").build();
+    cqlCodes.add(cqlCode);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+
+    List<CqlCode> codes = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
+    assertNotNull(codes);
+    assertEquals(cqlCode, codes.get(0));
+  }
+
+  /* coverage for getSvsCodeSystemVersion(), line 169:
+   * return code.getSvsVersion();
+   * when StringUtils.isNotBlank(code.getSvsVersion())
+   */
+  @Test
+  void getSvsCodeSystemVersion_returnsCodeSvsVersion_whenNotBlank() throws Exception {
+    Code code = Code.builder().build();
+    code.setSvsVersion("test-svs-version");
+    java.lang.reflect.Method method =
+        VsacService.class.getDeclaredMethod("getSvsCodeSystemVersion", Code.class);
+    method.setAccessible(true);
+    String result = (String) method.invoke(vsacService, code);
+    assertEquals("test-svs-version", result);
+  }
+
+  /* branch coverage for getSvsCodeSystemVersion(), line 185:
+   * if (version == null || version.getVsac() == null)
+   */
+  @Test
+  void getSvsCodeSystemVersionReturnsNullWhenVsacIsNullOnMatchingVersion() throws Exception {
+    Code code = Code.builder().fhirVersion("match.fhir").codeSystemOid("9.9.9.9").build();
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac(null);
+    version.setFhir("match.fhir");
+    var cse =
+        CodeSystemEntry.builder().oid("9.9.9.9").versions(Collections.toList(version)).build();
+    when(mappingService.getCodeSystemEntryByOid(anyString())).thenReturn(cse);
+
+    java.lang.reflect.Method method =
+        VsacService.class.getDeclaredMethod("getSvsCodeSystemVersion", Code.class);
+    method.setAccessible(true);
+    String result = (String) method.invoke(vsacService, code);
+    assertNull(result);
   }
 }

@@ -6,42 +6,48 @@ import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
+import gov.cms.madie.terminology.dto.ValueSetForSearch;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
-import gov.cms.madie.terminology.helpers.TestHelpers;
+// local resource helpers used instead of the shared TestHelpers to avoid
+// sure-fire single-test compilation issues during focused runs
+import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import org.apache.commons.io.FileUtils;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Meta;
+import org.hl7.fhir.r4.model.OperationOutcome;
+
+import gov.cms.madie.terminology.dto.ValueSetSearchResult;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
 
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.*;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class FhirTerminologyServiceTest {
@@ -127,12 +133,9 @@ class FhirTerminologyServiceTest {
   @BeforeEach
   public void setUp() throws IOException {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    File fileWithCodes =
-        TestHelpers.getTestResourceFile("/value-sets/value_set_with_expansion_codes.json");
-    File fileWithNoCodes =
-        TestHelpers.getTestResourceFile("/value-sets/value_set_with_no_expansions.json");
-    File fileWithNoResource =
-        TestHelpers.getTestResourceFile("/value-sets/value_set_with_no_resource.json");
+    File fileWithCodes = getTestResourceFile("/value-sets/value_set_with_expansion_codes.json");
+    File fileWithNoCodes = getTestResourceFile("/value-sets/value_set_with_no_expansions.json");
+    File fileWithNoResource = getTestResourceFile("/value-sets/value_set_with_no_resource.json");
     mockValueSetResourceWithCodes =
         FileUtils.readFileToString(Objects.requireNonNull(fileWithCodes), Charset.defaultCharset());
     mockValueSetResourceWithNoCodes =
@@ -341,10 +344,11 @@ class FhirTerminologyServiceTest {
         .thenReturn(mockCodeSystemsResource);
     when(codeSystemRepository.findById(anyString())).thenReturn(Optional.empty());
 
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
+    // call method under test and assert results
+    List<gov.cms.madie.terminology.models.CodeSystem> resultList =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-    assertEquals(2, result.size());
-    assertEquals(result.get(1).getFullUrl(), t.getFullUrl());
+    assertEquals(2, resultList.size());
+    assertEquals(resultList.get(1).getFullUrl(), t.getFullUrl());
     verify(codeSystemRepository, times(2))
         .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
   }
@@ -421,21 +425,21 @@ class FhirTerminologyServiceTest {
     List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3);
     when(mappingService.getCodeSystemEntries()).thenAnswer(invocation -> codeSystemEntries);
     when(codeSystemRepository.findAll()).thenAnswer(invocation -> codeSystems);
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
+    List<gov.cms.madie.terminology.models.CodeSystem> resultListAll =
         fhirTerminologyService.getAllCodeSystems();
 
     verify(codeSystemRepository).findAll();
-    assertEquals(3, result.size());
-    assertEquals("t1", result.get(0).getTitle());
-    assertEquals("1", result.get(0).getQdmDisplayVersion());
+    assertEquals(3, resultListAll.size());
+    assertEquals("t1", resultListAll.get(0).getTitle());
+    assertEquals("1", resultListAll.get(0).getQdmDisplayVersion());
 
-    assertEquals("t2", result.get(1).getTitle());
-    assertEquals("2", result.get(1).getQdmDisplayVersion());
+    assertEquals("t2", resultListAll.get(1).getTitle());
+    assertEquals("2", resultListAll.get(1).getQdmDisplayVersion());
 
     // Verify FHIR only Code Systems appear in the result set
-    assertEquals("t3", result.get(2).getTitle());
-    assertEquals("2024", result.get(2).getVersion());
-    assertNull(result.get(2).getQdmDisplayVersion());
+    assertEquals("t3", resultListAll.get(2).getTitle());
+    assertEquals("2024", resultListAll.get(2).getVersion());
+    assertNull(resultListAll.get(2).getQdmDisplayVersion());
   }
 
   @Test
@@ -609,5 +613,863 @@ class FhirTerminologyServiceTest {
     assertThat(code.get(0).getFhirVersion(), is(equalTo("2.40")));
     assertThat(code.get(0).getStatus(), is(equalTo(CodeStatus.ACTIVE)));
     assertThat(code.get(0).isVersionIncluded(), is(equalTo(false)));
+  }
+
+  /* Small local helper to avoid depending on the shared TestHelpers import which
+   * occasionally causes unresolved-symbol compile issues when running single
+   * test methods via Surefire. Mirrors the behaviour used elsewhere in tests.
+   */
+
+  private static File getTestResourceFile(String resourcePath) {
+    if (resourcePath == null || resourcePath.isEmpty()) {
+      return null;
+    }
+    return new File(
+        Objects.requireNonNull(FhirTerminologyServiceTest.class.getResource(resourcePath))
+            .getFile());
+  }
+
+  /* this test covers requestAllValueSetsExpansions(): when existingValueSet!=null
+   * which will also cover most of the private boolean containsEntry() method
+   */
+  @Test
+  void requestAllValueSetsExpansionsDedupeAndRecursiveCalls() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+
+    // existingValueSet with one contains entry A
+    ValueSet existing = new ValueSet();
+    existing.setId("vs1");
+    existing.setExpansion(new ValueSet.ValueSetExpansionComponent());
+    ValueSet.ValueSetExpansionContainsComponent a =
+        new ValueSet.ValueSetExpansionContainsComponent();
+    a.setCode("A");
+    a.setSystem("S");
+    a.setVersion("v1");
+    existing.getExpansion().addContains(a);
+
+    List<ValueSet> allValueSets = new ArrayList<>();
+    allValueSets.add(existing);
+
+    // First bundle: contains A (duplicate) and B; offset=0, total=3 -> will trigger recursion
+    ValueSet vsFromFirst = new ValueSet();
+    vsFromFirst.setId("vs1");
+    vsFromFirst.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    ValueSet.ValueSetExpansionComponent exp1 = new ValueSet.ValueSetExpansionComponent();
+    exp1.setOffset(0);
+    exp1.setTotal(3);
+    ValueSet.ValueSetExpansionContainsComponent b =
+        new ValueSet.ValueSetExpansionContainsComponent();
+    b.setCode("B");
+    b.setSystem("S");
+    b.setVersion("v1");
+    exp1.addContains(a);
+    exp1.addContains(b);
+    vsFromFirst.setExpansion(exp1);
+
+    Bundle bundle1 = new Bundle();
+    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(vsFromFirst));
+
+    // Second bundle (recursion): contains C; offset=2, total=3 -> no further recursion
+    ValueSet vsFromSecond = new ValueSet();
+    vsFromSecond.setId("vs1");
+    vsFromSecond.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    ValueSet.ValueSetExpansionComponent exp2 = new ValueSet.ValueSetExpansionComponent();
+    exp2.setOffset(2);
+    exp2.setTotal(3);
+    ValueSet.ValueSetExpansionContainsComponent c =
+        new ValueSet.ValueSetExpansionContainsComponent();
+    c.setCode("C");
+    c.setSystem("S");
+    c.setVersion("v1");
+    exp2.addContains(c);
+    vsFromSecond.setExpansion(exp2);
+
+    Bundle bundle2 = new Bundle();
+    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(vsFromSecond));
+
+    when(fhirTerminologyServiceWebClient.getValueSetResources(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(parser.encodeResourceToString(bundle1), parser.encodeResourceToString(bundle2));
+
+    ValueSetsSearchCriteria search =
+        ValueSetsSearchCriteria.builder()
+            .valueSetParams(
+                List.of(ValueSetsSearchCriteria.ValueSetParams.builder().oid("1").build()))
+            .build();
+
+    fhirTerminologyService.requestAllValueSetsExpansions(allValueSets, TEST_API_KEY, search);
+
+    // After dedupe and recursion, existing expansion should have A, B, C -> size 3
+    assertEquals(3, existing.getExpansion().getContains().size());
+
+    // ensure web client was invoked at least twice (initial + recursive)
+    verify(fhirTerminologyServiceWebClient, atLeast(2))
+        .getValueSetResources(anyString(), any(ValueSetsSearchCriteria.class));
+  }
+
+  /* this test is for branch testing on requestAllValueSetsExpansions() method when
+   * it throw new VsacParseBatchValueSetExpansionException AND
+   * valueSetsSearchCriteria.getManifestExpansion() == null
+   */
+  @Test
+  void requestAllValueSetsExpansionsHandlesNullManifestExpansion() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+
+    // Bundle with one entry where resource is null and response contains OperationOutcome
+    Bundle bundle = new Bundle();
+    Bundle.BundleEntryComponent entry = new Bundle.BundleEntryComponent();
+    entry.setResource(null); // This will make valueSetResource null
+    OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue().setDiagnostics("Simulated error");
+    entry.setResponse(new Bundle.BundleEntryResponseComponent().setOutcome(outcome));
+    bundle.addEntry(entry);
+    String bundleJson = parser.encodeResourceToString(bundle);
+
+    when(fhirTerminologyServiceWebClient.getValueSetResources(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(bundleJson);
+
+    List<ValueSet> allValueSets = new ArrayList<>();
+    ValueSetsSearchCriteria search =
+        ValueSetsSearchCriteria.builder()
+            .valueSetParams(
+                List.of(ValueSetsSearchCriteria.ValueSetParams.builder().oid("1").build()))
+            .manifestExpansion(null)
+            .build();
+
+    // Should throw VsacParseBatchValueSetExpansionException and cover the null branch
+    VsacParseBatchValueSetExpansionException ex =
+        assertThrows(
+            VsacParseBatchValueSetExpansionException.class,
+            () ->
+                fhirTerminologyService.requestAllValueSetsExpansions(
+                    allValueSets, TEST_API_KEY, search));
+    assertEquals("Failed to fetch VSAC value set expansions", ex.getMessage());
+    // Should be null due to manifestExpansion == null
+    assertNull(ex.getManifestExpansionFullUrl());
+  }
+
+  /* this is a branch coverage for searchValueSets() method
+   * when !l.getRelation().equals("next")
+   */
+  @Test
+  void searchValueSetsWithoutNextLinkDoesNotCallFetch() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+
+    ValueSet vs1 = new ValueSet();
+    vs1.setId("v1-no-next");
+    vs1.setTitle("TitleNoNext");
+    vs1.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    Meta m = new Meta();
+    m.setLastUpdated(new Date());
+    vs1.setMeta(m);
+
+    Bundle bundle1 = new Bundle();
+    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(vs1));
+    bundle1.addLink(
+        new Bundle.BundleLinkComponent()
+            .setRelation("notnext")
+            .setUrl("http://example.com/next?page=2"));
+
+    String json1 = parser.encodeResourceToString(bundle1);
+
+    when(fhirTerminologyServiceWebClient.searchValueSets(anyString(), anyMap())).thenReturn(json1);
+
+    ValueSetSearchResult result = fhirTerminologyService.searchValueSets(TEST_API_KEY, Map.of());
+
+    assertEquals(1, result.getValueSets().size());
+    // ensure fetchResourceFromVsac was not called since there is no 'next' link
+    verify(fhirTerminologyServiceWebClient, times(0))
+        .fetchResourceFromVsac(anyString(), anyString(), anyString());
+  }
+
+  /* this test covers searchValueSets() method
+   * when l.getRelation().equals("next"), it triggers
+   * recursiveRequestValueSets(valueSetList, apiKey, l.getUrl());
+   */
+  @Test
+  void searchValueSetsRecursiveFetchHandlesMultipleNextLinks() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+
+    // First page with a next link to page=2
+    ValueSet p1 = new ValueSet();
+    p1.setId("p1");
+    p1.setTitle("P1");
+    p1.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    Meta m1 = new Meta();
+    m1.setLastUpdated(new Date());
+    p1.setMeta(m1);
+    Bundle bundle1 = new Bundle();
+    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(p1));
+    bundle1.addLink(
+        new Bundle.BundleLinkComponent()
+            .setRelation("next")
+            .setUrl("http://example.com/next?page=2"));
+
+    // Second page with its own next link to page=3
+    ValueSet p2 = new ValueSet();
+    p2.setId("p2");
+    p2.setTitle("P2");
+    p2.addIdentifier(new Identifier().setValue("urn:oid:2"));
+    Meta m2 = new Meta();
+    m2.setLastUpdated(new Date());
+    p2.setMeta(m2);
+    Bundle bundle2 = new Bundle();
+    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(p2));
+    bundle2.addLink(
+        new Bundle.BundleLinkComponent()
+            .setRelation("next")
+            .setUrl("http://example.com/next?page=3"));
+
+    // Third (final) page with no next link
+    ValueSet p3 = new ValueSet();
+    p3.setId("p3");
+    p3.setTitle("P3");
+    p3.addIdentifier(new Identifier().setValue("urn:oid:3"));
+    Meta m3 = new Meta();
+    m3.setLastUpdated(new Date());
+    p3.setMeta(m3);
+    Bundle bundle3 = new Bundle();
+    bundle3.addEntry(new Bundle.BundleEntryComponent().setResource(p3));
+    // include a non-next link so the false branch in recursiveRequestValueSets is exercised
+    bundle3.addLink(
+        new Bundle.BundleLinkComponent().setRelation("self").setUrl("http://example.com/self"));
+
+    String json1 = parser.encodeResourceToString(bundle1);
+    String json2 = parser.encodeResourceToString(bundle2);
+    String json3 = parser.encodeResourceToString(bundle3);
+
+    when(fhirTerminologyServiceWebClient.searchValueSets(anyString(), anyMap())).thenReturn(json1);
+    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+            eq("https://example.com/next?page=2"), eq(TEST_API_KEY), eq("bundle")))
+        .thenReturn(json2);
+    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+            eq("https://example.com/next?page=3"), eq(TEST_API_KEY), eq("bundle")))
+        .thenReturn(json3);
+
+    ValueSetSearchResult result = fhirTerminologyService.searchValueSets(TEST_API_KEY, Map.of());
+
+    // should aggregate three entries
+    assertEquals(3, result.getValueSets().size());
+    // Ensure fetchResourceFromVsac was called for page2 and page3
+    verify(fhirTerminologyServiceWebClient, times(1))
+        .fetchResourceFromVsac(
+            eq("https://example.com/next?page=2"), eq(TEST_API_KEY), eq("bundle"));
+    verify(fhirTerminologyServiceWebClient, times(1))
+        .fetchResourceFromVsac(
+            eq("https://example.com/next?page=3"), eq(TEST_API_KEY), eq("bundle"));
+  }
+
+  /* this test covers private void recursiveRetrieveCodeSystems()
+   * when l.getRelation().equals("next")
+   * NOTE: retrieveAllCodeSystems() calls recursiveRetrieveCodeSystems()
+   */
+  @Test
+  void retrieveAllCodeSystemsParsesOffsetAndCountFromNextLink_andRecurses() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+
+    // build first bundle with one CodeSystem and a next link containing _offset and _count
+    org.hl7.fhir.r4.model.CodeSystem cs1 = new org.hl7.fhir.r4.model.CodeSystem();
+    cs1.setTitle("title1");
+    cs1.setName("name1");
+    cs1.setVersion("v1");
+    cs1.setId("title1v1");
+    cs1.setUrl("http://example.com/cs1");
+    var id1 = new ArrayList<Identifier>();
+    id1.add(new Identifier().setValue("codeUrl1"));
+    Meta m1 = new Meta();
+    m1.setVersionId("vid1");
+    m1.setLastUpdated(new Date());
+    cs1.setMeta(m1);
+    cs1.setIdentifier(id1);
+
+    Bundle bundle1 = new Bundle();
+    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(cs1));
+    bundle1.addLink(
+        new Bundle.BundleLinkComponent()
+            .setRelation("next")
+            .setUrl("http://example.com/res/CodeSystem?_offset=50&_count=50"));
+
+    // second bundle (recursive result) with another CodeSystem
+    org.hl7.fhir.r4.model.CodeSystem cs2 = new org.hl7.fhir.r4.model.CodeSystem();
+    cs2.setTitle("title2");
+    cs2.setName("name2");
+    cs2.setVersion("v2");
+    cs2.setId("title2v2");
+    cs2.setUrl("http://example.com/cs2");
+    var id2 = new ArrayList<Identifier>();
+    id2.add(new Identifier().setValue("codeUrl2"));
+    Meta m2 = new Meta();
+    m2.setVersionId("vid2");
+    m2.setLastUpdated(new Date());
+    cs2.setMeta(m2);
+    cs2.setIdentifier(id2);
+
+    Bundle bundle2 = new Bundle();
+    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(cs2));
+
+    IParser parser = FhirContext.forR4().newJsonParser();
+    String json1 = parser.encodeResourceToString(bundle1);
+    String json2 = parser.encodeResourceToString(bundle2);
+
+    // initial page invoked by retrieveAllCodeSystems -> return page for offset=0,count=50
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(0), eq(50), anyString()))
+        .thenReturn(json1);
+    // return page for the recursive offset=50,count=50
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(50), eq(50), anyString()))
+        .thenReturn(json2);
+
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    var result = fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
+
+    // should collect both code systems from initial + recursive
+    assertEquals(2, result.size());
+    // calls getCodeSystemsPage(offset,count,apiKey) when retrieving pages
+    verify(fhirTerminologyServiceWebClient, atLeast(1))
+        .getCodeSystemsPage(anyInt(), anyInt(), eq(TEST_API_KEY));
+  }
+
+  /*
+   * this test covers retrieveCode() method,
+   * last line: return null;
+   */
+  @Test
+  void testRetrieveCodeWhenCodeSystemVersionNull() {
+    String codeName = "1963-8";
+    String codeSystemName = "LOINC";
+    String version = "2.40";
+
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version versions = new CodeSystemEntry.Version();
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("1963-8")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .url("http://loinc.org")
+            .versions(List.of(versions))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
+
+    var codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .fullUrl("http://loinc.org")
+            .title("LOINC")
+            .name("LOINC")
+            .version("2.40")
+            .versionId("2084800774")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .build();
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findByNameAndVersion(anyString(), anyString()))
+        .thenReturn(Optional.of(codeSystem));
+
+    Code code =
+        fhirTerminologyService.retrieveCode(codeName, codeSystemName, version, TEST_API_KEY);
+    assertNull(code);
+  }
+
+  /* this is branch coverage for retrieveCodesAndCodeSystems() method
+   * when !StringUtils.isEmpty(codeName)
+   */
+  @Test
+  void retrieveCodesAndCodeSystemsReturnsNullWhenCodeNameNull() {
+    // Line 530 coverage: StringUtils.isEmpty(codeName)
+    List<Map<String, String>> codeList =
+        List.of(
+            Map.of(
+                "code", "",
+                "codeSystem", "LOINC",
+                "oid", "'urn:oid:2.16.840.1.113883.6.1'",
+                "versionIncluded", "false"));
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2.40");
+    version.setFhir("2.40");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("8462-4")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .url("http://loinc.org")
+            .versions(List.of(version))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<Code> result = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
+    assertNull(result.get(0));
+  }
+
+  /* this is branch coverage for retrieveCodesAndCodeSystems() method
+   * when !StringUtils.isEmpty(codeSystemName)
+   */
+  @Test
+  void retrieveCodesAndCodeSystemsReturnsNullWhenCodeSystemNameNull() {
+    // Line 531 coverage: StringUtils.isEmpty(codeSystemName)
+    List<Map<String, String>> codeList =
+        List.of(
+            Map.of(
+                "code", "test",
+                "codeSystem", "",
+                "oid", "'urn:oid:2.16.840.1.113883.6.1'",
+                "versionIncluded", "false"));
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2.40");
+    version.setFhir("2.40");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("8462-4")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .url("http://loinc.org")
+            .versions(List.of(version))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<Code> result = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
+    assertNull(result.get(0));
+  }
+
+  /* this is branch coverage for retrieveCodesAndCodeSystems() method
+   * when !StringUtils.isEmpty(fhirVersion)
+   */
+  @Test
+  void retrieveCodesAndCodeSystemsReturnsNullWhenFhirVersionNull() {
+    // Line 532 coverage: StringUtils.isEmpty(fhirVersion)
+    List<Map<String, String>> codeList =
+        List.of(
+            Map.of(
+                "code", "test",
+                "codeSystem", "LOINC",
+                "oid", "'urn:oid:2.16.840.1.113883.6.1'",
+                "versionIncluded", "false"));
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2.40");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("8462-4")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .url("http://loinc.org")
+            .versions(List.of(version))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<Code> result = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
+    assertNull(result.get(0));
+  }
+
+  /* this test is to cover retrieveCodesAndCodeSystems() method line 539
+   * when codeSystem == null, it should: return null;
+   */
+  @Test
+  void retrieveCodeReturnsNullWhenCodeSystemVersionNotFound() {
+    // Line 539 coverage
+    List<Map<String, String>> codeList =
+        List.of(
+            Map.of(
+                "code", "test",
+                "codeSystem", "LOINC",
+                "oid", "'urn:oid:2.16.840.1.113883.6.1'",
+                "versionIncluded", "false"));
+    codeSystemEntries = new ArrayList<>();
+    CodeSystemEntry.Version version = new CodeSystemEntry.Version();
+    version.setVsac("2.40");
+    version.setFhir("2.40");
+    var codeSystemEntry =
+        CodeSystemEntry.builder()
+            .name("8462-4")
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .url("http://loinc.org")
+            .versions(List.of(version))
+            .build();
+    codeSystemEntries.add(codeSystemEntry);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    List<Code> result = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
+    assertNull(result.get(0));
+  }
+
+  /* this branch coverage is for retrieveCodesAndCodeSystems() method
+   * when !codeSystemVersion.isPresent(), it should: return null;
+   */
+  @Test
+  void retrieveCodesAndCodeSystemsReturnsNullWhenCodeIsEmpty() {
+    // Covers line 533 in FhirTerminologyService.java
+    List<Map<String, String>> codeList =
+        List.of(
+            Map.of(
+                "code", "",
+                "codeSystem", "LOINC",
+                "oid", "'urn:oid:2.16.840.1.113883.6.1'",
+                "versionIncluded", "false"));
+    when(mappingService.getCodeSystemEntries()).thenReturn(Collections.emptyList());
+    List<Code> result = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
+    assertNull(result.get(0));
+  }
+
+  /* this test is for private String parseOidFromIdentifier()
+   * when StringUtils.equalsIgnoreCase(StringUtils.deleteWhitespace(identifier.getValue())
+   * it should: return "urn:oid:2.16.840.1.113883.6.285";
+   */
+  @Test
+  void parseOidFromIdentifierReturnsCustomOidForHCPCS() throws Exception {
+    // for private method: parseOidFromIdentifier: return "urn:oid:2.16.840.1.113883.6.285";
+    gov.cms.madie.terminology.service.MappingService mappingService =
+        Mockito.mock(gov.cms.madie.terminology.service.MappingService.class);
+    CodeSystemRepository codeSystemRepository = Mockito.mock(CodeSystemRepository.class);
+    gov.cms.madie.terminology.service.VsacService vsacService =
+        Mockito.mock(gov.cms.madie.terminology.service.VsacService.class);
+    FhirTerminologyService service =
+        new FhirTerminologyService(
+            fhirContext,
+            fhirTerminologyServiceWebClient,
+            mappingService,
+            codeSystemRepository,
+            vsacService);
+    Identifier id = new Identifier();
+    id.setValue("urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285");
+    Method method =
+        FhirTerminologyService.class.getDeclaredMethod("parseOidFromIdentifier", List.class);
+    method.setAccessible(true);
+    String result = (String) method.invoke(service, List.of(id));
+    assertEquals("urn:oid:2.16.840.1.113883.6.285", result);
+  }
+
+  /* this test is for parseOidFromIdentifier() method
+   * covering last line: return "";
+   */
+  @Test
+  void parseOidFromIdentifierReturnsEmptyStringWhenValueEmpty() throws Exception {
+    FhirTerminologyService service =
+        new FhirTerminologyService(
+            fhirContext,
+            fhirTerminologyServiceWebClient,
+            mappingService,
+            codeSystemRepository,
+            vsacService);
+    Identifier id = new Identifier();
+    id.setValue("");
+    Method method =
+        FhirTerminologyService.class.getDeclaredMethod("parseOidFromIdentifier", List.class);
+    method.setAccessible(true);
+    String result = (String) method.invoke(service, List.of(id));
+    assertEquals("", result);
+  }
+
+  /* this test covers private Optional<CodeSystemEntry.Version> getCodeSystemEntryVersion()
+   * if if (oid == null), it should: return Optional.empty();
+   */
+  @Test
+  void getCodeSystemEntryVersionReturnsEmptyWhenOidIsNull() throws Exception {
+    FhirTerminologyService service =
+        new FhirTerminologyService(
+            fhirContext,
+            fhirTerminologyServiceWebClient,
+            mappingService,
+            codeSystemRepository,
+            vsacService);
+
+    Method method =
+        FhirTerminologyService.class.getDeclaredMethod(
+            "getCodeSystemEntryVersion", String.class, String.class, List.class);
+    method.setAccessible(true);
+
+    Optional<?> result =
+        (Optional<?>) method.invoke(service, "version", null, Collections.emptyList());
+    assertTrue(result.isEmpty());
+  }
+
+  /* branch coverage for private boolean containsEntry() method
+   * when !Objects.equals(existing.getSystem(), newEntry.getSystem())
+   * line 136
+   */
+  @Test
+  void containsEntry_branchCoverage_notEqualsSystem() {
+    ValueSet.ValueSetExpansionContainsComponent existing =
+        new ValueSet.ValueSetExpansionContainsComponent();
+    existing.setCode("A");
+    existing.setSystem("S1");
+    existing.setVersion("v1");
+    ValueSet.ValueSetExpansionContainsComponent newEntry =
+        new ValueSet.ValueSetExpansionContainsComponent();
+    newEntry.setCode("A");
+    newEntry.setSystem("S2"); // different system
+    newEntry.setVersion("v1");
+    List<ValueSet.ValueSetExpansionContainsComponent> existingEntries = List.of(existing);
+    boolean result = invokeContainsEntry(existingEntries, newEntry);
+    assertFalse(result);
+  }
+
+  /* branch coverage for private boolean containsEntry() method
+   * when !Objects.equals(existing.getSystem(), newEntry.getSystem())
+   * line 137
+   */
+  @Test
+  void containsEntry_branchCoverage_notEqualsVersion() {
+    ValueSet.ValueSetExpansionContainsComponent existing =
+        new ValueSet.ValueSetExpansionContainsComponent();
+    existing.setCode("A");
+    existing.setSystem("S");
+    existing.setVersion("v1");
+    ValueSet.ValueSetExpansionContainsComponent newEntry =
+        new ValueSet.ValueSetExpansionContainsComponent();
+    newEntry.setCode("A");
+    newEntry.setSystem("S");
+    newEntry.setVersion("v2"); // different version
+    List<ValueSet.ValueSetExpansionContainsComponent> existingEntries = List.of(existing);
+    boolean result = invokeContainsEntry(existingEntries, newEntry);
+    assertFalse(result);
+  }
+
+  // Helper to invoke private containsEntry
+  private boolean invokeContainsEntry(
+      List<ValueSet.ValueSetExpansionContainsComponent> existingEntries,
+      ValueSet.ValueSetExpansionContainsComponent newEntry) {
+    try {
+      java.lang.reflect.Method method =
+          FhirTerminologyService.class.getDeclaredMethod(
+              "containsEntry", List.class, ValueSet.ValueSetExpansionContainsComponent.class);
+      method.setAccessible(true);
+      return (boolean) method.invoke(fhirTerminologyService, existingEntries, newEntry);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /* branch test getValueSetConcepts(), line 209
+   * when valueSet.getExpansion() == null, it should: return List.of();
+   */
+  @Test
+  void getValueSetConceptsReturnsEmptyListWhenExpansionNull() {
+    org.hl7.fhir.r4.model.ValueSet vs = new org.hl7.fhir.r4.model.ValueSet();
+    vs.setExpansion(null);
+    CodeSystemEntry cse = new CodeSystemEntry();
+    try {
+      java.lang.reflect.Method method =
+          FhirTerminologyService.class.getDeclaredMethod(
+              "getValueSetConcepts",
+              org.hl7.fhir.r4.model.ValueSet.class,
+              List.class,
+              String.class);
+      method.setAccessible(true);
+      @SuppressWarnings("unchecked")
+      List<QdmValueSet.Concept> result =
+          (List<QdmValueSet.Concept>)
+              method.invoke(fhirTerminologyService, vs, List.of(cse), "QDM");
+      assertTrue(result.isEmpty());
+    } catch (Exception e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  /* branch test getValueSetConcepts(), line 209
+   * when valueSet.valueSet.getExpansion().getTotal() <= 0, it should: return List.of();
+   */
+  @Test
+  void getValueSetConceptsReturnsEmptyListWhenExpansionTotalIsLessThan0() {
+    org.hl7.fhir.r4.model.ValueSet vs = new org.hl7.fhir.r4.model.ValueSet();
+    ValueSet.ValueSetExpansionComponent exp1 = new ValueSet.ValueSetExpansionComponent();
+    exp1.setOffset(0);
+    exp1.setTotal(0);
+    vs.setExpansion(exp1);
+    CodeSystemEntry cse = new CodeSystemEntry();
+    try {
+      java.lang.reflect.Method method =
+          FhirTerminologyService.class.getDeclaredMethod(
+              "getValueSetConcepts",
+              org.hl7.fhir.r4.model.ValueSet.class,
+              List.class,
+              String.class);
+      method.setAccessible(true);
+      @SuppressWarnings("unchecked")
+      List<QdmValueSet.Concept> result =
+          (List<QdmValueSet.Concept>)
+              method.invoke(fhirTerminologyService, vs, List.of(cse), "QDM");
+      assertTrue(result.isEmpty());
+    } catch (Exception e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  /* branch coverage for getValueSetConcepts() method line 219
+   * when !optionalCodeSystemEntry.isPresent()
+   */
+  @Test
+  void getValueSetConcepts_branchCoverage_optionalCodeSystemEntryNotPresent() {
+    // Create a ValueSet with an expansion containing a concept whose system is not in
+    // codeSystemEntries
+    org.hl7.fhir.r4.model.ValueSet valueSet = new org.hl7.fhir.r4.model.ValueSet();
+    org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent expansion =
+        new org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent();
+    expansion.setTotal(1);
+    org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent concept =
+        new org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent();
+    concept.setCode("test-code");
+    concept.setSystem("http://unmapped-system-url"); // Not in codeSystemEntries
+    concept.setVersion("v1");
+    expansion.addContains(concept);
+    valueSet.setExpansion(expansion);
+
+    // Provide empty codeSystemEntries to ensure optionalCodeSystemEntry.isPresent() is false
+    List<CodeSystemEntry> emptyCodeSystemEntries = Collections.emptyList();
+
+    try {
+      java.lang.reflect.Method method =
+          FhirTerminologyService.class.getDeclaredMethod(
+              "getValueSetConcepts",
+              org.hl7.fhir.r4.model.ValueSet.class,
+              List.class,
+              String.class);
+      method.setAccessible(true);
+      @SuppressWarnings("unchecked")
+      List<QdmValueSet.Concept> result =
+          (List<QdmValueSet.Concept>)
+              method.invoke(fhirTerminologyService, valueSet, emptyCodeSystemEntries, "QDM");
+      assertEquals(1, result.size());
+      // codeSystemOid should be the original system URL
+      assertEquals("http://unmapped-system-url", result.get(0).getCodeSystemOid());
+    } catch (Exception e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  /* branch coverage for traverseValueSet() method line 300
+   * when identifier.getValue() == null
+   */
+  @Test
+  void traverseValueSet_branchCoverage_identifierValueNull() throws Exception {
+    // Prepare a ValueSet with identifier value null
+    ValueSet vs = new ValueSet();
+    vs.setId("vs-null");
+    Identifier id = new Identifier();
+    id.setValue(null); // null value
+    vs.setIdentifier(List.of(id));
+    // Set Meta with non-null lastUpdated
+    Meta meta = new Meta();
+    meta.setLastUpdated(new Date());
+    vs.setMeta(meta);
+    Bundle.BundleEntryComponent entry = new Bundle.BundleEntryComponent();
+    entry.setResource(vs);
+    List<ValueSetForSearch> valueSetList = new ArrayList<>();
+
+    java.lang.reflect.Method method =
+        FhirTerminologyService.class.getDeclaredMethod(
+            "traverseValueSet", Bundle.BundleEntryComponent.class, List.class);
+    method.setAccessible(true);
+    method.invoke(fhirTerminologyService, entry, valueSetList);
+
+    assertEquals(1, valueSetList.size());
+    assertEquals("", valueSetList.get(0).getOid());
+  }
+
+  /* branch coverage for traverseValueSet() method line 300
+   * when identifier.getValue().isEmpty()
+   */
+  @Test
+  void traverseValueSet_branchCoverage_identifierValueEmpty() throws Exception {
+    // Prepare a ValueSet with identifier value empty string
+    ValueSet vs = new ValueSet();
+    vs.setId("vs-empty");
+    Identifier id = new Identifier();
+    id.setValue(""); // empty value
+    vs.setIdentifier(List.of(id));
+    // Set Meta with non-null lastUpdated
+    Meta meta = new Meta();
+    meta.setLastUpdated(new Date());
+    vs.setMeta(meta);
+    Bundle.BundleEntryComponent entry = new Bundle.BundleEntryComponent();
+    entry.setResource(vs);
+    List<ValueSetForSearch> valueSetList = new ArrayList<>();
+
+    java.lang.reflect.Method method =
+        FhirTerminologyService.class.getDeclaredMethod(
+            "traverseValueSet", Bundle.BundleEntryComponent.class, List.class);
+    method.setAccessible(true);
+    method.invoke(fhirTerminologyService, entry, valueSetList);
+
+    assertEquals(1, valueSetList.size());
+    assertEquals("", valueSetList.get(0).getOid());
+  }
+
+  /* branch coverage for traverseValueSet(), line 311
+   * map(extension -> String.valueOf(extension.getValue())
+   */
+  @Test
+  void traverseValueSet_branchCoverage_extensionValuePresent_line311() throws Exception {
+    ValueSet vs = new ValueSet();
+    vs.setId("vs-ext-present-311");
+    Identifier id = new Identifier();
+    id.setValue("urn:oid:1");
+    vs.setIdentifier(List.of(id));
+    Meta meta = new Meta();
+    meta.setLastUpdated(new Date());
+    vs.setMeta(meta);
+    // Add extension for line 311
+    vs.addExtension(
+        new org.hl7.fhir.r4.model.Extension(
+            "http://hl7.org/fhir/StructureDefinition/valueset-author",
+            new org.hl7.fhir.r4.model.StringType("author-name")));
+    Bundle.BundleEntryComponent entry = new Bundle.BundleEntryComponent();
+    entry.setResource(vs);
+    List<ValueSetForSearch> valueSetList = new ArrayList<>();
+    java.lang.reflect.Method method =
+        FhirTerminologyService.class.getDeclaredMethod(
+            "traverseValueSet", Bundle.BundleEntryComponent.class, List.class);
+    method.setAccessible(true);
+    method.invoke(fhirTerminologyService, entry, valueSetList);
+    assertEquals(1, valueSetList.size());
+    assertEquals("author-name", valueSetList.get(0).getAuthor());
+  }
+
+  /* branch coverage for getAllCodeSystems() method line 366
+   * when !version.getFhir().equals(codeSystem.getVersion()
+   */
+  @Test
+  void getAllCodeSystems_branchCoverage_fhirVersionNotEquals() {
+    // version.getFhir() != codeSystem.getVersion()
+    var c1 = new gov.cms.madie.terminology.models.CodeSystem();
+    c1.setTitle("t1");
+    c1.setOid("fakeoid1");
+    c1.setVersion("1.0");
+    var c2 = new gov.cms.madie.terminology.models.CodeSystem();
+    c2.setTitle("t2");
+    c2.setOid("fakeoid2");
+    c2.setVersion("2.0");
+    CodeSystemEntry.Version cv1 =
+        new CodeSystemEntry.Version().toBuilder().fhir("not1.0").vsac("1").build();
+    var ce1 = new CodeSystemEntry().toBuilder().versions(List.of(cv1)).oid("fakeoid1").build();
+    List<CodeSystemEntry> codeSystemEntries = List.of(ce1);
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = List.of(c1, c2);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAll()).thenReturn(codeSystems);
+    List<gov.cms.madie.terminology.models.CodeSystem> resultListAll =
+        fhirTerminologyService.getAllCodeSystems();
+    // Should not set QdmDisplayVersion for c1 since fhir version does not match
+    assertNull(resultListAll.get(0).getQdmDisplayVersion());
+  }
+
+  /* branch coverage for getAllCodeSystems() method line 367
+   * when ersion.getVsac() == null
+   */
+  @Test
+  void getAllCodeSystems_branchCoverage_vsacNull() {
+    // version.getFhir() == codeSystem.getVersion(), but version.getVsac() == null
+    var c1 = new gov.cms.madie.terminology.models.CodeSystem();
+    c1.setTitle("t1");
+    c1.setOid("fakeoid1");
+    c1.setVersion("1.0");
+    CodeSystemEntry.Version cv1 =
+        new CodeSystemEntry.Version().toBuilder().fhir("1.0").vsac(null).build();
+    var ce1 = new CodeSystemEntry().toBuilder().versions(List.of(cv1)).oid("fakeoid1").build();
+    List<CodeSystemEntry> codeSystemEntries = List.of(ce1);
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = List.of(c1);
+    when(mappingService.getCodeSystemEntries()).thenReturn(codeSystemEntries);
+    when(codeSystemRepository.findAll()).thenReturn(codeSystems);
+    List<gov.cms.madie.terminology.models.CodeSystem> resultListAll =
+        fhirTerminologyService.getAllCodeSystems();
+    // Should not set QdmDisplayVersion for c1 since vsac is null
+    assertNull(resultListAll.get(0).getQdmDisplayVersion());
   }
 }

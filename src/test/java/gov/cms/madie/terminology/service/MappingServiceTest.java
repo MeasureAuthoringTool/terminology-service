@@ -12,7 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
@@ -53,5 +58,64 @@ class MappingServiceTest {
         .thenReturn(codeSystemEntries);
     List<CodeSystemEntry> response = mappingService.getCodeSystemEntries();
     assertFalse(response.isEmpty());
+  }
+
+  @Test
+  void getCodeSystemEntriesThrowsException() throws IOException {
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
+        .thenThrow(new IOException("Error fetching code system entries"));
+    assertThrows(RuntimeException.class, () -> mappingService.getCodeSystemEntries());
+  }
+
+  @Test
+  void getCodeSystemEntriesDataEmpty() throws IOException {
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class))).thenReturn(null);
+    List<CodeSystemEntry> response = mappingService.getCodeSystemEntries();
+    assertTrue(response.isEmpty());
+  }
+
+  @Test
+  void getCodeSystemEntryByOidNotFound() throws IOException {
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
+        .thenReturn(codeSystemEntries);
+    CodeSystemEntry response = mappingService.getCodeSystemEntryByOid("1.2.3.4.5.6.7.8.0");
+    assertNull(response);
+  }
+
+  @Test
+  void getCodeSystemEntryByOidCodeSystemEntriesNull() throws IOException {
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class))).thenReturn(null);
+    CodeSystemEntry response = mappingService.getCodeSystemEntryByOid("1.2.3.4.5.6.7.8.9");
+    assertNull(response);
+  }
+
+  @Test
+  void getCodeSystemEntriesEmptyArray() throws IOException {
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
+        .thenReturn(new CodeSystemEntry[0]);
+    List<CodeSystemEntry> response = mappingService.getCodeSystemEntries();
+    assertTrue(response.isEmpty());
+  }
+
+  @Test
+  void getCodeSystemEntryOidNotStartsWithUrnOid() throws IOException {
+    // ensure stored entry uses URN OID form to match production behavior
+    codeSystemEntries[0].setOid("urn:oid:1.2.3.4.5.6.7.8.9");
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
+        .thenReturn(codeSystemEntries);
+    CodeSystemEntry response = mappingService.getCodeSystemEntryByOid("urn:oid:1.2.3.4.5.6.7.8.9");
+    assertNotNull(response);
+    assertEquals("ActPriority", response.getName());
+  }
+
+  @Test
+  void getCodeSystemEntryStoredUrnInputRawMatches() throws IOException {
+    // stored value in URN form should match raw oid input
+    codeSystemEntries[0].setOid("urn:oid:1.2.3.4.5.6.7.8.9");
+    when(objectMapper.readValue(any(URL.class), eq(CodeSystemEntry[].class)))
+        .thenReturn(codeSystemEntries);
+    CodeSystemEntry response = mappingService.getCodeSystemEntryByOid("1.2.3.4.5.6.7.8.9");
+    assertNotNull(response);
+    assertEquals("ActPriority", response.getName());
   }
 }
