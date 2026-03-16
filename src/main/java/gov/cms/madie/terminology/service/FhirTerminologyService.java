@@ -503,7 +503,7 @@ public class FhirTerminologyService {
     if (oid == null) {
       return Optional.empty();
     }
-    System.out.println("codeSystems = " + codeSystems.toString());
+
     if (CollectionUtils.isEmpty(codeSystems)) {
       return Optional.empty();
     }

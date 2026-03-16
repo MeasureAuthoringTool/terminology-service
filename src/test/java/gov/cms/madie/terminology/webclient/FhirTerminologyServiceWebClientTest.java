@@ -35,8 +35,6 @@ class FhirTerminologyServiceWebClientTest {
   private static final String MOCK_CODE_LOOKUP = "/CodeSystem/$lookup";
   private static final String DEFAULT_PROFILE = "Most Recent Code System Versions in VSAC";
   public static MockWebServer mockBackEnd;
-  // private static final String SEARCH_VALUE_SET_ENDPOINT =
-  // "https://cts.nlm.nih.gov/fhir/ValueSet";
 
   @Mock FhirContext fhirContext;
 
