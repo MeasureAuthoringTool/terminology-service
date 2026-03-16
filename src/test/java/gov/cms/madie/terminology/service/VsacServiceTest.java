@@ -5,6 +5,7 @@ import generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse;
 import gov.cms.madie.models.cql.terminology.CqlCode;
 import gov.cms.madie.models.cql.terminology.VsacCode;
 import gov.cms.madie.models.cql.terminology.VsacCode.VsacError;
+import org.hl7.fhir.r4.model.ValueSet;
 
 import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
@@ -29,6 +30,7 @@ import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +41,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,6 +55,8 @@ class VsacServiceTest {
   @Mock TerminologyServiceWebClient terminologyServiceWebClient;
 
   @Mock CodeSystemRepository codeSystemRepository;
+
+  @Mock gov.cms.madie.terminology.mapper.VsacToFhirValueSetMapper vsacToFhirValueSetMapper;
 
   @Mock UmlsUserRepository umlsUserRepository;
 
@@ -542,5 +547,189 @@ class VsacServiceTest {
     when(umlsUserRepository.deleteByHarpId(anyString())).thenReturn(Optional.empty());
     boolean loggedOut = vsacService.logoutUMLSUser(umlsUser.getHarpId());
     assertFalse(loggedOut);
+  }
+
+  /* branch test on validateUmlsInformation(), line 49:
+   * return umlsUser.isPresent() && !StringUtils.isBlank(umlsUser.get().getApiKey());
+   */
+  @Test
+  public void testValidateUmlsInformationWhenUmlsApiKeyIsAvailable() {
+    // return the pre-built umlsUser from setUp which has TEST_API_KEY
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.of(umlsUser));
+    assertTrue(vsacService.validateUmlsInformation(umlsUser.getHarpId()));
+  }
+
+  /* branch test on validateUmlsInformation(), line 49:
+   * when !umlsUser.isPresent()
+   */
+  @Test
+  void validateUmlsInformationUmlsUserNotFound() {
+    when(umlsUserRepository.findByHarpId(anyString())).thenReturn(Optional.empty());
+    boolean isValid = vsacService.validateUmlsInformation(umlsUser.getHarpId());
+    assertFalse(isValid);
+  }
+
+  /* covers convertToFHIRValueSet(), line 65:
+   * return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValueSetResponse);
+   */
+  @Test
+  void convertToFHIRValueSet() {
+    ValueSet valueSet = vsacService.convertToFHIRValueSet(svsValueSet);
+    assertNull(valueSet);
+  }
+
+  /* test for validateCode(), line 111
+   * return;
+   */
+  @Test
+  void validateCodeReturnsEarlyWhenCodeSystemIsNull() throws Exception {
+    CqlCode cqlCode = CqlCode.builder().name("test").codeId("validCodeId").codeSystem(null).build();
+    UmlsUser umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    Method method =
+        VsacService.class.getDeclaredMethod("validateCode", CqlCode.class, UmlsUser.class);
+    method.setAccessible(true);
+    method.invoke(new VsacService(null, null, null, null), cqlCode, umlsUser);
+    // Assert: no error message, no invalid flag set
+    assertNull(cqlCode.getErrorMessage());
+    assertTrue(cqlCode.isValid());
+  }
+
+  /* test for buildCodeSystemVersion(), lines 220-221
+   * return latestCodeSystemVersion.get().getVersion().getVsacVersion();
+   */
+  @Test
+  void
+      buildCodeSystemVersionReturnsLatestVsacVersionWhenCodeSystemVersionBlankAndLatestVersionPresent()
+          throws Exception {
+    // Arrange
+    CqlCode cqlCode = new CqlCode();
+    cqlCode.setCodeSystem(
+        CqlCode.CqlCodeSystem.builder()
+            .version("") // blank version
+            .build());
+    CodeSystem.Version version =
+        CodeSystem.Version.builder().vsacVersion("2026-03-15").fhirVersion("2026-03-15").build();
+    CodeSystem latestCodeSystem =
+        CodeSystem.builder().isLatestVersion(true).version(version).build();
+    List<CodeSystem> codeSystems = List.of(latestCodeSystem);
+    Method method =
+        VsacService.class.getDeclaredMethod("buildCodeSystemVersion", CqlCode.class, List.class);
+    method.setAccessible(true);
+    String result =
+        (String) method.invoke(new VsacService(null, null, null, null), cqlCode, codeSystems);
+    // Assert
+    assertEquals("2026-03-15", result);
+  }
+
+  /* branch coverage for buildCodeSystemVersion(), line 220
+   * !StringUtils.isNotBlank(latestCodeSystemVersion.get().getVersion().getVsacVersion())
+   */
+  @Test
+  void buildCodeSystemVersionReturnsEmpty_whenLatestVsacVersionBlank_branchCoverage()
+      throws Exception {
+    CqlCode cqlCode = new CqlCode();
+    cqlCode.setCodeSystem(
+        CqlCode.CqlCodeSystem.builder()
+            .version("") // blank version
+            .build());
+    CodeSystem.Version version =
+        CodeSystem.Version.builder()
+            .vsacVersion("") // blank vsacVersion
+            .fhirVersion("2026-03-15")
+            .build();
+    CodeSystem latestCodeSystem =
+        CodeSystem.builder().isLatestVersion(true).version(version).build();
+    List<CodeSystem> codeSystems = List.of(latestCodeSystem);
+    Method method =
+        VsacService.class.getDeclaredMethod("buildCodeSystemVersion", CqlCode.class, List.class);
+    method.setAccessible(true);
+    String result =
+        (String) method.invoke(new VsacService(null, null, null, null), cqlCode, codeSystems);
+    // Assert: result is empty, error message is set
+    assertEquals("", result);
+    assertFalse(cqlCode.getCodeSystem().isValid());
+    assertEquals("Unable to find a code system version", cqlCode.getCodeSystem().getErrorMessage());
+  }
+
+  /* coverage for buildCodeSystemVersion(), line 243:
+   * ? cqlCodeSystemVersion
+   */
+  @Test
+  void buildCodeSystemVersionReturnsCqlCodeSystemVersionWhenVsacVersionBlank() throws Exception {
+    CqlCode cqlCode = new CqlCode();
+    cqlCode.setCodeSystem(
+        CqlCode.CqlCodeSystem.builder()
+            .version("2026-03-15") // user-provided version
+            .build());
+    CodeSystem.Version version =
+        CodeSystem.Version.builder()
+            .vsacVersion("") // blank vsacVersion
+            .fhirVersion("2026-03-15") // matches CQL version
+            .build();
+    CodeSystem codeSystem = CodeSystem.builder().version(version).build();
+    List<CodeSystem> codeSystems = List.of(codeSystem);
+    Method method =
+        VsacService.class.getDeclaredMethod("buildCodeSystemVersion", CqlCode.class, List.class);
+    method.setAccessible(true);
+    String result =
+        (String) method.invoke(new VsacService(null, null, null, null), cqlCode, codeSystems);
+    // Assert: result is sanitized CQL code system version
+    assertEquals("2026-03-15", result);
+  }
+
+  /* branch coverage for buildVsacErrorMessage(), line 262:
+   * && StringUtils.isNumeric(vsacCode.getErrors().getResultSet().get(0).getErrCode()))
+   */
+  @Test
+  void buildVsacErrorMessageHandlesNonNumericErrCode() throws Exception {
+    CqlCode cqlCode =
+        CqlCode.builder()
+            .name("test")
+            .codeId("P")
+            .codeSystem(CqlCode.CqlCodeSystem.builder().oid("urn:oid:1.2.3.4.5.6.7.8.9").build())
+            .build();
+    VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
+    vsacErrorResultSet.setErrCode("NOT_NUM"); // non-numeric
+    vsacErrorResultSet.setErrDesc("Some weird error");
+    VsacCode.VsacError vsacError = new VsacCode.VsacError();
+    vsacError.setResultSet(List.of(vsacErrorResultSet));
+    VsacCode vsacCode = new VsacCode();
+    vsacCode.setStatus("error");
+    vsacCode.setErrors(vsacError);
+    Method method =
+        VsacService.class.getDeclaredMethod("buildVsacErrorMessage", CqlCode.class, VsacCode.class);
+    method.setAccessible(true);
+    method.invoke(new VsacService(null, null, null, null), cqlCode, vsacCode);
+    // Assert: code is invalid
+    assertFalse(cqlCode.isValid());
+    assertNull(cqlCode.getErrorMessage()); // error message is not set for uncaught error
+  }
+
+  /*
+   * branch coverage for line 272:  else if (errorCode == 802)
+   */
+  @Test
+  void buildVsacErrorMessage_handlesErrorCode802_branchCoverage() throws Exception {
+    CqlCode cqlCode =
+        CqlCode.builder()
+            .name("test")
+            .codeId("P")
+            .codeSystem(CqlCode.CqlCodeSystem.builder().oid("urn:oid:1.2.3.4.5.6.7.8.9").build())
+            .build();
+    VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
+    vsacErrorResultSet.setErrCode("803"); // error code 802
+    vsacErrorResultSet.setErrDesc("Code not found");
+    VsacCode.VsacError vsacError = new VsacCode.VsacError();
+    vsacError.setResultSet(List.of(vsacErrorResultSet));
+    VsacCode vsacCode = new VsacCode();
+    vsacCode.setStatus("error");
+    vsacCode.setErrors(vsacError);
+    Method method =
+        VsacService.class.getDeclaredMethod("buildVsacErrorMessage", CqlCode.class, VsacCode.class);
+    method.setAccessible(true);
+    method.invoke(new VsacService(null, null, null, null), cqlCode, vsacCode);
+    // Assert: code is invalid, error message is set to error description
+    assertFalse(cqlCode.isValid());
+    assertNull(cqlCode.getErrorMessage());
   }
 }

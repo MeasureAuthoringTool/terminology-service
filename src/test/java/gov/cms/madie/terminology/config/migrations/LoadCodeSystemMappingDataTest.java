@@ -14,6 +14,7 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
+import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -355,5 +356,96 @@ class LoadCodeSystemMappingDataTest {
     migration.rollback(mongoTemplateMock, codeSystemRepositoryMock);
 
     verify(codeSystemRepositoryMock, never()).saveAll(anyList());
+  }
+
+  /* test coverage for: deserializeFromFile() -> loadMappingDoc()
+   * line 144: throw new UncheckedIOException
+   */
+  @Test
+  void loadMappingDocThrowsUncheckedIOExceptionWhenResourceMissing() {
+    LoadCodeSystemMappingData migration = new LoadCodeSystemMappingData();
+    try {
+      java.lang.reflect.Field filePathField =
+          LoadCodeSystemMappingData.class.getDeclaredField("FILE_PATH");
+      filePathField.setAccessible(true);
+      filePathField.set(migration, "/not-found.json");
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    ObjectMapper objectMapper = new ObjectMapper();
+    // Use reflection to invoke private method
+    assertThrows(
+        UncheckedIOException.class,
+        () -> {
+          try {
+            java.lang.reflect.Method method =
+                LoadCodeSystemMappingData.class.getDeclaredMethod(
+                    "deserializeFromFile", ObjectMapper.class);
+            method.setAccessible(true);
+            method.invoke(migration, objectMapper);
+          } catch (Exception ex) {
+            // UncheckedIOException is wrapped in InvocationTargetException
+            Throwable cause = ex.getCause();
+            if (cause instanceof UncheckedIOException) {
+              throw (UncheckedIOException) cause;
+            }
+            throw new RuntimeException(ex);
+          }
+        });
+  }
+
+  /*
+   * branch coverage for apply(), line 76:
+   * Objects.equals(cs.getFullUrl(), entry.getUrl())
+   */
+  @Test
+  void applyFullUrlNotEqualsEntryUrl() throws Exception {
+    // Setup: create a CodeSystem with a different fullUrl than entry.getUrl()
+    CodeSystem codeSystem =
+        CodeSystem.builder()
+            .id("test-id")
+            .oid("urn:oid:1.1.1.1")
+            .name("TestCodeSystem")
+            .title("Test Code System")
+            .fullUrl("http://example.com/fhir/CodeSystem/DIFFERENT") // Not equal to entry.getUrl()
+            .version(CodeSystem.Version.builder().fhirVersion("1.0.0").build())
+            .build();
+    CodeSystemEntry entry =
+        CodeSystemEntry.builder()
+            .oid("urn:oid:1.1.1.1")
+            .url("http://example.com/fhir/CodeSystem/ORIGINAL") // entry.getUrl()
+            .name("TestCodeSystemEntry")
+            .versions(
+                List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("1.0.0").build()))
+            .build();
+    // Mock repository to return the codeSystem
+    when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(codeSystem));
+    // Mock objectMapper to return the entry
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
+        .thenReturn(new CodeSystemEntry[] {entry});
+    // Run apply
+    migration.apply(
+        mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
+    // Verify that the filter branch where cs.getFullUrl() != entry.getUrl() is covered
+    // (No update to existing codeSystem, new codeSystem is created)
+    verify(codeSystemRepositoryMock, times(1)).findAll();
+    verify(codeSystemRepositoryMock, times(1)).save(any(CodeSystem.class));
+  }
+
+  /* branch coverage for deserializeFromFile(), line 128:
+   * if (entries != null) {
+   */
+  @Test
+  void deserializeFromFileEntriesNull() throws Exception {
+    // Mock objectMapper to return null for entries
+    when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class))).thenReturn(null);
+    // Use reflection to invoke private method
+    java.lang.reflect.Method method =
+        LoadCodeSystemMappingData.class.getDeclaredMethod(
+            "deserializeFromFile", ObjectMapper.class);
+    method.setAccessible(true);
+    Object result = method.invoke(migration, objectMapperMock);
+    assertTrue(result instanceof List);
+    assertTrue(((List<?>) result).isEmpty());
   }
 }

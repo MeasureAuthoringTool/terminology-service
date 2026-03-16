@@ -276,4 +276,78 @@ public class VsacToFhirValueSetMapperTest {
     vsacConcept.setDisplayName(displayName);
     return vsacConcept;
   }
+
+  @Test
+  void getUrlByOidReturnsFullUrlWhenCodeSystemVersionIsNotBlank() {
+    String oid = "testOid";
+    String fullUrl = "http://example.com/fhir/CodeSystem/testOid";
+    gov.cms.madie.terminology.models.CodeSystem codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder().oid(oid).fullUrl(fullUrl).build();
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystemVersions = List.of(codeSystem);
+    org.mockito.Mockito.when(codeSystemRepository.findAllByOid(oid)).thenReturn(codeSystemVersions);
+    String result = mapper.getUrlByOid(oid);
+    assertEquals(fullUrl, result);
+  }
+
+  @Test
+  void getUrlByOidReturnsOidWhenCodeSystemVersionFullUrlIsBlank() {
+    String oid = "testOid";
+    gov.cms.madie.terminology.models.CodeSystem codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .oid(oid)
+            .fullUrl("") // blank fullUrl
+            .build();
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystemVersions = List.of(codeSystem);
+    org.mockito.Mockito.when(codeSystemRepository.findAllByOid(oid)).thenReturn(codeSystemVersions);
+    String result = mapper.getUrlByOid(oid);
+    assertEquals(oid, result);
+  }
+
+  @Test
+  void convertToFHIRValueSetHandlesNullConceptList() {
+    RetrieveMultipleValueSetsResponse vsacValueSetResponse =
+        new RetrieveMultipleValueSetsResponse();
+    DescribedValueSet describedValueSet = new DescribedValueSet();
+    describedValueSet.setID("testId");
+    describedValueSet.setConceptList(null); // ConceptList is null
+    // Set revisionDate to avoid NullPointerException
+    GregorianCalendar gregory = new GregorianCalendar();
+    gregory.setTime(today);
+    try {
+      XMLGregorianCalendar todayXMLGregorianCalendar =
+          DatatypeFactory.newInstance().newXMLGregorianCalendar(gregory);
+      describedValueSet.setRevisionDate(todayXMLGregorianCalendar);
+    } catch (DatatypeConfigurationException e) {
+      e.printStackTrace();
+    }
+    vsacValueSetResponse.setDescribedValueSet(describedValueSet);
+    ValueSet fhirValueSet = mapper.convertToFHIRValueSet(vsacValueSetResponse);
+    assertEquals(
+        0, fhirValueSet.getCompose() == null ? 0 : fhirValueSet.getCompose().getInclude().size());
+  }
+
+  @Test
+  void convertToFHIRValueSetHandlesEmptyConceptList() {
+    RetrieveMultipleValueSetsResponse vsacValueSetResponse =
+        new RetrieveMultipleValueSetsResponse();
+    DescribedValueSet describedValueSet = new DescribedValueSet();
+    describedValueSet.setID("testId");
+    ConceptList conceptList = new ConceptList();
+    conceptList.getConcepts().clear(); // Ensure concepts list is empty
+    describedValueSet.setConceptList(conceptList);
+    // Set revisionDate to avoid NullPointerException
+    GregorianCalendar gregory = new GregorianCalendar();
+    gregory.setTime(today);
+    try {
+      XMLGregorianCalendar todayXMLGregorianCalendar =
+          DatatypeFactory.newInstance().newXMLGregorianCalendar(gregory);
+      describedValueSet.setRevisionDate(todayXMLGregorianCalendar);
+    } catch (DatatypeConfigurationException e) {
+      e.printStackTrace();
+    }
+    vsacValueSetResponse.setDescribedValueSet(describedValueSet);
+    ValueSet fhirValueSet = mapper.convertToFHIRValueSet(vsacValueSetResponse);
+    assertEquals(
+        0, fhirValueSet.getCompose() == null ? 0 : fhirValueSet.getCompose().getInclude().size());
+  }
 }

@@ -103,8 +103,9 @@ public class TerminologyServiceUtil {
       String activeOnly,
       ManifestExpansion manifestExpansion) {
     MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-    String expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
+    String expandValueSetUri;
     if (valueSetParams != null) {
+      expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
       Integer offset = valueSetParams.getOffset();
       Integer count = valueSetParams.getCount();
       if (offset != null && offset >= 0) {
@@ -113,20 +114,30 @@ public class TerminologyServiceUtil {
       if (count != null && count >= 0) {
         params.put("count", List.of(String.valueOf(count)));
       }
-    }
-    if (StringUtils.isNotBlank(valueSetParams.getVersion())) {
-      params.put("valueSetVersion", List.of(valueSetParams.getVersion()));
-    } else if (manifestExpansion != null
-        && StringUtils.isNotBlank(manifestExpansion.getFullUrl())) {
-      params.put("manifest", List.of(manifestExpansion.getFullUrl()));
-    } else {
-      if (StringUtils.isNotBlank(includeDraft)) {
-        params.put("includeDraft", List.of("true"));
+      String version = valueSetParams.getVersion();
+      if (StringUtils.isNotBlank(version)) {
+        params.put("valueSetVersion", List.of(version));
+      } else if (manifestExpansion != null) {
+        String manifestUrl = manifestExpansion.getFullUrl();
+        if (StringUtils.isNotBlank(manifestUrl)) {
+          params.put("manifest", List.of(manifestUrl));
+        }
       }
-
+    } else {
+      // Defensive: if valueSetParams is null, use a default URI
+      expandValueSetUri = "/ValueSet/$expand";
+    }
+    if (StringUtils.isNotBlank(includeDraft)) {
+      params.put("includeDraft", List.of(includeDraft));
+    }
+    if (StringUtils.isNotBlank(activeOnly)) {
       params.put("activeOnly", List.of(activeOnly));
     }
-
-    return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
+    String query =
+        params.entrySet().stream()
+            .flatMap(e -> e.getValue().stream().map(v -> e.getKey() + "=" + v))
+            .reduce((a, b) -> a + "&" + b)
+            .orElse("");
+    return URI.create(expandValueSetUri + (query.isEmpty() ? "" : "?" + query));
   }
 }
