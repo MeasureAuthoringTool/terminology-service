@@ -173,4 +173,47 @@ public class TerminologyServiceUtilTest {
     assertFalse(uriStr.contains("offset"));
     assertFalse(uriStr.contains("count"));
   }
+
+  /* branch coverage for buildValueSetResourceUri(), line 133:
+   * if (StringUtils.isNotBlank(activeOnly)) {
+   */
+  @Test
+  void buildValueSetResourceUriDoesNotSetActiveOnlyWhenActiveOnlyIsBlankOrNull() {
+    ValueSetsSearchCriteria.ValueSetParams params =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").build();
+    String profile = "test-profile";
+    String includeDraft = "true";
+    String activeOnlyBlank = "";
+    String activeOnlyNull = null;
+    ManifestExpansion manifestExpansion = null;
+    URI uriBlank =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            params, profile, includeDraft, activeOnlyBlank, manifestExpansion);
+    URI uriNull =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            params, profile, includeDraft, activeOnlyNull, manifestExpansion);
+    String uriStrBlank = uriBlank.toString();
+    String uriStrNull = uriNull.toString();
+    assertFalse(uriStrBlank.contains("activeOnly="), "ACTUAL URI: " + uriStrBlank);
+    assertFalse(uriStrNull.contains("activeOnly="), "ACTUAL URI: " + uriStrNull);
+  }
+
+  /* branch coverage for buildValueSetResourceUri(), line 141:
+   * return URI.create(expandValueSetUri + (query.isEmpty() ? "" : "?" + query));
+   */
+  @Test
+  void buildValueSetResourceUriReturnsUriWithoutQueryWhenQueryIsEmpty() {
+    ValueSetsSearchCriteria.ValueSetParams params =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").build();
+    String profile = "";
+    String includeDraft = "";
+    String activeOnly = "";
+    ManifestExpansion manifestExpansion = null;
+    URI uri =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            params, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStr = uri.toString();
+    assertTrue(uriStr.equals("/ValueSet/1.2.3.4.5/$expand"), "ACTUAL URI: " + uriStr);
+    assertFalse(uriStr.contains("?"), "ACTUAL URI: " + uriStr);
+  }
 }
