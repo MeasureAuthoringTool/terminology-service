@@ -119,7 +119,7 @@ public class TerminologyServiceUtilTest {
   }
 
   @Test
-  void buildValueSetResourceUri_doesNotSetCount_whenCountIsNegativeOrNull() {
+  void buildValueSetResourceUriDoesNotSetCountWhenCountIsNegativeOrNull() {
     // count is negative
     ValueSetsSearchCriteria.ValueSetParams paramsNeg =
         ValueSetsSearchCriteria.ValueSetParams.builder()
@@ -150,7 +150,8 @@ public class TerminologyServiceUtilTest {
   @Test
   void constructorIsCovered() {
     // Instantiates the utility class to cover the default constructor
-    new TerminologyServiceUtil();
+    TerminologyServiceUtil terminologyServiceUtil = new TerminologyServiceUtil();
+    assertNotNull(terminologyServiceUtil);
   }
 
   /* branch coverage for buildValueSetResourceUri(),
