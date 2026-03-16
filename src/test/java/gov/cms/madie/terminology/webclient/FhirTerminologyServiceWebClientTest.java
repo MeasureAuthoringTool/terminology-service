@@ -98,7 +98,22 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getManifestBundle_ReturnsException() throws InterruptedException {
+  void getManifestBundleReturnsException() throws IOException, InterruptedException {
+    mockBackEnd.shutdown();
+    mockBackEnd = new MockWebServer();
+    mockBackEnd.start();
+    String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
+    String searchValueSetEndpoint =
+        String.format("http://localhost:%s/fhir/ValueSet", mockBackEnd.getPort());
+    fhirTerminologyServiceWebClient =
+        new FhirTerminologyServiceWebClient(
+            baseUrl,
+            MOCK_MANIFEST_URN,
+            MOCK_CODE_SYSTEM_URN,
+            MOCK_CODE_LOOKUP,
+            DEFAULT_PROFILE,
+            searchValueSetEndpoint,
+            fhirContext);
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     assertThrows(
         VsacValueSetExpansionException.class,
@@ -108,7 +123,7 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getLatestValueSetResourceSuccessfully_when_noCustomSearchCriteriaIsProvided()
+  void getLatestValueSetResourceSuccessfullWhenNoCustomSearchCriteriaIsProvided()
       throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
@@ -127,7 +142,7 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getDraftValueSetResourceSuccessfully_when_noCustomSearchCriteriaIsProvided()
+  void getDraftValueSetResourceSuccessfullyWhenNoCustomSearchCriteriaIsProvided()
       throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
@@ -147,7 +162,7 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getValueSetResourceSuccessfully_when_manifestExpansionIsProvided()
+  void getValueSetResourceSuccessfullyWhenManifestExpansionIsProvided()
       throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
@@ -172,8 +187,23 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getValueSetResourceSuccessfully_when_ValueSetVersionIsProvided()
-      throws InterruptedException {
+  void getValueSetResourceSuccessfullyWhenValueSetVersionIsProvided()
+      throws IOException, InterruptedException {
+    mockBackEnd.shutdown();
+    mockBackEnd = new MockWebServer();
+    mockBackEnd.start();
+    String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
+    String searchValueSetEndpoint =
+        String.format("http://localhost:%s/fhir/ValueSet", mockBackEnd.getPort());
+    fhirTerminologyServiceWebClient =
+        new FhirTerminologyServiceWebClient(
+            baseUrl,
+            MOCK_MANIFEST_URN,
+            MOCK_CODE_SYSTEM_URN,
+            MOCK_CODE_LOOKUP,
+            DEFAULT_PROFILE,
+            searchValueSetEndpoint,
+            fhirContext);
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(200)
@@ -193,7 +223,7 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getValueSetResource_ReturnsException() throws InterruptedException {
+  void getValueSetResourceReturnsException() throws InterruptedException {
     testValueSetParams.setVersion("");
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
@@ -207,7 +237,7 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getCodeSystemsPageSuccessfully_when_ValueSetVersionIsProvided() throws InterruptedException {
+  void getCodeSystemsPageSuccessfullyWhenValueSetVersionIsProvided() throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(200)
@@ -222,10 +252,25 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
-  void getCodeSystemsPage_ReturnsException() throws InterruptedException {
+  void getCodeSystemsPageReturnsException() throws IOException, InterruptedException {
+    mockBackEnd.shutdown();
+    mockBackEnd = new MockWebServer();
+    mockBackEnd.start();
+    String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
+    String searchValueSetEndpoint =
+        String.format("http://localhost:%s/fhir/ValueSet", mockBackEnd.getPort());
+    fhirTerminologyServiceWebClient =
+        new FhirTerminologyServiceWebClient(
+            baseUrl,
+            MOCK_MANIFEST_URN,
+            MOCK_CODE_SYSTEM_URN,
+            MOCK_CODE_LOOKUP,
+            DEFAULT_PROFILE,
+            searchValueSetEndpoint,
+            fhirContext);
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     assertThrows(
-        VsacValueSetExpansionException.class,
+        gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException.class,
         () -> fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, MOCK_API_KEY));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertEquals("/codeSystemUrn?_offset=0&_count=50", recordedRequest.getPath());
@@ -235,7 +280,11 @@ class FhirTerminologyServiceWebClientTest {
   void testGetCodeResource() throws InterruptedException {
     String codeName = "1963-8";
     CodeSystem codeSystem =
-        CodeSystem.builder().fullUrl("http://loinc.org").name("LOINC").version("2.40").build();
+        CodeSystem.builder()
+            .fullUrl("http://loinc.org")
+            .name("LOINC")
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
+            .build();
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(200)
@@ -289,7 +338,7 @@ class FhirTerminologyServiceWebClientTest {
    * urlValue.startsWith("http://cts.nlm.nih.gov/fhir/ValueSet/")
    */
   @Test
-  void searchValueSets_doesNotModifyUrl_whenUrlHasVsacPrefix() throws InterruptedException {
+  void searchValueSetsDoesNotModifyUrlWhenUrlHasVsacPrefix() throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(401)
@@ -309,7 +358,7 @@ class FhirTerminologyServiceWebClientTest {
    * !queryParams.containsKey("url")
    */
   @Test
-  void searchValueSets_handlesOtherQueryParams() throws InterruptedException {
+  void searchValueSetsHandlesOtherQueryParams() throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(401)
@@ -331,7 +380,7 @@ class FhirTerminologyServiceWebClientTest {
    * return fetchResourceFromVsac(uri.toString(), apiKey, "bundle");
    */
   @Test
-  void searchValueSets_returnsBundleOnSuccess() throws InterruptedException {
+  void searchValueSetsReturnsBundleOnSuccess() throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(200)
@@ -351,7 +400,7 @@ class FhirTerminologyServiceWebClientTest {
    * if (clientResponse.statusCode().equals(HttpStatus.NOT_FOUND))
    */
   @Test
-  void searchValueSets_throwsVsacResourceNotFoundExceptionOn404() throws InterruptedException {
+  void searchValueSetsThrowsVsacResourceNotFoundExceptionOn404() throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(404)

@@ -184,4 +184,21 @@ class VsacControllerAdviceTest {
     assertEquals(manifestExpansionFullUrl, resp.get("manifestExpansionFullUrl"));
     assertEquals(oid, resp.get("valueSetOid"));
   }
+
+  @Test
+  void onVsacParseBatchValueSetExpansionException_handlesNullOutcome() {
+    String manifestExpansionFullUrl = "http://example.com/manifest";
+    String oid = "1.2.3.4.5";
+    VsacParseBatchValueSetExpansionException ex =
+        mock(VsacParseBatchValueSetExpansionException.class);
+    when(ex.getMessage()).thenReturn("parse error");
+    when(ex.getOperationOutcome()).thenReturn(null);
+    when(ex.getManifestExpansionFullUrl()).thenReturn(manifestExpansionFullUrl);
+    when(ex.getOid()).thenReturn(oid);
+    var resp = advice.onVsacParseBatchValueSetExpansionException(ex, webRequest);
+    assertTrue(resp.containsKey("validationErrors"));
+    assertEquals(manifestExpansionFullUrl, resp.get("manifestExpansionFullUrl"));
+    assertEquals(oid, resp.get("valueSetOid"));
+    assertFalse(resp.containsKey("diagnostic"));
+  }
 }

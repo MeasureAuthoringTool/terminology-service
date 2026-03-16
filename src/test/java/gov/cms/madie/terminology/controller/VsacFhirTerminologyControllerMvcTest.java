@@ -13,8 +13,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -36,15 +37,16 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(VsacFhirTerminologyController.class)
+@ActiveProfiles("test")
 class VsacFhirTerminologyControllerMvcTest {
 
   private static final String TEST_USR = "FAKE";
 
-  @MockBean private VsacService vsacService;
+  @MockitoBean private VsacService vsacService;
 
-  @MockBean private FhirTerminologyService fhirTerminologyService;
+  @MockitoBean private FhirTerminologyService fhirTerminologyService;
 
-  @MockBean private FhirContext fhirContext;
+  @MockitoBean private FhirContext fhirContext;
 
   @Autowired private MockMvc mockMvc;
 

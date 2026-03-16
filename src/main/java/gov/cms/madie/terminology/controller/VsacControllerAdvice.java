@@ -114,10 +114,14 @@ public class VsacControllerAdvice {
 
     OperationOutcome outcome = ex.getOperationOutcome();
 
-    errorAttributes.put("diagnostic", outcome.getIssueFirstRep().getDiagnostics());
     errorAttributes.put("manifestExpansionFullUrl", ex.getManifestExpansionFullUrl());
     errorAttributes.put("valueSetOid", ex.getOid());
-
+    if (outcome == null) {
+      errorAttributes.forEach((key, value) -> log.info("{}:{}", key, value));
+      return errorAttributes;
+    }
+    errorAttributes.put("diagnostic", outcome.getIssueFirstRep().getDiagnostics());
+    errorAttributes.forEach((key, value) -> log.info("{}:{}", key, value));
     return errorAttributes;
   }
 

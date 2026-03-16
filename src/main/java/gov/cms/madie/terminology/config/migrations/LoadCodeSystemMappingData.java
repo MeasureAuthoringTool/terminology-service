@@ -1,0 +1,151 @@
+package gov.cms.madie.terminology.config.migrations;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import gov.cms.madie.models.mapping.CodeSystemEntry;
+import gov.cms.madie.terminology.models.CodeSystem;
+import gov.cms.madie.terminology.repositories.CodeSystemRepository;
+import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
+import io.mongock.api.annotations.ChangeUnit;
+import io.mongock.api.annotations.Execution;
+import io.mongock.api.annotations.RollbackExecution;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.mongodb.core.MongoTemplate;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.*;
+
+@ChangeUnit(id = "load-code-system-mapping-from-doc", order = "1", author = "madie-dev")
+@Slf4j
+public class LoadCodeSystemMappingData {
+
+  private final List<CodeSystem> originalCodeSystems = new ArrayList<>();
+  private String FILE_PATH = "/code-system-entry.json";
+
+  @Execution
+  public void apply(
+      MongoTemplate mongoTemplate,
+      CodeSystemRepository codeSystemRepository,
+      ObjectMapper objectMapper,
+      UpdateCodeSystemTask updateCodeSystemTask) {
+
+    // Load code-mapping-entry.json
+    List<CodeSystemEntry> codeSystemEntries = deserializeFromFile(objectMapper);
+    if (CollectionUtils.isEmpty(codeSystemEntries)) {
+      log.error("Unable to load code system mapping doc.");
+      throw new UncheckedIOException(new IOException("Unable to load code system mapping doc."));
+    }
+
+    // Drop the existing codeSystem collection to allow for model changes.
+    mongoTemplate.dropCollection("codeSystem");
+
+    // Run the Code System refresh task to update the existing CS entries with the updated model.
+    updateCodeSystemTask.updateCodeSystems();
+
+    List<CodeSystem> codeSystems = codeSystemRepository.findAll();
+
+    // Store a copy of the original code system for potential rollback
+    codeSystems.forEach(
+        codeSystem -> {
+          originalCodeSystems.add(
+              codeSystem.toBuilder()
+                  .version(
+                      CodeSystem.Version.builder()
+                          .fhirVersion(codeSystem.getVersion().getFhirVersion())
+                          .vsacVersion(codeSystem.getVersion().getVsacVersion())
+                          .build())
+                  .build());
+        });
+
+    for (CodeSystemEntry entry : codeSystemEntries) {
+      boolean isLastestVersion = true; // First version in the list is the latest.
+      for (CodeSystemEntry.Version version : entry.getVersions()) {
+        Optional<CodeSystem> newCsVersion = Optional.empty();
+        Optional<CodeSystem> existingCsVersion = Optional.empty();
+
+        // If FHIR, check for existing Code System.
+        if (StringUtils.isNotBlank(version.getFhir())) {
+          // Update Existing Code System if FHIR version matches any existing CS.
+          existingCsVersion =
+              codeSystems.stream()
+                  .filter(
+                      cs ->
+                          Objects.equals(cs.getFullUrl(), entry.getUrl())
+                              && Objects.equals(
+                                  cs.getVersion().getFhirVersion(), version.getFhir()))
+                  .findFirst();
+          if (existingCsVersion.isPresent()) {
+            existingCsVersion.get().setLatestVersion(isLastestVersion);
+            existingCsVersion.get().getVersion().setVsacVersion(version.getVsac());
+          }
+        }
+
+        // New Code System
+        if (existingCsVersion.isEmpty()) {
+          newCsVersion = Optional.of(new CodeSystem());
+          newCsVersion.get().setOid(entry.getOid());
+          newCsVersion.get().setName(entry.getName());
+          newCsVersion.get().setFullUrl(entry.getUrl());
+          newCsVersion.get().setLatestVersion(isLastestVersion);
+          newCsVersion
+              .get()
+              .setVersion(
+                  CodeSystem.Version.builder()
+                      .fhirVersion(version.getFhir())
+                      .vsacVersion(version.getVsac())
+                      .build());
+        }
+
+        existingCsVersion.ifPresent(codeSystemRepository::save);
+        newCsVersion.ifPresent(codeSystemRepository::save);
+        isLastestVersion = false; // First version in the list is the latest.
+      }
+    }
+  }
+
+  @RollbackExecution
+  public void rollback(MongoTemplate mongoTemplate, CodeSystemRepository codeSystemRepository) {
+    if (CollectionUtils.isEmpty(originalCodeSystems)) {
+      log.warn("No original code systems found for rollback. Skipping rollback.");
+      return;
+    }
+    codeSystemRepository.saveAll(originalCodeSystems);
+  }
+
+  /**
+   * Deserialize code-system-entry.json from Resource into a List of CodeSystemEntry objects.
+   *
+   * @param objectMapper the ObjectMapper to use for deserialization. Exposed as a parameter for
+   *     easier testing.
+   * @return a List of CodeSystemEntry objects, or an empty list if deserialization fails
+   */
+  private List<CodeSystemEntry> deserializeFromFile(ObjectMapper objectMapper) {
+    try {
+      CodeSystemEntry[] entries = objectMapper.readValue(loadMappingDoc(), CodeSystemEntry[].class);
+      if (entries != null) {
+        log.info(
+            "Successfully deserialized {} CodeSystemEntry objects from file: {}",
+            entries.length,
+            "/code-system-entry.json");
+        return Arrays.asList(entries);
+      }
+    } catch (IOException e) {
+      log.error("Error deserializing CodeSystemEntry from file: {}", "/code-system-entry.json", e);
+    }
+    return Collections.emptyList();
+  }
+
+  private String loadMappingDoc() {
+    try (InputStream inputStream = LoadCodeSystemMappingData.class.getResourceAsStream(FILE_PATH)) {
+      if (inputStream == null) {
+        throw new UncheckedIOException(new IOException("Unable to read resource " + FILE_PATH));
+      }
+      return new String(inputStream.readAllBytes());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+}

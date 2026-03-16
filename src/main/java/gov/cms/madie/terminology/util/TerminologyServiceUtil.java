@@ -4,9 +4,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
-import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import org.apache.commons.lang3.StringUtils;
@@ -85,22 +83,8 @@ public class TerminologyServiceUtil {
         + "/Info";
   }
 
-  public static Optional<CodeSystemEntry> getCodeSystemEntry(
-      List<CodeSystemEntry> codeSystemEntries, String cqlCodeSystemOid, String model) {
-    return codeSystemEntries.stream()
-        .filter(cse -> isCodeSystemMatch(cse, cqlCodeSystemOid, model))
-        .findFirst();
-  }
-
-  private static boolean isCodeSystemMatch(CodeSystemEntry cse, String oid, String model) {
-    if ("QDM".equals(model)) {
-      return cse.getOid().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
-    }
-    return cse.getUrl().equalsIgnoreCase(TerminologyServiceUtil.sanitizeInput(oid));
-  }
-
   public static String sanitizeInput(String input) {
-    return input.replaceAll("'", "");
+    return StringUtils.isBlank(input) ? "" : StringUtils.remove(input, "'");
   }
 
   public static String removeUrnOidSubString(String oid) {
@@ -119,8 +103,9 @@ public class TerminologyServiceUtil {
       String activeOnly,
       ManifestExpansion manifestExpansion) {
     MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-    String expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
+    String expandValueSetUri;
     if (valueSetParams != null) {
+      expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
       Integer offset = valueSetParams.getOffset();
       Integer count = valueSetParams.getCount();
       if (offset != null && offset >= 0) {
@@ -129,44 +114,30 @@ public class TerminologyServiceUtil {
       if (count != null && count >= 0) {
         params.put("count", List.of(String.valueOf(count)));
       }
-    }
-    if (StringUtils.isNotBlank(valueSetParams.getVersion())) {
-      params.put("valueSetVersion", List.of(valueSetParams.getVersion()));
-    } else if (manifestExpansion != null
-        && StringUtils.isNotBlank(manifestExpansion.getFullUrl())) {
-      params.put("manifest", List.of(manifestExpansion.getFullUrl()));
-    } else {
-      if (StringUtils.isNotBlank(includeDraft)) {
-        params.put("includeDraft", List.of("true"));
+      String version = valueSetParams.getVersion();
+      if (StringUtils.isNotBlank(version)) {
+        params.put("valueSetVersion", List.of(version));
+      } else if (manifestExpansion != null) {
+        String manifestUrl = manifestExpansion.getFullUrl();
+        if (StringUtils.isNotBlank(manifestUrl)) {
+          params.put("manifest", List.of(manifestUrl));
+        }
       }
-
+    } else {
+      // Defensive: if valueSetParams is null, use a default URI
+      expandValueSetUri = "/ValueSet/$expand";
+    }
+    if (StringUtils.isNotBlank(includeDraft)) {
+      params.put("includeDraft", List.of(includeDraft));
+    }
+    if (StringUtils.isNotBlank(activeOnly)) {
       params.put("activeOnly", List.of(activeOnly));
     }
-
-    return UriComponentsBuilder.fromPath(expandValueSetUri).queryParams(params).build().toUri();
-  }
-
-  /**
-   * Returns model specific code system version
-   *
-   * @param codeSystem
-   * @param fhirCsVersion
-   * @param model
-   * @return code system version string
-   */
-  public static String getCodeSystemVersion(
-      CodeSystemEntry codeSystem, String fhirCsVersion, String model) {
-    if ("QDM".equals(model) && codeSystem != null && StringUtils.isNotBlank(fhirCsVersion)) {
-      CodeSystemEntry.Version csv =
-          codeSystem.getVersions().stream()
-              .filter(version -> fhirCsVersion.equals(version.getFhir()))
-              .findFirst()
-              .orElse(null);
-      if (csv == null) {
-        return null;
-      }
-      return csv.getVsac();
-    }
-    return fhirCsVersion;
+    String query =
+        params.entrySet().stream()
+            .flatMap(e -> e.getValue().stream().map(v -> e.getKey() + "=" + v))
+            .reduce((a, b) -> a + "&" + b)
+            .orElse("");
+    return URI.create(expandValueSetUri + (query.isEmpty() ? "" : "?" + query));
   }
 }

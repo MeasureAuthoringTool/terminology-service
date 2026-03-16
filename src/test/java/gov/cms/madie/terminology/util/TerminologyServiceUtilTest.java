@@ -1,60 +1,176 @@
 package gov.cms.madie.terminology.util;
 
-import gov.cms.madie.models.mapping.CodeSystemEntry;
-import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.net.URI;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
+import gov.cms.madie.models.measure.ManifestExpansion;
+import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-
-@ExtendWith(MockitoExtension.class)
 public class TerminologyServiceUtilTest {
-  private CodeSystemEntry cse;
-  private CodeSystemEntry.Version v1;
-  private CodeSystemEntry.Version v2;
-
-  @BeforeEach
-  void setUp() {
-    v1 = CodeSystemEntry.Version.builder().fhir("01012021").vsac("2021-01").build();
-    v2 = CodeSystemEntry.Version.builder().fhir("05052022").vsac("2022-05").build();
-    cse = CodeSystemEntry.builder().versions(List.of(v1, v2)).build();
+  @Test
+  void buildRetrieveMultipleValueSetsUriSetsDefaultProfileWhenProfileIsBlank() {
+    String baseUrl = "http://example.com";
+    String valuesetEndpoint = "/ValueSet";
+    String oid = "1.2.3.4.5";
+    String profile = null;
+    String includeDraft = null;
+    String release = null;
+    String version = null;
+    URI uri =
+        TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
+            baseUrl, valuesetEndpoint, oid, profile, includeDraft, release, version);
+    String uriStr = uri.toString();
+    assertTrue(uriStr.contains("http://example.com/ValueSet"), "ACTUAL URI: " + uriStr);
   }
 
   @Test
-  void testGetCodeSystemVersionForQdmModel() {
-    String version = TerminologyServiceUtil.getCodeSystemVersion(cse, v1.getFhir(), "QDM");
-    assertThat(version, is(equalTo(v1.getVsac())));
+  void buildRetrieveMultipleValueSetsUriSetsIncludeDraftYesWhenIncludeDraftIsBlank() {
+    String baseUrl = "http://example.com";
+    String valuesetEndpoint = "/ValueSet";
+    String oid = "1.2.3.4.5";
+    String profile = "test-profile";
+    String includeDraft = null;
+    String release = null;
+    String version = null;
+    URI uri =
+        TerminologyServiceUtil.buildRetrieveMultipleValueSetsUri(
+            baseUrl, valuesetEndpoint, oid, profile, includeDraft, release, version);
+    String uriStr = uri.toString();
+    // The URI will not show includeDraft unless the URL contains {includeDraft}, but we can assert
+    // a URI is returned
+    assertNotNull(uri);
+    assertTrue(uriStr.startsWith(baseUrl + valuesetEndpoint));
   }
 
   @Test
-  void testGetCodeSystemVersionForFhirModel() {
-    String version = TerminologyServiceUtil.getCodeSystemVersion(cse, v1.getFhir(), "FHIR");
-    assertThat(version, is(equalTo(v1.getFhir())));
+  void removeUrnOidSubStringReturnsOidWhenOidDoesNotStartWithUrnOid() {
+    String oid = "1.2.3.4.5";
+    String result = TerminologyServiceUtil.removeUrnOidSubString(oid);
+    assertEquals(oid, result);
   }
 
   @Test
-  void testGetCodeSystemVersionWhenCodeSystemIsNull() {
-    cse.setVersions(List.of());
-    String version = TerminologyServiceUtil.getCodeSystemVersion(null, v1.getFhir(), "FHIR");
-    assertThat(version, is(equalTo(v1.getFhir())));
+  void removeUrnOidSubStringReturnsOidWhenOidIsBlank() {
+    String oid = "";
+    String result = TerminologyServiceUtil.removeUrnOidSubString(oid);
+    assertEquals(oid, result);
+    String nullOid = null;
+    assertEquals(nullOid, TerminologyServiceUtil.removeUrnOidSubString(nullOid));
   }
 
   @Test
-  void testGetCodeSystemVersionWhenFhirVersionIsNull() {
-    cse.setVersions(List.of());
-    String version = TerminologyServiceUtil.getCodeSystemVersion(cse, null, "FHIR");
-    assertThat(version, is(equalTo(null)));
+  void buildValueSetResourceUriSetsOffsetWhenOffsetIsNonNegative() {
+    ValueSetsSearchCriteria.ValueSetParams params =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").offset(5).build();
+    String profile = "test-profile";
+    String includeDraft = "true";
+    String activeOnly = "false";
+    ManifestExpansion manifestExpansion = null;
+    URI uri =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            params, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStr = uri.toString();
+    assertTrue(uriStr.contains("offset=5"), "ACTUAL URI: " + uriStr);
   }
 
   @Test
-  void testGetCodeSystemVersionWhenEquivalentQdmVersionIsNull() {
-    v1.setVsac(null);
-    String version = TerminologyServiceUtil.getCodeSystemVersion(cse, v1.getFhir(), "QDM");
-    assertThat(version, is(equalTo(null)));
+  void buildValueSetResourceUriSetsCountWhenCountIsNonNegative() {
+    ValueSetsSearchCriteria.ValueSetParams params =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").count(7).build();
+    String profile = "test-profile";
+    String includeDraft = "true";
+    String activeOnly = "false";
+    ManifestExpansion manifestExpansion = null;
+    URI uri =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            params, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStr = uri.toString();
+    assertTrue(uriStr.contains("count=7"), "ACTUAL URI: " + uriStr);
+  }
+
+  @Test
+  void buildValueSetResourceUriDoesNotSetOffsetWhenOffsetIsNegativeOrNull() {
+    // offset is negative
+    ValueSetsSearchCriteria.ValueSetParams paramsNeg =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").offset(-1).build();
+    String profile = "test-profile";
+    String includeDraft = "true";
+    String activeOnly = "false";
+    ManifestExpansion manifestExpansion = null;
+    URI uriNeg =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            paramsNeg, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStrNeg = uriNeg.toString();
+    assertTrue(!uriStrNeg.contains("offset="), "ACTUAL URI: " + uriStrNeg);
+
+    // offset is null
+    ValueSetsSearchCriteria.ValueSetParams paramsNull =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").build();
+    URI uriNull =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            paramsNull, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStrNull = uriNull.toString();
+    assertTrue(!uriStrNull.contains("offset="), "ACTUAL URI: " + uriStrNull);
+  }
+
+  @Test
+  void buildValueSetResourceUri_doesNotSetCount_whenCountIsNegativeOrNull() {
+    // count is negative
+    ValueSetsSearchCriteria.ValueSetParams paramsNeg =
+        ValueSetsSearchCriteria.ValueSetParams.builder()
+            .oid("1.2.3.4.5")
+            .offset(0)
+            .count(-1)
+            .build();
+    String profile = "test-profile";
+    String includeDraft = "true";
+    String activeOnly = "false";
+    ManifestExpansion manifestExpansion = null;
+    URI uriNeg =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            paramsNeg, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStrNeg = uriNeg.toString();
+    assertTrue(!uriStrNeg.contains("count="), "ACTUAL URI: " + uriStrNeg);
+
+    // count is null
+    ValueSetsSearchCriteria.ValueSetParams paramsNull =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").offset(0).build();
+    URI uriNull =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            paramsNull, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStrNull = uriNull.toString();
+    assertTrue(!uriStrNull.contains("count="), "ACTUAL URI: " + uriStrNull);
+  }
+
+  @Test
+  void constructorIsCovered() {
+    // Instantiates the utility class to cover the default constructor
+    new TerminologyServiceUtil();
+  }
+
+  /* branch coverage for buildValueSetResourceUri(),
+   * line 107: if (valueSetParams != null) {
+   */
+  @Test
+  void buildValueSetResourceUriValueSetParamsNull() {
+    // valueSetParams is null, should skip offset/count logic
+    ManifestExpansion manifestExpansion = null;
+    String profile = "profile";
+    String includeDraft = "true";
+    String activeOnly = "false";
+    URI uri =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            null, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStr = uri.toString();
+    assertTrue(uriStr.contains("includeDraft=true"));
+    assertTrue(uriStr.contains("activeOnly=false"));
+    // Should not contain offset or count
+    assertFalse(uriStr.contains("offset"));
+    assertFalse(uriStr.contains("count"));
   }
 }

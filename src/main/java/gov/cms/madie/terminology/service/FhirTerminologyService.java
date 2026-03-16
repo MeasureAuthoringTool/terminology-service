@@ -2,7 +2,6 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
@@ -16,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 public class FhirTerminologyService {
   private final FhirContext fhirContext;
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
-  private final MappingService mappingService;
   private final CodeSystemRepository codeSystemRepository;
   private final VsacService vsacService;
 
@@ -178,14 +177,12 @@ public class FhirTerminologyService {
 
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
-    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
     List<ValueSet> fhirValueSets = getValueSetsExpansion(valueSetsSearchCriteria, umlsUser);
 
     return fhirValueSets.stream()
         .map(
             fhirValueSet -> {
-              List<QdmValueSet.Concept> concepts =
-                  getValueSetConcepts(fhirValueSet, codeSystemEntries, "QDM");
+              List<QdmValueSet.Concept> concepts = getValueSetConcepts(fhirValueSet);
               return QdmValueSet.builder()
                   .oid(fhirValueSet.getIdPart())
                   .displayName(fhirValueSet.getName())
@@ -198,37 +195,37 @@ public class FhirTerminologyService {
 
   /**
    * @param valueSet resource from FHIR Terminology Server
-   * @param codeSystemEntries Code Systems mapping document
    * @return a List of QdmValueSet.Concept if the valueSet has expansions. Also, valueSet resource
    *     only has CodeSystem URL info for its expansions, so we use codeSystem entries to find its
-   *     appropriate OID If associated OID is not found, we return the original FHIR URL of the code
-   *     system.
+   *     appropriate OID. If associated OID is not found, we return the original FHIR URL of the
+   *     code system.
    */
-  private List<QdmValueSet.Concept> getValueSetConcepts(
-      ValueSet valueSet, List<CodeSystemEntry> codeSystemEntries, String model) {
+  private List<QdmValueSet.Concept> getValueSetConcepts(ValueSet valueSet) {
     if (valueSet.getExpansion() != null && valueSet.getExpansion().getTotal() > 0) {
       return valueSet.getExpansion().getContains().stream()
           .map(
               concept -> {
-                Optional<CodeSystemEntry> optionalCodeSystemEntry =
-                    TerminologyServiceUtil.getCodeSystemEntry(
-                        codeSystemEntries, concept.getSystem(), "FHIR");
-                String codeSystemOid = concept.getSystem();
-                String codeSystem = concept.getSystem();
-                String codeSystemVersion = concept.getVersion();
-                if (optionalCodeSystemEntry.isPresent()) {
-                  codeSystemOid = optionalCodeSystemEntry.get().getOid();
-                  codeSystem = optionalCodeSystemEntry.get().getName();
-                  codeSystemVersion =
-                      TerminologyServiceUtil.getCodeSystemVersion(
-                          optionalCodeSystemEntry.get(), concept.getVersion(), model);
+                Optional<CodeSystem> codeSystemOptional =
+                    codeSystemRepository.findByFullUrlAndVersionFhirVersion(
+                        concept.getSystem(), concept.getVersion());
+                if (codeSystemOptional.isPresent()) {
+                  CodeSystem codeSystem = codeSystemOptional.get();
+                  return QdmValueSet.Concept.builder()
+                      .code(concept.getCode())
+                      .displayName(concept.getDisplay())
+                      .codeSystemName(codeSystem.getName())
+                      .codeSystemVersion(codeSystem.getVersion().getVsacVersion())
+                      .codeSystemOid(
+                          TerminologyServiceUtil.removeUrnOidSubString(codeSystem.getOid()))
+                      .build();
                 }
                 return QdmValueSet.Concept.builder()
                     .code(concept.getCode())
                     .displayName(concept.getDisplay())
-                    .codeSystemName(codeSystem)
-                    .codeSystemVersion(codeSystemVersion)
-                    .codeSystemOid(TerminologyServiceUtil.removeUrnOidSubString(codeSystemOid))
+                    .codeSystemName(concept.getSystem())
+                    .codeSystemVersion(concept.getVersion())
+                    .codeSystemOid(
+                        TerminologyServiceUtil.removeUrnOidSubString(concept.getSystem()))
                     .build();
               })
           .toList();
@@ -341,46 +338,7 @@ public class FhirTerminologyService {
   }
 
   public List<CodeSystem> getAllCodeSystems() {
-    // remove items that are marked as not present in vsac to cut expense
-    List<CodeSystemEntry> codeSystemMappingEntries =
-        mappingService.getCodeSystemEntries().stream()
-            .filter(codeSystemEntry -> !codeSystemEntry.getOid().contains("NOT.IN.VSAC"))
-            .toList();
-    List<CodeSystem> codeSystems = codeSystemRepository.findAll();
-    codeSystems.forEach(
-        codeSystem -> {
-          Optional<CodeSystemEntry> matchingEntry =
-              codeSystemMappingEntries.stream()
-                  .filter(entry -> entry.getOid().equals(codeSystem.getOid()))
-                  .findFirst();
-          if (matchingEntry.isPresent()) {
-            matchingEntry
-                .get()
-                .getVersions()
-                .forEach(
-                    version -> {
-                      // We use fhir url to interact with VSAC FHIR Term Service.
-                      // Goal here is to look for fhir version, then give users
-                      // viewing QDM measures a display version that looks like
-                      // svs vsac because that's what they expect.
-                      if (version.getFhir().equals(codeSystem.getVersion())
-                          && version.getVsac() != null) {
-                        codeSystem.setQdmDisplayVersion(version.getVsac());
-                        log.debug(
-                            "CodeSystem title {} , version: {} was found in mapping document",
-                            codeSystem.getTitle(),
-                            codeSystem.getVersion());
-                      }
-                    });
-          } else {
-            // it was not found, we log that it's not located within vsac.
-            log.debug(
-                "CodeSystem title {} , version: {} was NOT found in mapping document",
-                codeSystem.getTitle(),
-                codeSystem.getName());
-          }
-        });
-    return codeSystems;
+    return codeSystemRepository.findAll().stream().filter(CodeSystem::isVsacSearchable).toList();
   }
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
@@ -400,22 +358,16 @@ public class FhirTerminologyService {
     }
 
     CodeSystem codeSystem =
-        codeSystemRepository.findByNameAndVersion(codeSystemName, version).orElse(null);
-    if (codeSystem == null) {
+        codeSystemRepository
+            .findByNameAndVersionFhirVersion(codeSystemName, version)
+            .orElse(
+                codeSystemRepository
+                    .findByNameAndVersionVsacVersion(codeSystemName, version)
+                    .orElse(null));
+    if (codeSystem == null || !codeSystem.isVsacSearchable()) {
       return null;
     }
-
-    List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
-    Optional<CodeSystemEntry.Version> codeSystemVersion =
-        getCodeSystemEntryVersion(version, codeSystem.getOid(), codeSystemEntries);
-
-    if (codeSystemVersion.isPresent()) {
-      String vsacVersion = codeSystemVersion.get().getVsac();
-      String fhirVersion = codeSystemVersion.get().getFhir();
-
-      return retrieveCodes(codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
-    }
-    return null;
+    return retrieveCodes(codeName, codeSystemName, codeSystem, apiKey);
   }
 
   private void recursiveRetrieveCodeSystems(
@@ -428,13 +380,14 @@ public class FhirTerminologyService {
         .forEach(
             entry -> {
               var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
+              // Also update isLatest flag if any new version is found.
               codeSystemsPage.add(
                   CodeSystem.builder()
-                      .id(codeSystem.getTitle() + codeSystem.getVersion())
                       .fullUrl(codeSystem.getUrl())
                       .title(codeSystem.getTitle())
                       .name(codeSystem.getName())
-                      .version(codeSystem.getVersion())
+                      .version(
+                          CodeSystem.Version.builder().fhirVersion(codeSystem.getVersion()).build())
                       .versionId(codeSystem.getMeta().getVersionId())
                       .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
                       .lastUpdated(Instant.now())
@@ -461,10 +414,10 @@ public class FhirTerminologyService {
   private String parseOidFromIdentifier(List<Identifier> identifiers) {
     for (Identifier identifier : identifiers) {
       if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
-        // HCPCS contains two OIDs, which VSAC returns as comma delimited String.
-        // MADiE is only concerned with the Level 2 OID ending in .285 as it
-        // CMS's custom codes. Level 1 is a duplicate of CPT, and
-        // users should be utilizing CPT directly.
+        // HCPCS contains two OIDs, which VSAC returns as a comma-delimited String.
+        // MADiE is only concerned with the Level 2 OID ending in .285 as
+        // it contains CMS's custom codes. Level 1 is a duplicate of CPT,
+        // and users should be utilizing CPT directly.
         if (StringUtils.equalsIgnoreCase(
             StringUtils.deleteWhitespace(identifier.getValue()),
             "urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285")) {
@@ -486,24 +439,32 @@ public class FhirTerminologyService {
 
   private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList) {
     for (CodeSystem codeSystem : codeSystemList) {
-      var id = codeSystem.getTitle() + codeSystem.getVersion();
-      Optional<CodeSystem> existingCodeSystemOptional = codeSystemRepository.findById(id);
-      if (existingCodeSystemOptional.isEmpty()) {
-        // Insert new CodeSystem
-        codeSystemRepository.save(codeSystem);
-        log.info("New CodeSystem inserted: {}", codeSystem);
-      } else {
-        CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
-        existingCodeSystem.setTitle(codeSystem.getTitle());
-        existingCodeSystem.setFullUrl(codeSystem.getFullUrl());
-        existingCodeSystem.setName(codeSystem.getName());
-        existingCodeSystem.setVersion(codeSystem.getVersion());
-        existingCodeSystem.setVersionId(codeSystem.getVersionId());
-        existingCodeSystem.setOid(codeSystem.getOid());
-        existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
-        existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
-        codeSystemRepository.save(existingCodeSystem);
-        log.info("CodeSystem updated: {}", existingCodeSystem);
+      try {
+        Optional<CodeSystem> existingCodeSystemOptional =
+            codeSystemRepository.findByOidAndVersionFhirVersion(
+                codeSystem.getOid(), codeSystem.getVersion().getFhirVersion());
+        if (existingCodeSystemOptional.isEmpty()) {
+          // Insert new CodeSystem
+          codeSystemRepository.save(codeSystem);
+          log.info("New CodeSystem inserted: {}", codeSystem);
+        } else {
+          CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
+          existingCodeSystem.setTitle(codeSystem.getTitle());
+          existingCodeSystem.setFullUrl(codeSystem.getFullUrl());
+          existingCodeSystem.setName(codeSystem.getName());
+          existingCodeSystem.getVersion().setFhirVersion(codeSystem.getVersion().getFhirVersion());
+          existingCodeSystem.setVersionId(codeSystem.getVersionId());
+          existingCodeSystem.setOid(codeSystem.getOid());
+          existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
+          existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
+          codeSystemRepository.save(existingCodeSystem);
+          log.info("CodeSystem updated: {}", existingCodeSystem);
+        }
+      } catch (DataAccessException e) {
+        log.error(
+            "Database error while updating/inserting CodeSystem {}: {}",
+            codeSystem.getName(),
+            e.getMessage());
       }
     }
   }
@@ -512,7 +473,6 @@ public class FhirTerminologyService {
     return codeList.stream()
         .map(
             codeDetails -> {
-              List<CodeSystemEntry> codeSystemEntries = mappingService.getCodeSystemEntries();
               String codeName = codeDetails.get("code");
               String codeSystemName = codeDetails.get("codeSystem");
               String oid =
@@ -520,59 +480,51 @@ public class FhirTerminologyService {
                       ? codeDetails.get("oid").replaceAll("'|'", "")
                       : null;
 
-              Optional<CodeSystemEntry.Version> codeSystemVersion =
-                  getCodeSystemEntryVersion(codeDetails.get("version"), oid, codeSystemEntries);
+              List<CodeSystem> codeSystems = codeSystemRepository.findAllByOid(oid);
+              Optional<CodeSystem> codeSystemVersion =
+                  getCodeSystemVersion(codeDetails.get("version"), oid, codeSystems);
 
-              if (codeSystemVersion.isPresent()) {
-                String vsacVersion = codeSystemVersion.get().getVsac();
-                String fhirVersion = codeSystemVersion.get().getFhir();
-
-                if (StringUtils.isEmpty(codeName)
-                    || StringUtils.isEmpty(codeSystemName)
-                    || StringUtils.isEmpty(fhirVersion)) {
-                  return null;
-                }
-
-                CodeSystem codeSystem =
-                    codeSystemRepository.findByOidAndVersion(oid, fhirVersion).orElse(null);
-                if (codeSystem == null) {
-                  return null;
-                }
-
-                Code code =
-                    retrieveCodes(
-                        codeName, codeSystemName, vsacVersion, fhirVersion, codeSystem, apiKey);
-                code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
-                return code;
+              if (codeSystemVersion.isEmpty()
+                  || StringUtils.isEmpty(codeName)
+                  || StringUtils.isEmpty(codeSystemName)
+                  || !codeSystemVersion.get().isFhir()) {
+                return null;
               }
-              return null;
+
+              Code code = retrieveCodes(codeName, codeSystemName, codeSystemVersion.get(), apiKey);
+              code.setVersionIncluded("true".equals(codeDetails.get("versionIncluded")));
+              return code;
             })
         .collect(Collectors.toList());
   }
 
-  private Optional<CodeSystemEntry.Version> getCodeSystemEntryVersion(
-      String version, String oid, List<CodeSystemEntry> codeSystemEntries) {
+  private Optional<CodeSystem> getCodeSystemVersion(
+      String version, String oid, List<CodeSystem> codeSystems) {
     if (oid == null) {
       return Optional.empty();
     }
-
-    Optional<CodeSystemEntry.Version> result;
+    System.out.println("codeSystems = " + codeSystems.toString());
+    if (CollectionUtils.isEmpty(codeSystems)) {
+      return Optional.empty();
+    }
+    Optional<CodeSystem> result;
     if (version == null) {
       result =
-          codeSystemEntries.stream()
-              .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
-              .map(codeSystemEntry -> codeSystemEntry.getVersions().get(0))
+          codeSystems.stream()
+              .filter(
+                  codeSystemEntry ->
+                      StringUtils.equals(codeSystemEntry.getOid(), oid)
+                          && codeSystemEntry.isLatestVersion())
               .findFirst();
     } else {
       result =
-          codeSystemEntries.stream()
+          codeSystems.stream()
               .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
-              .flatMap(codeSystemEntry -> codeSystemEntry.getVersions().stream())
-              // depending on the version type suitable mapping is done
               .filter(
                   codeSystemVersion ->
-                      StringUtils.equals(codeSystemVersion.getVsac(), version)
-                          || StringUtils.equals(codeSystemVersion.getFhir(), version))
+                      StringUtils.equals(codeSystemVersion.getVersion().getVsacVersion(), version)
+                          || StringUtils.equals(
+                              codeSystemVersion.getVersion().getFhirVersion(), version))
               .findFirst();
     }
 
@@ -580,12 +532,7 @@ public class FhirTerminologyService {
   }
 
   private Code retrieveCodes(
-      String codeName,
-      String codeSystemName,
-      String vsacVersion,
-      String fhirVersion,
-      CodeSystem codeSystem,
-      String apiKey) {
+      String codeName, String codeSystemName, CodeSystem codeSystem, String apiKey) {
     String codeJson = fhirTerminologyServiceWebClient.getCodeResource(codeName, codeSystem, apiKey);
 
     Parameters parameters = fhirContext.newJsonParser().parseResource(Parameters.class, codeJson);
@@ -593,8 +540,8 @@ public class FhirTerminologyService {
         Code.builder()
             .name(codeName)
             .codeSystem(codeSystemName)
-            .fhirVersion(fhirVersion)
-            .svsVersion(vsacVersion)
+            .fhirVersion(codeSystem.getVersion().getFhirVersion())
+            .svsVersion(codeSystem.getVersion().getVsacVersion())
             .codeSystemUrl(codeSystem.getFullUrl())
             .display(parameters.getParameter("display").getValue().toString())
             .codeSystemOid(parameters.getParameter("Oid").getValue().toString())
