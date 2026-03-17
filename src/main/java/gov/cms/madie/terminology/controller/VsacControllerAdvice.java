@@ -23,6 +23,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.HapiOperationException;
 import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
@@ -168,11 +169,25 @@ public class VsacControllerAdvice {
     return errorAttributes;
   }
 
+  @ExceptionHandler(DuplicateCodeSystemException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onDuplicateCodeSystemException(
+      DuplicateCodeSystemException ex, WebRequest request) {
+    log.warn("Duplicate CodeSystem exception: {}", ex.getMessage());
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
   @ExceptionHandler(CodeSystemNotFoundException.class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
   @ResponseBody
   Map<String, Object> onCodeSystemNotFoundException(
       CodeSystemNotFoundException ex, WebRequest request) {
+    log.warn("CodeSystem not found exception: {}", ex.getMessage());
     Map<String, String> validationErrors = new HashMap<>();
     validationErrors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.NOT_FOUND);

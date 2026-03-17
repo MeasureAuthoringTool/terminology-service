@@ -2,13 +2,17 @@ package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gov.cms.madie.terminology.clients.UserServiceClient;
+import gov.cms.madie.terminology.config.SecurityConfig;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -30,6 +34,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminController.class)
+@Import(SecurityConfig.class)
 @ActiveProfiles("test")
 class AdminControllerMvcTest {
 
@@ -37,6 +42,7 @@ class AdminControllerMvcTest {
 
   @MockitoBean private FhirTerminologyService fhirTerminologyService;
   @MockitoBean private FhirContext fhirContext;
+  @MockitoBean private UserServiceClient userServiceClient;
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
 
@@ -66,7 +72,7 @@ class AdminControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.post("/terminology/admin/code-system")
-                    .with(user(TEST_USR))
+                    .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf())
                     .content(objectMapper.writeValueAsString(codeSystem))
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -78,13 +84,27 @@ class AdminControllerMvcTest {
   }
 
   @Test
+  void testCreateCodeSystemForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/code-system")
+                .with(user(TEST_USR))
+                .with(csrf())
+                .content(objectMapper.writeValueAsString(codeSystem))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isForbidden());
+
+    verify(fhirTerminologyService, never()).createCodeSystem(any());
+  }
+
+  @Test
   void testCreateCodeSystemMissingRequiredFields() throws Exception {
     CodeSystem invalid = CodeSystem.builder().name("LOINC").build();
 
     mockMvc
         .perform(
             MockMvcRequestBuilders.post("/terminology/admin/code-system")
-                .with(user(TEST_USR))
+                .with(user(TEST_USR).roles("MADIE-ADMIN"))
                 .with(csrf())
                 .content(objectMapper.writeValueAsString(invalid))
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -94,13 +114,35 @@ class AdminControllerMvcTest {
   }
 
   @Test
+  void testCreateCodeSystemDuplicate() throws Exception {
+    when(fhirTerminologyService.createCodeSystem(any(CodeSystem.class)))
+        .thenThrow(
+            new DuplicateCodeSystemException(
+                "CodeSystem with oid [urn:oid:2.16.840.1.113883.6.1] and fhir version [2.40] already exists"));
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.post("/terminology/admin/code-system")
+                    .with(user(TEST_USR).roles("MADIE-ADMIN"))
+                    .with(csrf())
+                    .content(objectMapper.writeValueAsString(codeSystem))
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isBadRequest())
+            .andReturn();
+
+    assertThat(result.getResponse().getStatus(), is(equalTo(400)));
+    verify(fhirTerminologyService, times(1)).createCodeSystem(any(CodeSystem.class));
+  }
+
+  @Test
   void testUpdateCodeSystemMissingRequiredFields() throws Exception {
     CodeSystem invalid = CodeSystem.builder().name("LOINC").build();
 
     mockMvc
         .perform(
             MockMvcRequestBuilders.put("/terminology/admin/code-system/" + codeSystem.getId())
-                .with(user(TEST_USR))
+                .with(user(TEST_USR).roles("MADIE-ADMIN"))
                 .with(csrf())
                 .content(objectMapper.writeValueAsString(invalid))
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -118,7 +160,7 @@ class AdminControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.put("/terminology/admin/code-system/" + codeSystem.getId())
-                    .with(user(TEST_USR))
+                    .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf())
                     .content(objectMapper.writeValueAsString(codeSystem))
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -130,6 +172,20 @@ class AdminControllerMvcTest {
   }
 
   @Test
+  void testUpdateCodeSystemForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.put("/terminology/admin/code-system/" + codeSystem.getId())
+                .with(user(TEST_USR))
+                .with(csrf())
+                .content(objectMapper.writeValueAsString(codeSystem))
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isForbidden());
+
+    verify(fhirTerminologyService, never()).updateCodeSystem(anyString(), any());
+  }
+
+  @Test
   void testUpdateCodeSystemNotFound() throws Exception {
     when(fhirTerminologyService.updateCodeSystem(anyString(), any(CodeSystem.class)))
         .thenThrow(new CodeSystemNotFoundException("CodeSystem not found for id: nonexistent"));
@@ -138,7 +194,7 @@ class AdminControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.put("/terminology/admin/code-system/nonexistent")
-                    .with(user(TEST_USR))
+                    .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf())
                     .content(objectMapper.writeValueAsString(codeSystem))
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -157,13 +213,25 @@ class AdminControllerMvcTest {
             .perform(
                 MockMvcRequestBuilders.delete(
                         "/terminology/admin/code-system/" + codeSystem.getId())
-                    .with(user(TEST_USR))
+                    .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf()))
             .andExpect(status().isNoContent())
             .andReturn();
 
     assertThat(result.getResponse().getStatus(), is(equalTo(204)));
     verify(fhirTerminologyService, times(1)).deleteCodeSystem(codeSystem.getId());
+  }
+
+  @Test
+  void testDeleteCodeSystemForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.delete("/terminology/admin/code-system/" + codeSystem.getId())
+                .with(user(TEST_USR))
+                .with(csrf()))
+        .andExpect(status().isForbidden());
+
+    verify(fhirTerminologyService, never()).deleteCodeSystem(anyString());
   }
 
   @Test
@@ -176,7 +244,7 @@ class AdminControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.delete("/terminology/admin/code-system/nonexistent")
-                    .with(user(TEST_USR))
+                    .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf()))
             .andExpect(status().isNotFound())
             .andReturn();

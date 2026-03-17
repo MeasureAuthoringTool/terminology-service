@@ -8,6 +8,7 @@ import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.service.VsacService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,8 @@ class VsacFhirTerminologyControllerMvcTest {
   @MockitoBean private FhirTerminologyService fhirTerminologyService;
 
   @MockitoBean private FhirContext fhirContext;
+
+  @MockitoBean private UserServiceClient userServiceClient;
 
   @Autowired private MockMvc mockMvc;
 

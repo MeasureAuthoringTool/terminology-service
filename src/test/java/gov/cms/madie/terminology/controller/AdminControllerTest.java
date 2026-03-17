@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +61,19 @@ class AdminControllerTest {
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     assertEquals(codeSystem, response.getBody());
     verify(fhirTerminologyService, times(1)).createCodeSystem(any(CodeSystem.class));
+  }
+
+  @Test
+  void testCreateCodeSystemDuplicate() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(fhirTerminologyService.createCodeSystem(any(CodeSystem.class)))
+        .thenThrow(
+            new DuplicateCodeSystemException(
+                "CodeSystem with oid [urn:oid:2.16.840.1.113883.6.1] and fhir version [2.40] already exists"));
+
+    assertThrows(
+        DuplicateCodeSystemException.class,
+        () -> adminController.createCodeSystem(principal, codeSystem));
   }
 
   @Test

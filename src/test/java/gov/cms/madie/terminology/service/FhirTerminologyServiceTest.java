@@ -6,6 +6,8 @@ import gov.cms.madie.terminology.dto.Code;
 import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.helpers.TestHelpers;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -28,6 +30,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.ArgumentCaptor;
+
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 
@@ -595,5 +600,150 @@ class FhirTerminologyServiceTest {
     assertThat(code.get(0).getFhirVersion(), is(equalTo("2.40")));
     assertThat(code.get(0).getStatus(), is(equalTo(CodeStatus.ACTIVE)));
     assertThat(code.get(0).isVersionIncluded(), is(equalTo(false)));
+  }
+
+  @Test
+  void testCreateCodeSystem() {
+    gov.cms.madie.terminology.models.CodeSystem codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .title("LOINC")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .build();
+    gov.cms.madie.terminology.models.CodeSystem saved =
+        codeSystem.toBuilder().id("LOINCversion2.40").build();
+
+    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.empty());
+    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
+        .thenReturn(saved);
+
+    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
+        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
+
+    gov.cms.madie.terminology.models.CodeSystem result =
+        fhirTerminologyService.createCodeSystem(codeSystem);
+
+    assertNotNull(result);
+    assertEquals("LOINCversion2.40", result.getId());
+    assertEquals("LOINC", result.getName());
+    assertEquals("urn:oid:2.16.840.1.113883.6.1", result.getOid());
+    assertEquals("https://loinc.org", result.getFullUrl());
+    assertEquals("2.40", result.getVersion().getFhirVersion());
+    verify(codeSystemRepository, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getLastUpdated());
+  }
+
+  @Test
+  void testCreateCodeSystemThrowsDuplicateException() {
+    gov.cms.madie.terminology.models.CodeSystem codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .title("LOINC")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .build();
+
+    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.of(codeSystem));
+
+    assertThrows(
+        DuplicateCodeSystemException.class,
+        () -> fhirTerminologyService.createCodeSystem(codeSystem));
+    verify(codeSystemRepository, never())
+        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
+  }
+
+  @Test
+  void testUpdateCodeSystem() {
+    String id = "LOINCversion2.40";
+    gov.cms.madie.terminology.models.CodeSystem existing =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id(id)
+            .title("Old Title")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.39")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .build();
+    Date lastUpdatedUpstream = new Date();
+    gov.cms.madie.terminology.models.CodeSystem updated =
+        existing.toBuilder()
+            .title("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .versionId("2")
+            .lastUpdatedUpstream(lastUpdatedUpstream)
+            .build();
+
+    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
+        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
+
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
+    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
+        .thenReturn(updated);
+
+    gov.cms.madie.terminology.models.CodeSystem result =
+        fhirTerminologyService.updateCodeSystem(id, updated);
+
+    assertNotNull(result);
+    assertEquals("LOINC", result.getTitle());
+    assertEquals("LOINC", result.getName());
+    assertEquals("urn:oid:2.16.840.1.113883.6.1", result.getOid());
+    assertEquals("https://loinc.org", result.getFullUrl());
+    assertEquals("2.40", result.getVersion().getFhirVersion());
+    verify(codeSystemRepository, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getLastUpdated());
+    assertEquals("2", captor.getValue().getVersionId());
+    assertEquals(lastUpdatedUpstream, captor.getValue().getLastUpdatedUpstream());
+  }
+
+  @Test
+  void testUpdateCodeSystemThrowsNotFoundException() {
+    String id = "nonexistent";
+    gov.cms.madie.terminology.models.CodeSystem codeSystem =
+        gov.cms.madie.terminology.models.CodeSystem.builder().build();
+
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.empty());
+
+    assertThrows(
+        CodeSystemNotFoundException.class,
+        () -> fhirTerminologyService.updateCodeSystem(id, codeSystem));
+    verify(codeSystemRepository, never())
+        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
+  }
+
+  @Test
+  void testDeleteCodeSystem() {
+    String id = "LOINCversion2.40";
+    when(codeSystemRepository.existsById(id)).thenReturn(true);
+
+    fhirTerminologyService.deleteCodeSystem(id);
+
+    verify(codeSystemRepository, times(1)).deleteById(id);
+  }
+
+  @Test
+  void testDeleteCodeSystemThrowsNotFoundException() {
+    String id = "nonexistent";
+    when(codeSystemRepository.existsById(id)).thenReturn(false);
+
+    assertThrows(
+        CodeSystemNotFoundException.class, () -> fhirTerminologyService.deleteCodeSystem(id));
+    verify(codeSystemRepository, never()).deleteById(anyString());
   }
 }

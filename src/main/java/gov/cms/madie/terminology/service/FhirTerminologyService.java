@@ -5,6 +5,7 @@ import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -475,10 +476,14 @@ public class FhirTerminologyService {
         .findByOidAndVersionFhirVersion(
             codeSystem.getOid(), codeSystem.getVersion().getFhirVersion())
         .isPresent()) {
-      throw new IllegalArgumentException(
-          "CodeSystem with name ["
-              + codeSystem.getName()
-              + "] and version ["
+      log.warn(
+          "Duplicate CodeSystem — oid: [{}] fhir version: [{}] already exists",
+          codeSystem.getOid(),
+          codeSystem.getVersion().getFhirVersion());
+      throw new DuplicateCodeSystemException(
+          "CodeSystem with oid ["
+              + codeSystem.getOid()
+              + "] and fhir version ["
               + codeSystem.getVersion().getFhirVersion()
               + "] already exists");
     }
@@ -493,7 +498,10 @@ public class FhirTerminologyService {
         codeSystemRepository
             .findById(id)
             .orElseThrow(
-                () -> new CodeSystemNotFoundException("CodeSystem not found for id: " + id));
+                () -> {
+                  log.warn("CodeSystem not found for update — id: [{}]", id);
+                  return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
+                });
     existing.setFullUrl(codeSystem.getFullUrl());
     existing.setTitle(codeSystem.getTitle());
     existing.setName(codeSystem.getName());
@@ -509,6 +517,7 @@ public class FhirTerminologyService {
 
   public void deleteCodeSystem(String id) {
     if (!codeSystemRepository.existsById(id)) {
+      log.warn("CodeSystem not found for delete — id: [{}]", id);
       throw new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
     }
     codeSystemRepository.deleteById(id);
