@@ -1,7 +1,9 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.terminology.models.CodeSystem;
+import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.VsacService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,16 +14,28 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 
 @RestController
-@RequestMapping(path = "/terminology/admin/code-system")
+@RequestMapping(path = "/terminology/admin")
 @Slf4j
 @RequiredArgsConstructor
 public class AdminController {
 
   private final FhirTerminologyService fhirTerminologyService;
+  private final VsacService vsacService;
+
+  @PostMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<List<CodeSystem>> retrieveAndUpdateCodeSystems(Principal principal) {
+    final String username = principal.getName();
+    log.info("Admin user [{}] is triggering a manual code system refresh", username);
+    UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
+    return ResponseEntity.ok().body(fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
+  }
 
   @PostMapping(
+      path = "/code-system",
       produces = MediaType.APPLICATION_JSON_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasRole('MADIE-ADMIN')")
@@ -39,7 +53,7 @@ public class AdminController {
   }
 
   @PutMapping(
-      path = "/{id}",
+      path = "/code-system/{id}",
       produces = MediaType.APPLICATION_JSON_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasRole('MADIE-ADMIN')")
@@ -56,7 +70,7 @@ public class AdminController {
     return ResponseEntity.ok().body(fhirTerminologyService.updateCodeSystem(id, codeSystem));
   }
 
-  @DeleteMapping(path = "/{id}")
+  @DeleteMapping(path = "/code-system/{id}")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<Void> deleteCodeSystem(Principal principal, @PathVariable String id) {
     log.info("Admin user [{}] is deleting code system with id: [{}]", principal.getName(), id);

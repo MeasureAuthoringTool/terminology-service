@@ -2,8 +2,11 @@ package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
+import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.CodeSystem;
+import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.VsacService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +30,7 @@ import static org.mockito.Mockito.*;
 class AdminControllerTest {
 
   @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock private VsacService vsacService;
   @InjectMocks private AdminController adminController;
 
   private static final String TEST_USER = "test.admin.user";
@@ -49,6 +54,32 @@ class AdminControllerTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build();
+  }
+
+  @Test
+  void testRetrieveAndUpdateCodeSystemsSuccessfully() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USER).build();
+    when(vsacService.verifyUmlsAccess(TEST_USER)).thenReturn(umlsUser);
+    when(fhirTerminologyService.retrieveAllCodeSystems(umlsUser)).thenReturn(List.of(codeSystem));
+
+    ResponseEntity<List<CodeSystem>> response =
+        adminController.retrieveAndUpdateCodeSystems(principal);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(List.of(codeSystem), response.getBody());
+  }
+
+  @Test
+  void testRetrieveAndUpdateCodeSystemsUnauthorizedUmlsUser() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
+        .when(vsacService)
+        .verifyUmlsAccess(anyString());
+
+    assertThrows(
+        VsacUnauthorizedException.class,
+        () -> adminController.retrieveAndUpdateCodeSystems(principal));
   }
 
   @Test

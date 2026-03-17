@@ -4,6 +4,8 @@ import ca.uhn.fhir.context.FhirContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.config.SecurityConfig;
+import gov.cms.madie.terminology.models.UmlsUser;
+import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -41,6 +44,7 @@ class AdminControllerMvcTest {
   private static final String TEST_USR = "FAKE";
 
   @MockitoBean private FhirTerminologyService fhirTerminologyService;
+  @MockitoBean private VsacService vsacService;
   @MockitoBean private FhirContext fhirContext;
   @MockitoBean private UserServiceClient userServiceClient;
   @Autowired private MockMvc mockMvc;
@@ -62,6 +66,35 @@ class AdminControllerMvcTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build();
+  }
+
+  @Test
+  void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
+    UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USR).build();
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.retrieveAllCodeSystems(any(UmlsUser.class)))
+        .thenReturn(List.of(codeSystem));
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
+                .with(user(TEST_USR).roles("MADIE-ADMIN"))
+                .with(csrf()))
+        .andExpect(status().isOk());
+
+    verify(fhirTerminologyService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
+  }
+
+  @Test
+  void testRetrieveAndUpdateCodeSystemsForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
+                .with(user(TEST_USR))
+                .with(csrf()))
+        .andExpect(status().isForbidden());
+
+    verify(fhirTerminologyService, never()).retrieveAllCodeSystems(any());
   }
 
   @Test

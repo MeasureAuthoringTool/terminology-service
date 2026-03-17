@@ -59,8 +59,6 @@ class VsacFhirTerminologyControllerMvcTest {
   private final List<QdmValueSet> mockQdmValueSets = new ArrayList<>();
   private static final String TEST_USER = "test.user";
   private static final String TEST_API_KEY = "te$tKey";
-  private static final String ADMIN_TEST_API_KEY_HEADER = "api-key";
-  private static final String ADMIN_TEST_API_KEY_HEADER_VALUE = "0a51991c";
   private static final String TEST_TOKEN = "test-okta";
 
   @BeforeEach
@@ -208,41 +206,6 @@ class VsacFhirTerminologyControllerMvcTest {
             .andExpect(status().isUnauthorized())
             .andReturn();
     assertThat(result.getResponse().getStatus(), is(equalTo(401)));
-  }
-
-  @Test
-  public void testRetrieveAndUpdateCodeSystemsUnauthorized() throws Exception {
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
-    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
-        .when(vsacService)
-        .verifyUmlsAccess(anyString());
-    MvcResult result =
-        mockMvc
-            .perform(
-                MockMvcRequestBuilders.get("/terminology/update-code-systems")
-                    .with(csrf())
-                    .with(user(TEST_USR))
-                    .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
-                    .header("Authorization", TEST_TOKEN))
-            .andExpect(status().isUnauthorized())
-            .andReturn();
-    assertThat(result.getResponse().getStatus(), is(equalTo(401)));
-  }
-
-  @Test
-  public void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
-    Principal principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
-    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.get("/terminology/update-code-systems")
-                .with(csrf())
-                .with(user(TEST_USR))
-                .header(ADMIN_TEST_API_KEY_HEADER, ADMIN_TEST_API_KEY_HEADER_VALUE)
-                .header("Authorization", TEST_TOKEN))
-        .andExpect(status().isOk());
   }
 
   @Test
