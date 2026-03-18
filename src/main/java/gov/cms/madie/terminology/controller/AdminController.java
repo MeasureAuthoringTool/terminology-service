@@ -42,7 +42,8 @@ public class AdminController {
   public ResponseEntity<CodeSystem> createCodeSystem(
       Principal principal, @Valid @RequestBody CodeSystem codeSystem) {
     log.info(
-        "Admin user [{}] is creating a new code system version for name: [{}] oid: [{}] fullUrl: [{}] version: [{}]",
+        "Admin user [{}] is creating a new code system version for"
+            + " name: [{}] oid: [{}] fullUrl: [{}] version: [{}]",
         principal.getName(),
         codeSystem.getName(),
         codeSystem.getOid(),
@@ -60,7 +61,8 @@ public class AdminController {
   public ResponseEntity<CodeSystem> updateCodeSystem(
       Principal principal, @PathVariable String id, @Valid @RequestBody CodeSystem codeSystem) {
     log.info(
-        "Admin user [{}] is updating code system with id: [{}] name: [{}] oid: [{}] fullUrl: [{}] version: [{}]",
+        "Admin user [{}] is updating code system with id: [{}]"
+            + " name: [{}] oid: [{}] fullUrl: [{}] version: [{}]",
         principal.getName(),
         id,
         codeSystem.getName(),
