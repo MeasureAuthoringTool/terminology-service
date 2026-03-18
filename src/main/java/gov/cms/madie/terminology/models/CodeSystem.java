@@ -23,7 +23,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class CodeSystem {
   @Id private String id;
   @NotBlank private String fullUrl;
-  @NotBlank private String title;
+  private String title;
   @NotBlank private String name;
   @NotNull @Valid private Version version;
   private String versionId;

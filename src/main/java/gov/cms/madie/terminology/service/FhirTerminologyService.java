@@ -488,7 +488,9 @@ public class FhirTerminologyService {
               + "] already exists");
     }
     codeSystem.setLastUpdated(Instant.now());
+
     CodeSystem saved = codeSystemRepository.save(codeSystem);
+
     log.info("New CodeSystem created by admin: {}", saved);
     return saved;
   }
@@ -503,13 +505,29 @@ public class FhirTerminologyService {
                   return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
                 });
     existing.setFullUrl(codeSystem.getFullUrl());
-    existing.setTitle(codeSystem.getTitle());
+
+    if (codeSystem.getTitle() != null) {
+      existing.setTitle(codeSystem.getTitle());
+    }
+
     existing.setName(codeSystem.getName());
-    existing.setVersion(codeSystem.getVersion());
-    existing.setVersionId(codeSystem.getVersionId());
+
+    existing.getVersion().setFhirVersion(codeSystem.getVersion().getFhirVersion());
+    if (codeSystem.getVersion().getVsacVersion() != null) {
+      existing.getVersion().setVsacVersion(codeSystem.getVersion().getVsacVersion());
+    }
+
+    if (codeSystem.getVersionId() != null) {
+      existing.setVersionId(codeSystem.getVersionId());
+    }
+
     existing.setOid(codeSystem.getOid());
     existing.setLastUpdated(Instant.now());
-    existing.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
+
+    if (codeSystem.getLastUpdatedUpstream() != null) {
+      existing.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
+    }
+
     CodeSystem updated = codeSystemRepository.save(existing);
     log.info("CodeSystem updated by admin: {}", updated);
     return updated;

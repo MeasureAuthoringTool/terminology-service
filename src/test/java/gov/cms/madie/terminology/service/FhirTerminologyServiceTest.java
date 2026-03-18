@@ -1693,6 +1693,67 @@ class FhirTerminologyServiceTest {
   @Test
   void testUpdateCodeSystem() {
     String id = "LOINCversion2.40";
+    Date existingLastUpdatedUpstream = new Date(0);
+    Date newLastUpdatedUpstream = new Date(existingLastUpdatedUpstream.getTime() + 1);
+
+    gov.cms.madie.terminology.models.CodeSystem existing =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id(id)
+            .title("Old Title")
+            .name("Old Name")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.39")
+                    .vsacVersion("2.39")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .versionId("1")
+            .lastUpdatedUpstream(existingLastUpdatedUpstream)
+            .build();
+
+    gov.cms.madie.terminology.models.CodeSystem incoming =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .title("New Title")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .vsacVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .versionId("2")
+            .lastUpdatedUpstream(newLastUpdatedUpstream)
+            .build();
+
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
+    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
+        .thenReturn(existing);
+
+    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
+        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
+
+    fhirTerminologyService.updateCodeSystem(id, incoming);
+
+    verify(codeSystemRepository, times(1)).save(captor.capture());
+    gov.cms.madie.terminology.models.CodeSystem saved = captor.getValue();
+
+    assertNotNull(saved.getLastUpdated());
+    assertEquals("New Title", saved.getTitle());
+    assertEquals("LOINC", saved.getName());
+    assertEquals("urn:oid:2.16.840.1.113883.6.1", saved.getOid());
+    assertEquals("https://loinc.org", saved.getFullUrl());
+    assertEquals("2.40", saved.getVersion().getFhirVersion());
+    assertEquals("2.40", saved.getVersion().getVsacVersion());
+    assertEquals("2", saved.getVersionId());
+    assertEquals(newLastUpdatedUpstream, saved.getLastUpdatedUpstream());
+  }
+
+  @Test
+  void testUpdateCodeSystemPreservesOptionalFieldsWhenNotProvided() {
+    String id = "LOINCversion2.40";
+    Date existingLastUpdatedUpstream = new Date();
     gov.cms.madie.terminology.models.CodeSystem existing =
         gov.cms.madie.terminology.models.CodeSystem.builder()
             .id(id)
@@ -1701,42 +1762,42 @@ class FhirTerminologyServiceTest {
             .version(
                 gov.cms.madie.terminology.models.CodeSystem.Version.builder()
                     .fhirVersion("2.39")
+                    .vsacVersion("2.39")
                     .build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
+            .versionId("1")
+            .lastUpdatedUpstream(existingLastUpdatedUpstream)
             .build();
-    Date lastUpdatedUpstream = new Date();
-    gov.cms.madie.terminology.models.CodeSystem updated =
-        existing.toBuilder()
-            .title("LOINC")
+
+    // title, vsacVersion, versionId, lastUpdatedUpstream omitted — existing values should be
+    // preserved
+    gov.cms.madie.terminology.models.CodeSystem incoming =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .name("LOINC")
             .version(
                 gov.cms.madie.terminology.models.CodeSystem.Version.builder()
                     .fhirVersion("2.40")
                     .build())
-            .versionId("2")
-            .lastUpdatedUpstream(lastUpdatedUpstream)
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
             .build();
+
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
+    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
+        .thenReturn(existing);
 
     ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
         ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
 
-    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
-        .thenReturn(updated);
+    fhirTerminologyService.updateCodeSystem(id, incoming);
 
-    gov.cms.madie.terminology.models.CodeSystem result =
-        fhirTerminologyService.updateCodeSystem(id, updated);
-
-    assertNotNull(result);
-    assertEquals("LOINC", result.getTitle());
-    assertEquals("LOINC", result.getName());
-    assertEquals("urn:oid:2.16.840.1.113883.6.1", result.getOid());
-    assertEquals("https://loinc.org", result.getFullUrl());
-    assertEquals("2.40", result.getVersion().getFhirVersion());
     verify(codeSystemRepository, times(1)).save(captor.capture());
-    assertNotNull(captor.getValue().getLastUpdated());
-    assertEquals("2", captor.getValue().getVersionId());
-    assertEquals(lastUpdatedUpstream, captor.getValue().getLastUpdatedUpstream());
+    gov.cms.madie.terminology.models.CodeSystem saved = captor.getValue();
+    assertEquals("Old Title", saved.getTitle());
+    assertEquals("2.39", saved.getVersion().getVsacVersion());
+    assertEquals("1", saved.getVersionId());
+    assertEquals(existingLastUpdatedUpstream, saved.getLastUpdatedUpstream());
   }
 
   @Test
