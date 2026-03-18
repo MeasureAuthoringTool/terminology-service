@@ -82,7 +82,7 @@ class VsacServiceTest {
             .codeId("'P'")
             .codeSystem(
                 CqlCode.CqlCodeSystem.builder()
-                    .oid("'https://terminology.hl7.org/CodeSystem/v3-ActPriority'")
+                    .oid("'https://terminology.hl7.org/CodeSystem/v3-ActPriority'") // Enclosing single quotes match API usage.
                     .name("ActPriority:HL7V3.0_2021-03")
                     .version("'HL7V3.0_2021-03'")
                     .build())
@@ -97,7 +97,7 @@ class VsacServiceTest {
     var codeSystem =
         CodeSystem.builder()
             .name("ActPriority")
-            .oid("urn:oid:1.2.3.4.5.6.7.8.9")
+            .oid("'urn:oid:1.2.3.4.5.6.7.8.9'") // Enclosing single quotes match API usage.
             .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
             .version(CodeSystem.Version.builder().vsacVersion("2.3").fhirVersion("2.3").build())
             .build();
@@ -122,7 +122,8 @@ class VsacServiceTest {
 
   @Test
   void testAValidCodeFromVsac() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
+    // Verifies oids wrapped in single quotes are unwrapped.
+    when(codeSystemRepository.findAllByOid(eq("https://terminology.hl7.org/CodeSystem/v3-ActPriority"))).thenReturn(codeSystems);
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
         .thenReturn(vsacCode);

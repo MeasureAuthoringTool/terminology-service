@@ -27,6 +27,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static gov.cms.madie.terminology.util.TerminologyServiceUtil.sanitizeInput;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -99,7 +101,7 @@ public class VsacService {
     cqlCode.setValid(true);
 
     // Verify Code is provided.
-    if (TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeId()).isBlank()) {
+    if (sanitizeInput(cqlCode.getCodeId()).isBlank()) {
       log.info("Code Id is not available for code {}", cqlCode.getName());
       cqlCode.setValid(false);
       cqlCode.setErrorMessage("Code Id is required");
@@ -112,7 +114,7 @@ public class VsacService {
     }
 
     // Verify oid/url is provided in cql, else the code system is considered invalid.
-    String cqlCodeSystemOid = cqlCode.getCodeSystem().getOid();
+    String cqlCodeSystemOid = sanitizeInput(cqlCode.getCodeSystem().getOid());
     if (StringUtils.isBlank(cqlCodeSystemOid)) {
       log.info("CodeSystem {} does not contain any OID/URL", cqlCode.getCodeSystem().getName());
       cqlCode.getCodeSystem().setValid(false);
@@ -152,7 +154,7 @@ public class VsacService {
         TerminologyServiceUtil.buildCodePath(
             codeSystems.get(0).getName(),
             codeSystemVersion,
-            TerminologyServiceUtil.sanitizeInput(cqlCode.getCodeId()));
+            sanitizeInput(cqlCode.getCodeId()));
     VsacCode vsacCode = validateCodeAgainstVsac(codePath, umlsUser);
     // Invalid: If the statusCode is "error" and either CodeSystem or CodeSystem version
     // or Code is not found.
@@ -229,7 +231,7 @@ public class VsacService {
     // Locate the code system version that matches with user provided FHIR version
     // and return the equivalent VSAC version.
     String cqlCodeSystemVersion =
-        TerminologyServiceUtil.sanitizeInput(
+        sanitizeInput(
             cqlCode.getCodeSystem().getVersion().replace(CS_VERSION_PREFIX, ""));
 
     Optional<CodeSystem.Version> csVersion =
