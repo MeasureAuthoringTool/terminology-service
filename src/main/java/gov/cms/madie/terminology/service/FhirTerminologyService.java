@@ -487,11 +487,18 @@ public class FhirTerminologyService {
               + codeSystem.getVersion().getFhirVersion()
               + "] already exists");
     }
+
     codeSystem.setLastUpdated(Instant.now());
 
-    CodeSystem saved = codeSystemRepository.save(codeSystem);
+    // Admin marked the new code system as the latest version so demote any existing versions for
+    // the same OID
+    if (codeSystem.isLatestVersion()) {
+      demoteAllLatestVersionsByOid(codeSystem.getOid());
+    }
 
+    CodeSystem saved = codeSystemRepository.save(codeSystem);
     log.info("New CodeSystem created by admin: {}", saved);
+
     return saved;
   }
 
@@ -528,9 +535,41 @@ public class FhirTerminologyService {
       existing.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
     }
 
+    // Admin marked the updated code system as the latest version so demote any existing versions
+    // for the same OID
+    if (codeSystem.isLatestVersion()) {
+      demoteAllLatestVersionsByOid(codeSystem.getOid());
+    }
+
+    // Setting to true re-promotes existing after helper demotes all code system (including
+    // existing) while setting to false only demotes existing
+    existing.setLatestVersion(codeSystem.isLatestVersion());
+
     CodeSystem updated = codeSystemRepository.save(existing);
     log.info("CodeSystem updated by admin: {}", updated);
+
     return updated;
+  }
+
+  private void demoteAllLatestVersionsByOid(String oid) {
+    List<CodeSystem> existingCodeSystems = codeSystemRepository.findAllByOid(oid);
+
+    if (!CollectionUtils.isEmpty(existingCodeSystems)) {
+      existingCodeSystems.forEach(
+          existingCodeSystem -> {
+            if (existingCodeSystem.isLatestVersion()) {
+              log.info(
+                  "Demoting existing CodeSystem id: [{}] oid: [{}] fhirVersion: [{}]"
+                      + " - setting its isLatestVersion from true to false",
+                  existingCodeSystem.getId(),
+                  existingCodeSystem.getOid(),
+                  existingCodeSystem.getVersion().getFhirVersion());
+              existingCodeSystem.setLatestVersion(false);
+            }
+          });
+
+      codeSystemRepository.saveAll(existingCodeSystems);
+    }
   }
 
   public void deleteCodeSystem(String id) {

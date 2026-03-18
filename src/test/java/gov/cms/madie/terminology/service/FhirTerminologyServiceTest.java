@@ -1664,6 +1664,67 @@ class FhirTerminologyServiceTest {
     assertEquals("2.40", result.getVersion().getFhirVersion());
     verify(codeSystemRepository, times(1)).save(captor.capture());
     assertNotNull(captor.getValue().getLastUpdated());
+    verify(codeSystemRepository, never()).findAllByOid(anyString());
+  }
+
+  @Test
+  void testCreateCodeSystemDemotesExistingLatestVersionsWhenMarkedAsLatest() {
+    gov.cms.madie.terminology.models.CodeSystem incoming =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(true)
+            .build();
+
+    gov.cms.madie.terminology.models.CodeSystem existingLatest =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id("LOINCversion2.39")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.39")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(true)
+            .build();
+
+    gov.cms.madie.terminology.models.CodeSystem existingNonLatest =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id("LOINCversion2.38")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.38")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(false)
+            .build();
+
+    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.empty());
+    when(codeSystemRepository.findAllByOid(anyString()))
+        .thenReturn(List.of(existingLatest, existingNonLatest));
+    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
+        .thenReturn(incoming.toBuilder().id("LOINCversion2.40").build());
+
+    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
+        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
+
+    fhirTerminologyService.createCodeSystem(incoming);
+
+    verify(codeSystemRepository, times(1)).saveAll(anyList());
+    verify(codeSystemRepository, times(1)).save(captor.capture());
+
+    assertTrue(captor.getValue().isLatestVersion());
+    assertFalse(existingLatest.isLatestVersion());
+    assertFalse(existingNonLatest.isLatestVersion());
   }
 
   @Test
@@ -1737,6 +1798,7 @@ class FhirTerminologyServiceTest {
     fhirTerminologyService.updateCodeSystem(id, incoming);
 
     verify(codeSystemRepository, times(1)).save(captor.capture());
+    verify(codeSystemRepository, never()).findAllByOid(anyString());
     gov.cms.madie.terminology.models.CodeSystem saved = captor.getValue();
 
     assertNotNull(saved.getLastUpdated());
@@ -1748,6 +1810,123 @@ class FhirTerminologyServiceTest {
     assertEquals("2.40", saved.getVersion().getVsacVersion());
     assertEquals("2", saved.getVersionId());
     assertEquals(newLastUpdatedUpstream, saved.getLastUpdatedUpstream());
+  }
+
+  @Test
+  void testUpdateCodeSystemDemotesExistingLatestVersionsWhenMarkedAsLatest() {
+    String id = "LOINCversion2.40";
+
+    gov.cms.madie.terminology.models.CodeSystem existing =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id(id)
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(false)
+            .build();
+
+    gov.cms.madie.terminology.models.CodeSystem incoming =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(true)
+            .build();
+
+    gov.cms.madie.terminology.models.CodeSystem existingLatest =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id("LOINCversion2.39")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.39")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(true)
+            .build();
+
+    gov.cms.madie.terminology.models.CodeSystem existingNonLatest =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id("LOINCversion2.38")
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.38")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(false)
+            .build();
+
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
+    when(codeSystemRepository.findAllByOid(anyString()))
+        .thenReturn(List.of(existingLatest, existingNonLatest, existing));
+    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
+        .thenReturn(existing);
+
+    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
+        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
+
+    fhirTerminologyService.updateCodeSystem(id, incoming);
+
+    verify(codeSystemRepository, times(1)).saveAll(anyList());
+    verify(codeSystemRepository, times(1)).save(captor.capture());
+
+    assertTrue(captor.getValue().isLatestVersion());
+    assertFalse(existingLatest.isLatestVersion());
+    assertFalse(existingNonLatest.isLatestVersion());
+  }
+
+  @Test
+  void testUpdateCodeSystemSetsLatestVersionFalseWhenNotMarkedAsLatest() {
+    String id = "LOINCversion2.40";
+
+    gov.cms.madie.terminology.models.CodeSystem existing =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .id(id)
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(true)
+            .build();
+
+    gov.cms.madie.terminology.models.CodeSystem incoming =
+        gov.cms.madie.terminology.models.CodeSystem.builder()
+            .name("LOINC")
+            .version(
+                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+                    .fhirVersion("2.40")
+                    .build())
+            .oid("urn:oid:2.16.840.1.113883.6.1")
+            .fullUrl("https://loinc.org")
+            .isLatestVersion(false)
+            .build();
+
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
+    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
+        .thenReturn(existing);
+
+    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
+        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
+
+    fhirTerminologyService.updateCodeSystem(id, incoming);
+
+    verify(codeSystemRepository, never()).findAllByOid(anyString());
+    verify(codeSystemRepository, times(1)).save(captor.capture());
+    assertFalse(captor.getValue().isLatestVersion());
   }
 
   @Test
