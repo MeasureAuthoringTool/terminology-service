@@ -23,6 +23,7 @@ import java.util.*;
 public class LoadCodeSystemMappingData {
 
   private final List<CodeSystem> originalCodeSystems = new ArrayList<>();
+  private String FILE_PATH = "/code-system-entry.json";
 
   @Execution
   public void apply(
@@ -138,11 +139,9 @@ public class LoadCodeSystemMappingData {
   }
 
   private String loadMappingDoc() {
-    try (InputStream inputStream =
-        LoadCodeSystemMappingData.class.getResourceAsStream("/code-system-entry.json")) {
+    try (InputStream inputStream = LoadCodeSystemMappingData.class.getResourceAsStream(FILE_PATH)) {
       if (inputStream == null) {
-        throw new UncheckedIOException(
-            new IOException("Unable to read resource /code-system-entry.json"));
+        throw new UncheckedIOException(new IOException("Unable to read resource " + FILE_PATH));
       }
       return new String(inputStream.readAllBytes());
     } catch (IOException e) {

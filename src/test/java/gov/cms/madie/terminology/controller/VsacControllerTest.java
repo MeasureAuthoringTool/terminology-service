@@ -109,7 +109,7 @@ public class VsacControllerTest {
 
     ResponseEntity<String> response = vsacController.umlsLogin(principal, TEST);
 
-    assertEquals(response.getBody(), "User: " + TEST_USER + " is successfully logged in to UMLS.");
+    assertEquals("User: " + TEST_USER + " is successfully logged in to UMLS.", response.getBody());
   }
 
   @Test
@@ -120,7 +120,7 @@ public class VsacControllerTest {
     when(vsacService.validateUmlsInformation(anyString())).thenReturn(true);
     ResponseEntity<Boolean> response = vsacController.checkUserLogin(principal);
 
-    assertEquals(response.getBody(), Boolean.TRUE);
+    assertEquals(Boolean.TRUE, response.getBody());
   }
 
   @Test
@@ -142,7 +142,7 @@ public class VsacControllerTest {
     when(vsacService.logoutUMLSUser(anyString())).thenReturn(true);
     ResponseEntity<Boolean> response = vsacController.umlsLogout(principal);
 
-    assertEquals(response.getBody(), Boolean.TRUE);
+    assertEquals(Boolean.TRUE, response.getBody());
   }
 
   @Test
@@ -154,5 +154,72 @@ public class VsacControllerTest {
     ResponseEntity<Boolean> response = vsacController.umlsLogout(principal);
 
     assertEquals(response.getStatusCode(), HttpStatus.UNAUTHORIZED);
+  }
+
+  @Test
+  void testGetValueSetSuccessCoversServiceChain() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    UmlsUser mockUmlsUser = mock(UmlsUser.class);
+    Optional<UmlsUser> optionalUmlsUser = Optional.of(mockUmlsUser);
+    when(vsacService.findByHarpId(anyString())).thenReturn(optionalUmlsUser);
+
+    // Mock RetrieveMultipleValueSetsResponse
+    generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse valuesetResponse =
+        mock(generated.vsac.nlm.nih.gov.RetrieveMultipleValueSetsResponse.class);
+    when(vsacService.getValueSet(
+            anyString(), any(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(valuesetResponse);
+
+    // Mock FHIR ValueSet
+    org.hl7.fhir.r4.model.ValueSet fhirValueSet = mock(org.hl7.fhir.r4.model.ValueSet.class);
+    when(fhirValueSet.getId()).thenReturn("test-id");
+    when(vsacService.convertToFHIRValueSet(valuesetResponse)).thenReturn(fhirValueSet);
+
+    // Mock serialization
+    VsacController controller =
+        new VsacController(vsacService, ca.uhn.fhir.context.FhirContext.forR4());
+    String expectedSerialized = "{\"resourceType\":\"ValueSet\",\"id\":\"test-id\"}";
+    // Override serializeFhirValueset to return expectedSerialized
+    VsacController spyController = org.mockito.Mockito.spy(controller);
+    org.mockito.Mockito.doReturn(expectedSerialized)
+        .when(spyController)
+        .serializeFhirValueset(fhirValueSet);
+
+    ResponseEntity<String> response =
+        spyController.getValueSet(
+            principal, "oid", "profile", "includeDraft", "release", "version");
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(expectedSerialized, response.getBody());
+  }
+
+  @Test
+  void testSerializeFhirValuesetCoversJsonParser() {
+    // Create a minimal ValueSet
+    org.hl7.fhir.r4.model.ValueSet valueSet = new org.hl7.fhir.r4.model.ValueSet();
+    valueSet.setId("test-id");
+    // Use a real FhirContext for serialization
+    ca.uhn.fhir.context.FhirContext fhirContext = ca.uhn.fhir.context.FhirContext.forR4();
+    VsacController controller = new VsacController(vsacService, fhirContext);
+    String json = controller.serializeFhirValueset(valueSet);
+    // Assert output contains expected fields
+    assertTrue(json.contains("\"resourceType\":\"ValueSet\""));
+    assertTrue(json.contains("\"id\":\"test-id\""));
+  }
+
+  @Test
+  void testValidateCodesWhenUmlsUserIsNotPresent() {
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(vsacService.findByHarpId(anyString())).thenReturn(Optional.empty());
+    var cqlCode =
+        gov.cms.madie.models.cql.terminology.CqlCode.builder()
+            .name("test-code")
+            .codeId("test-codeId")
+            .build();
+    ResponseEntity<List<CqlCode>> response =
+        vsacController.validateCodes(principal, List.of(cqlCode), FHIR_DATA_MODEL);
+    assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
   }
 }
