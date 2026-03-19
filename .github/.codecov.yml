@@ -14,5 +14,5 @@ coverage:
         base: auto
         paths:
           - "src"
-exclude:
+ignore:
   - "src/main/java/generated.vsac.nlm.nih.gov/**"
