@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -30,6 +31,8 @@ public class CodeSystem {
   @NotBlank private String oid; // identifier[0].value oid of identifier List
   private Instant lastUpdated; // when queried
   private Date lastUpdatedUpstream; // when was resource last updated on vsac end
+
+  @JsonProperty("isLatestVersion")
   private boolean isLatestVersion;
 
   public boolean isFhir() {
