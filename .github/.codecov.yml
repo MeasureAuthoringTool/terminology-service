@@ -3,9 +3,16 @@ coverage:
     project:
       default:   # default is the status check's name, not default settings
         target: 90%
-        threshold: 20%
+        threshold: 5%
         base: auto
         paths:
           - "src"
-exclude:
+    patch:
+      default:
+        target: 95%
+        threshold: 10%
+        base: auto
+        paths:
+          - "src"
+ignore:
   - "src/main/java/generated.vsac.nlm.nih.gov/**"

@@ -20,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.io.IOException;
 import java.security.Principal;
@@ -45,11 +44,8 @@ class VsacFhirTerminologyControllerTest {
   @InjectMocks private VsacFhirTerminologyController vsacFhirTerminologyController;
   private UmlsUser umlsUser;
   private static final String TEST_USER = "test.user";
-  private static final String ADMIN_TEST_API_KEY_HEADER = "api-key";
-  private static final String ADMIN_TEST_API_KEY_HEADER_VALUE = "0a51991c";
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
-  MockHttpServletRequest request;
   private final List<ManifestExpansion> mockManifests = new ArrayList<>();
   private final List<QdmValueSet> mockQdmValueSets = new ArrayList<>();
   private Principal principal;
@@ -74,7 +70,6 @@ class VsacFhirTerminologyControllerTest {
             .version("20240101")
             .displayName("test-value-set-display-name")
             .build());
-    request = new MockHttpServletRequest();
     principal = mock(Principal.class);
     when(principal.getName()).thenReturn(TEST_USER);
   }
@@ -113,30 +108,6 @@ class VsacFhirTerminologyControllerTest {
   }
 
   @Test
-  void retrieveAndUpdateCodeSystemsSuccessfully() {
-    List<CodeSystem> mockCodeSystemsPage = new ArrayList<>();
-    mockCodeSystemsPage.add(
-        CodeSystem.builder()
-            .id("titleversion")
-            .title("title")
-            .name("name")
-            .version(CodeSystem.Version.builder().fhirVersion("version").build())
-            .versionId("vid")
-            .oid("urlval")
-            .lastUpdated(Instant.now())
-            .lastUpdatedUpstream(new Date())
-            .build());
-    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(fhirTerminologyService.retrieveAllCodeSystems(any())).thenReturn(mockCodeSystemsPage);
-
-    ResponseEntity<List<CodeSystem>> response =
-        vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(
-            principal, request, TEST_API_KEY, TEST_USER);
-    assertEquals(response.getStatusCode(), HttpStatus.OK);
-    assertEquals(response.getBody(), mockCodeSystemsPage);
-  }
-
-  @Test
   void testUnAuthorizedUmlsUserWhileFetchingValueSetsExpansions() {
     doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
         .when(vsacService)
@@ -144,18 +115,6 @@ class VsacFhirTerminologyControllerTest {
     assertThrows(
         VsacUnauthorizedException.class,
         () -> vsacFhirTerminologyController.getManifests(principal));
-  }
-
-  @Test
-  void testUnAuthorizedUmlsUserWhileretrievingAndUpdatingCodeSystems() {
-    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
-        .when(vsacService)
-        .verifyUmlsAccess(anyString());
-    assertThrows(
-        VsacUnauthorizedException.class,
-        () ->
-            vsacFhirTerminologyController.retrieveAndUpdateCodeSystems(
-                principal, request, TEST_API_KEY, TEST_USER));
   }
 
   @Test

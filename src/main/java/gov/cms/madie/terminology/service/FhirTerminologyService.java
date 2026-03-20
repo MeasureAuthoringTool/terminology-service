@@ -4,6 +4,8 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
+import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -467,6 +469,116 @@ public class FhirTerminologyService {
             e.getMessage());
       }
     }
+  }
+
+  public CodeSystem createCodeSystem(CodeSystem codeSystem) {
+    if (codeSystemRepository
+        .findByOidAndVersionFhirVersion(
+            codeSystem.getOid(), codeSystem.getVersion().getFhirVersion())
+        .isPresent()) {
+      log.warn(
+          "Duplicate CodeSystem — oid: [{}] fhir version: [{}] already exists",
+          codeSystem.getOid(),
+          codeSystem.getVersion().getFhirVersion());
+      throw new DuplicateCodeSystemException(
+          "CodeSystem with oid ["
+              + codeSystem.getOid()
+              + "] and fhir version ["
+              + codeSystem.getVersion().getFhirVersion()
+              + "] already exists");
+    }
+
+    codeSystem.setLastUpdated(Instant.now());
+
+    // Admin marked the new code system as the latest version so demote any existing versions for
+    // the same OID
+    if (codeSystem.isLatestVersion()) {
+      demoteAllLatestVersionsByOid(codeSystem.getOid());
+    }
+
+    CodeSystem saved = codeSystemRepository.save(codeSystem);
+    log.info("New CodeSystem created by admin: {}", saved);
+
+    return saved;
+  }
+
+  public CodeSystem updateCodeSystem(String id, CodeSystem codeSystem) {
+    CodeSystem existing =
+        codeSystemRepository
+            .findById(id)
+            .orElseThrow(
+                () -> {
+                  log.warn("CodeSystem not found for update — id: [{}]", id);
+                  return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
+                });
+    existing.setFullUrl(codeSystem.getFullUrl());
+
+    if (codeSystem.getTitle() != null) {
+      existing.setTitle(codeSystem.getTitle());
+    }
+
+    existing.setName(codeSystem.getName());
+
+    existing.getVersion().setFhirVersion(codeSystem.getVersion().getFhirVersion());
+    if (codeSystem.getVersion().getVsacVersion() != null) {
+      existing.getVersion().setVsacVersion(codeSystem.getVersion().getVsacVersion());
+    }
+
+    if (codeSystem.getVersionId() != null) {
+      existing.setVersionId(codeSystem.getVersionId());
+    }
+
+    existing.setOid(codeSystem.getOid());
+    existing.setLastUpdated(Instant.now());
+
+    if (codeSystem.getLastUpdatedUpstream() != null) {
+      existing.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
+    }
+
+    // Admin marked the updated code system as the latest version so demote any existing versions
+    // for the same OID
+    if (codeSystem.isLatestVersion()) {
+      demoteAllLatestVersionsByOid(codeSystem.getOid());
+    }
+
+    // Setting to true re-promotes existing after helper demotes all code system (including
+    // existing) while setting to false only demotes existing
+    existing.setLatestVersion(codeSystem.isLatestVersion());
+
+    CodeSystem updated = codeSystemRepository.save(existing);
+    log.info("CodeSystem updated by admin: {}", updated);
+
+    return updated;
+  }
+
+  private void demoteAllLatestVersionsByOid(String oid) {
+    List<CodeSystem> existingCodeSystems = codeSystemRepository.findAllByOid(oid);
+
+    if (!CollectionUtils.isEmpty(existingCodeSystems)) {
+      existingCodeSystems.forEach(
+          existingCodeSystem -> {
+            if (existingCodeSystem.isLatestVersion()) {
+              log.info(
+                  "Demoting existing CodeSystem id: [{}] oid: [{}] fhirVersion: [{}]"
+                      + " - setting its isLatestVersion from true to false",
+                  existingCodeSystem.getId(),
+                  existingCodeSystem.getOid(),
+                  existingCodeSystem.getVersion().getFhirVersion());
+              existingCodeSystem.setLatestVersion(false);
+            }
+          });
+
+      codeSystemRepository.saveAll(existingCodeSystems);
+    }
+  }
+
+  public void deleteCodeSystem(String id) {
+    if (!codeSystemRepository.existsById(id)) {
+      log.warn("CodeSystem not found for delete — id: [{}]", id);
+      throw new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
+    }
+    codeSystemRepository.deleteById(id);
+    log.info("CodeSystem deleted by admin, id: {}", id);
   }
 
   public List<Code> retrieveCodesAndCodeSystems(List<Map<String, String>> codeList, String apiKey) {
