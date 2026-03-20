@@ -20,4 +20,6 @@ public interface CodeSystemRepository extends MongoRepository<CodeSystem, String
   Optional<CodeSystem> findByFullUrlAndVersionFhirVersion(String fullUrl, String version);
 
   List<CodeSystem> findAllByOid(String oid);
+
+  List<CodeSystem> findAllByFullUrl(String url);
 }
