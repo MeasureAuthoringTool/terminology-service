@@ -82,7 +82,9 @@ class VsacServiceTest {
             .codeId("'P'")
             .codeSystem(
                 CqlCode.CqlCodeSystem.builder()
-                    .oid("'https://terminology.hl7.org/CodeSystem/v3-ActPriority'") // Enclosing single quotes match API usage.
+                    .oid(
+                        // Enclosing url/oid in single quotes to match most common format.
+                        "'https://terminology.hl7.org/CodeSystem/v3-ActPriority'")
                     .name("ActPriority:HL7V3.0_2021-03")
                     .version("'HL7V3.0_2021-03'")
                     .build())
@@ -121,9 +123,11 @@ class VsacServiceTest {
   }
 
   @Test
-  void testAValidCodeFromVsac() {
+  void testAValidCodeFromVsacFhir() {
     // Verifies oids wrapped in single quotes are unwrapped.
-    when(codeSystemRepository.findAllByOid(eq("https://terminology.hl7.org/CodeSystem/v3-ActPriority"))).thenReturn(codeSystems);
+    when(codeSystemRepository.findAllByFullUrl(
+            eq("https://terminology.hl7.org/CodeSystem/v3-ActPriority")))
+        .thenReturn(codeSystems);
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
         .thenReturn(vsacCode);
@@ -132,8 +136,30 @@ class VsacServiceTest {
   }
 
   @Test
+  void testAValidCodeFromVsacQdm() {
+    when(codeSystemRepository.findAllByOid(eq("urn:oid:1.1.1.1"))).thenReturn(codeSystems);
+    when(terminologyServiceWebClient.getCode(
+            eq("/CodeSystem/ActPriority/Version/HL7V3.0_2021-03/Code/P/Info"), anyString()))
+        .thenReturn(vsacCode);
+    List<CqlCode> testCode =
+        List.of(
+            CqlCode.builder()
+                .name("preop")
+                .codeId("'P'")
+                .codeSystem(
+                    CqlCode.CqlCodeSystem.builder()
+                        .oid("'urn:oid:1.1.1.1'")
+                        .name("ActPriority:HL7V3.0_2021-03")
+                        .version("'HL7V3.0_2021-03'")
+                        .build())
+                .build());
+    List<CqlCode> result = vsacService.validateCodes(testCode, umlsUser, QDM_MODEL);
+    assertTrue(result.get(0).isValid());
+  }
+
+  @Test
   void testCodeSystemNotFoundFromVsac() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
+    when(codeSystemRepository.findAllByFullUrl(anyString())).thenReturn(codeSystems);
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -150,7 +176,7 @@ class VsacServiceTest {
 
   @Test
   void testCodeSystemVersionNotFoundFromVsac() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
+    when(codeSystemRepository.findAllByFullUrl(anyString())).thenReturn(codeSystems);
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -167,7 +193,7 @@ class VsacServiceTest {
 
   @Test
   void testCodeNotFoundFromVsac() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
+    when(codeSystemRepository.findAllByFullUrl(anyString())).thenReturn(codeSystems);
     vsacCode.setStatus("error");
 
     VsacCode.VsacErrorResultSet vsacErrorResultSet = new VsacCode.VsacErrorResultSet();
@@ -184,7 +210,7 @@ class VsacServiceTest {
 
   @Test
   void testVsacCommunicationError() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(codeSystems);
+    when(codeSystemRepository.findAllByFullUrl(anyString())).thenReturn(codeSystems);
     VsacCode badRequest = new VsacCode();
     badRequest.setStatus(
         "400"); // VSAC's response to using the updated Basic Authn scheme on code validation.
@@ -212,10 +238,11 @@ class VsacServiceTest {
 
   @Test
   void testIfThereIsNoAssociatedCodeSystem() {
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of());
+    when(codeSystemRepository.findAllByFullUrl(anyString())).thenReturn(List.of());
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
-    assertEquals("Invalid Code system", result.get(0).getCodeSystem().getErrorMessage());
+    assertEquals(
+        "Unable to find a code system version", result.get(0).getCodeSystem().getErrorMessage());
   }
 
   @Test
@@ -227,7 +254,8 @@ class VsacServiceTest {
             .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
             .version(CodeSystem.Version.builder().vsacVersion("2.3").fhirVersion("2.3").build())
             .build();
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(notInVsacCodeSystem));
+    when(codeSystemRepository.findAllByFullUrl(anyString()))
+        .thenReturn(List.of(notInVsacCodeSystem));
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertTrue(result.get(0).isValid());
   }
@@ -251,7 +279,7 @@ class VsacServiceTest {
             .version(null)
             .build();
     when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystemNoVersion));
-    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
+    List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, QDM_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals(
         "Unable to find a code system version", result.get(0).getCodeSystem().getErrorMessage());
@@ -267,7 +295,8 @@ class VsacServiceTest {
             .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
             .version(CodeSystem.Version.builder().fhirVersion("2.3").vsacVersion(null).build())
             .build();
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystemNullVsac));
+    when(codeSystemRepository.findAllByFullUrl(anyString()))
+        .thenReturn(List.of(codeSystemNullVsac));
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
     assertFalse(result.get(0).getCodeSystem().isValid());
     assertEquals(
@@ -283,7 +312,8 @@ class VsacServiceTest {
             .fullUrl("https://terminology.hl7.org/CodeSystem/v3-ActPriority")
             .version(null)
             .build();
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystemNoVersion));
+    when(codeSystemRepository.findAllByFullUrl(anyString()))
+        .thenReturn(List.of(codeSystemNoVersion));
 
     when(terminologyServiceWebClient.getCode(anyString(), anyString())).thenReturn(vsacCode);
     List<CqlCode> result = vsacService.validateCodes(cqlCodes, umlsUser, FHIR_MODEL);
@@ -333,7 +363,7 @@ class VsacServiceTest {
                     .fhirVersion("http://snomed.info/sct/731000124108/version/20220301")
                     .build())
             .build();
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(snomedCodeSystem));
+    when(codeSystemRepository.findAllByFullUrl(anyString())).thenReturn(List.of(snomedCodeSystem));
 
     when(terminologyServiceWebClient.getCode(
             eq("/CodeSystem/SNOMEDCT/Version/2022-03/Code/37687000/Info"), anyString()))
@@ -586,13 +616,13 @@ class VsacServiceTest {
   void validateCodeReturnsEarlyWhenCodeSystemIsNull() throws Exception {
     CqlCode cqlCode = CqlCode.builder().name("test").codeId("validCodeId").codeSystem(null).build();
     UmlsUser umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    Method method =
-        VsacService.class.getDeclaredMethod("validateCode", CqlCode.class, UmlsUser.class);
-    method.setAccessible(true);
-    method.invoke(new VsacService(null, null, null, null), cqlCode, umlsUser);
+
+    List<CqlCode> result = vsacService.validateCodes(List.of(cqlCode), umlsUser, FHIR_MODEL);
+
     // Assert: no error message, no invalid flag set
-    assertNull(cqlCode.getErrorMessage());
-    assertTrue(cqlCode.isValid());
+    assertThat(result.size(), is(1));
+    assertNull(result.get(0).getErrorMessage());
+    assertTrue(result.get(0).isValid());
   }
 
   /* test for buildCodeSystemVersion(), lines 220-221

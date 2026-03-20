@@ -93,11 +93,11 @@ public class VsacService {
    *     displayed to user by cql-elm-translator
    */
   public List<CqlCode> validateCodes(List<CqlCode> cqlCodes, UmlsUser umlsUser, String model) {
-    cqlCodes.forEach(cqlCode -> validateCode(cqlCode, umlsUser));
+    cqlCodes.forEach(cqlCode -> validateCode(cqlCode, umlsUser, model));
     return cqlCodes;
   }
 
-  private void validateCode(CqlCode cqlCode, UmlsUser umlsUser) {
+  private void validateCode(CqlCode cqlCode, UmlsUser umlsUser, String model) {
     cqlCode.setValid(true);
 
     // Verify Code is provided.
@@ -122,14 +122,17 @@ public class VsacService {
       return;
     }
 
+    List<CodeSystem> targetCodeSystemVersions;
     // Verify code system is known.
-    List<CodeSystem> targetCodeSystemVersions = codeSystemRepository.findAllByOid(cqlCodeSystemOid);
+    if (model.contains("QDM")) {
+      targetCodeSystemVersions = codeSystemRepository.findAllByOid(cqlCodeSystemOid);
+    } else {
+      targetCodeSystemVersions = codeSystemRepository.findAllByFullUrl(cqlCodeSystemOid);
+    }
     if (CollectionUtils.isEmpty(targetCodeSystemVersions)) {
-      log.info(
-          "No associated Code system found in code system entry json for {}",
-          cqlCode.getCodeSystem().getOid());
+      log.info("No Code system versions found for {}", cqlCode.getCodeSystem().getOid());
       cqlCode.getCodeSystem().setValid(false);
-      cqlCode.getCodeSystem().setErrorMessage("Invalid Code system");
+      cqlCode.getCodeSystem().setErrorMessage("Unable to find a code system version");
       return;
     }
 
@@ -152,9 +155,7 @@ public class VsacService {
     }
     String codePath =
         TerminologyServiceUtil.buildCodePath(
-            codeSystems.get(0).getName(),
-            codeSystemVersion,
-            sanitizeInput(cqlCode.getCodeId()));
+            codeSystems.get(0).getName(), codeSystemVersion, sanitizeInput(cqlCode.getCodeId()));
     VsacCode vsacCode = validateCodeAgainstVsac(codePath, umlsUser);
     // Invalid: If the statusCode is "error" and either CodeSystem or CodeSystem version
     // or Code is not found.
@@ -231,8 +232,7 @@ public class VsacService {
     // Locate the code system version that matches with user provided FHIR version
     // and return the equivalent VSAC version.
     String cqlCodeSystemVersion =
-        sanitizeInput(
-            cqlCode.getCodeSystem().getVersion().replace(CS_VERSION_PREFIX, ""));
+        sanitizeInput(cqlCode.getCodeSystem().getVersion().replace(CS_VERSION_PREFIX, ""));
 
     Optional<CodeSystem.Version> csVersion =
         codeSystems.stream()
