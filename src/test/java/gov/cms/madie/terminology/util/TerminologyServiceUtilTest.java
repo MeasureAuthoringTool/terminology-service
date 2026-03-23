@@ -223,7 +223,7 @@ public class TerminologyServiceUtilTest {
   }
 
   @Test
-  void buildValueSetResourceUriWhenManifestExpansionIsNull() {
+  void buildValueSetResourceUriWhenManifestExpansionIsNotNull() {
     ValueSetsSearchCriteria.ValueSetParams params =
         ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").build();
     String profile = "test-profile";
