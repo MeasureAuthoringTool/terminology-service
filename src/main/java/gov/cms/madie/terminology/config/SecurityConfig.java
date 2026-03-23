@@ -1,7 +1,9 @@
 package gov.cms.madie.terminology.config;
 
+import gov.cms.madie.terminology.clients.UserRoleConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -10,18 +12,31 @@ import org.springframework.security.web.header.writers.XXssProtectionHeaderWrite
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
+  private static final String[] AUTH_WHITELIST = {"/actuator/**"};
+
   @Bean
-  protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+  protected SecurityFilterChain filterChain(HttpSecurity http, UserRoleConverter roleConverter)
+      throws Exception {
     http.cors(withDefaults())
         .csrf(withDefaults())
         .authorizeHttpRequests(
             request ->
-                request.requestMatchers("/actuator/**").permitAll().anyRequest().authenticated())
+                request
+                    .requestMatchers(AUTH_WHITELIST)
+                    .permitAll()
+                    .requestMatchers("/terminology/admin/**")
+                    .hasRole("MADIE-ADMIN")
+                    .anyRequest()
+                    .authenticated())
         .sessionManagement(
             sessionMgt -> sessionMgt.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .oauth2ResourceServer((oauth2) -> oauth2.jwt(withDefaults()))
+        .oauth2ResourceServer(
+            oAuth2ResourceServerConfigurer ->
+                oAuth2ResourceServerConfigurer.jwt(
+                    jwt -> jwt.jwtAuthenticationConverter(roleConverter)))
         .headers(
             headers ->
                 headers

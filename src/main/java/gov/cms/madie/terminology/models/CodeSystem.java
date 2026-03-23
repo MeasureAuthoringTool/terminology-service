@@ -1,5 +1,8 @@
 package gov.cms.madie.terminology.models;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -19,14 +23,16 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document
 public class CodeSystem {
   @Id private String id;
-  private String fullUrl;
+  @NotBlank private String fullUrl;
   private String title;
-  private String name;
-  private Version version;
+  @NotBlank private String name;
+  @NotNull @Valid private Version version;
   private String versionId;
-  private String oid; // identifier[0].value oid of identifier List
+  @NotBlank private String oid; // identifier[0].value oid of identifier List
   private Instant lastUpdated; // when queried
   private Date lastUpdatedUpstream; // when was resource last updated on vsac end
+
+  @JsonProperty("isLatestVersion")
   private boolean isLatestVersion;
 
   public boolean isFhir() {
@@ -44,7 +50,7 @@ public class CodeSystem {
   @Data
   @Builder(toBuilder = true)
   public static class Version {
-    private String fhirVersion;
+    @NotBlank private String fhirVersion;
     private String vsacVersion;
   }
 }

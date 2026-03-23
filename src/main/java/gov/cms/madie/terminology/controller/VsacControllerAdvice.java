@@ -13,6 +13,7 @@ import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 
@@ -53,6 +56,20 @@ public class VsacControllerAdvice {
     return ResponseEntity.status(ex.getRawStatusCode())
         .contentType(MediaType.APPLICATION_JSON)
         .body(errorAttributes);
+  }
+
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onMethodArgumentNotValidException(
+      MethodArgumentNotValidException ex, WebRequest request) {
+    Map<String, String> validationErrors = new HashMap<>();
+    ex.getBindingResult()
+        .getFieldErrors()
+        .forEach(fe -> validationErrors.put(fe.getField(), fe.getDefaultMessage()));
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
   }
 
   @ExceptionHandler(MissingServletRequestParameterException.class)
@@ -138,6 +155,32 @@ public class VsacControllerAdvice {
 
     errorAttributes1.put("diagnostic", outcome1.getIssueFirstRep().getDiagnostics());
     return errorAttributes1;
+  }
+
+  @ExceptionHandler(DuplicateCodeSystemException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onDuplicateCodeSystemException(
+      DuplicateCodeSystemException ex, WebRequest request) {
+    log.warn("Duplicate CodeSystem exception: {}", ex.getMessage());
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(CodeSystemNotFoundException.class)
+  @ResponseStatus(HttpStatus.NOT_FOUND)
+  @ResponseBody
+  Map<String, Object> onCodeSystemNotFoundException(
+      CodeSystemNotFoundException ex, WebRequest request) {
+    log.warn("CodeSystem not found exception: {}", ex.getMessage());
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.NOT_FOUND);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
   }
 
   @ExceptionHandler(VsacUnauthorizedException.class)
