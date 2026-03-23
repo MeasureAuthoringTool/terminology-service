@@ -225,7 +225,11 @@ public class TerminologyServiceUtilTest {
   @Test
   void buildValueSetResourceUriWhenManifestExpansionIsNotNull() {
     ValueSetsSearchCriteria.ValueSetParams params =
-        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").build();
+        ValueSetsSearchCriteria.ValueSetParams.builder()
+            .oid("1.2.3.4.5")
+            .offset(0)
+            .count(1000)
+            .build();
     String profile = "test-profile";
     String includeDraft = "true";
     String activeOnly = "false";
@@ -235,6 +239,6 @@ public class TerminologyServiceUtilTest {
         TerminologyServiceUtil.buildValueSetResourceUri(
             params, profile, includeDraft, activeOnly, manifestExpansion);
     String uriStr = uri.toString();
-    assertEquals("/ValueSet/1.2.3.4.5/$expand?manifest=test-manifest", uriStr);
+    assertEquals("/ValueSet/1.2.3.4.5/$expand?offset=0&count=1000&manifest=test-manifest", uriStr);
   }
 }
