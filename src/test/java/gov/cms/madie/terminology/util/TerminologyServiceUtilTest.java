@@ -1,15 +1,12 @@
 package gov.cms.madie.terminology.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.net.URI;
 import org.junit.jupiter.api.Test;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TerminologyServiceUtilTest {
   @Test
@@ -164,15 +161,22 @@ public class TerminologyServiceUtilTest {
     String profile = "profile";
     String includeDraft = "true";
     String activeOnly = "false";
-    URI uri =
+    assertNull(
         TerminologyServiceUtil.buildValueSetResourceUri(
-            null, profile, includeDraft, activeOnly, manifestExpansion);
-    String uriStr = uri.toString();
-    assertTrue(uriStr.contains("includeDraft=true"));
-    assertTrue(uriStr.contains("activeOnly=false"));
-    // Should not contain offset or count
-    assertFalse(uriStr.contains("offset"));
-    assertFalse(uriStr.contains("count"));
+            null, profile, includeDraft, activeOnly, manifestExpansion));
+  }
+
+  @Test
+  void buildValueSetResourceUriIfOidNull() {
+    ManifestExpansion manifestExpansion = null;
+    String profile = "profile";
+    String includeDraft = "true";
+    String activeOnly = "false";
+    ValueSetsSearchCriteria.ValueSetParams params =
+        ValueSetsSearchCriteria.ValueSetParams.builder().build();
+    assertNull(
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            params, profile, includeDraft, activeOnly, manifestExpansion));
   }
 
   /* branch coverage for buildValueSetResourceUri(), line 133:
@@ -216,5 +220,21 @@ public class TerminologyServiceUtilTest {
     String uriStr = uri.toString();
     assertTrue(uriStr.equals("/ValueSet/1.2.3.4.5/$expand"), "ACTUAL URI: " + uriStr);
     assertFalse(uriStr.contains("?"), "ACTUAL URI: " + uriStr);
+  }
+
+  @Test
+  void buildValueSetResourceUriWhenManifestExpansionIsNull() {
+    ValueSetsSearchCriteria.ValueSetParams params =
+        ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5").build();
+    String profile = "test-profile";
+    String includeDraft = "true";
+    String activeOnly = "false";
+    ManifestExpansion manifestExpansion =
+        ManifestExpansion.builder().fullUrl("test-manifest").build();
+    URI uri =
+        TerminologyServiceUtil.buildValueSetResourceUri(
+            params, profile, includeDraft, activeOnly, manifestExpansion);
+    String uriStr = uri.toString();
+    assertEquals("/ValueSet/1.2.3.4.5/$expand?manifest=test-manifest", uriStr);
   }
 }

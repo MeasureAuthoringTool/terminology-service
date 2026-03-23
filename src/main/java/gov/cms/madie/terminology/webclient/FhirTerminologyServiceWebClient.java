@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
@@ -134,12 +135,13 @@ public class FhirTerminologyServiceWebClient {
         .map(
             valueSetParam ->
                 TerminologyServiceUtil.buildValueSetResourceUri(
-                        valueSetParam,
-                        profile,
-                        searchCriteria.getIncludeDraft(),
-                        searchCriteria.getActiveOnly(),
-                        searchCriteria.getManifestExpansion())
-                    .toString())
+                    valueSetParam,
+                    profile,
+                    searchCriteria.getIncludeDraft(),
+                    searchCriteria.getActiveOnly(),
+                    searchCriteria.getManifestExpansion()))
+        .filter(Objects::nonNull)
+        .map(URI::toString)
         .distinct()
         .collect(Collectors.toList());
   }
