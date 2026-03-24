@@ -104,34 +104,33 @@ public class TerminologyServiceUtil {
       ManifestExpansion manifestExpansion) {
     MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
     String expandValueSetUri;
-    if (valueSetParams != null) {
-      expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
-      Integer offset = valueSetParams.getOffset();
-      Integer count = valueSetParams.getCount();
-      if (offset != null && offset >= 0) {
-        params.put("offset", List.of(String.valueOf(offset)));
-      }
-      if (count != null && count >= 0) {
-        params.put("count", List.of(String.valueOf(count)));
-      }
-      String version = valueSetParams.getVersion();
-      if (StringUtils.isNotBlank(version)) {
-        params.put("valueSetVersion", List.of(version));
-      } else if (manifestExpansion != null) {
-        String manifestUrl = manifestExpansion.getFullUrl();
-        if (StringUtils.isNotBlank(manifestUrl)) {
-          params.put("manifest", List.of(manifestUrl));
-        }
+    if (valueSetParams == null || StringUtils.isBlank(valueSetParams.getOid())) {
+      return null;
+    }
+    expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
+    Integer offset = valueSetParams.getOffset();
+    Integer count = valueSetParams.getCount();
+    if (offset != null && offset >= 0) {
+      params.put("offset", List.of(String.valueOf(offset)));
+    }
+    if (count != null && count >= 0) {
+      params.put("count", List.of(String.valueOf(count)));
+    }
+    String version = valueSetParams.getVersion();
+    if (StringUtils.isNotBlank(version)) {
+      params.put("valueSetVersion", List.of(version));
+    } else if (manifestExpansion != null) {
+      String manifestUrl = manifestExpansion.getFullUrl();
+      if (StringUtils.isNotBlank(manifestUrl)) {
+        params.put("manifest", List.of(manifestUrl));
       }
     } else {
-      // Defensive: if valueSetParams is null, use a default URI
-      expandValueSetUri = "/ValueSet/$expand";
-    }
-    if (StringUtils.isNotBlank(includeDraft)) {
-      params.put("includeDraft", List.of(includeDraft));
-    }
-    if (StringUtils.isNotBlank(activeOnly)) {
-      params.put("activeOnly", List.of(activeOnly));
+      if (StringUtils.isNotBlank(includeDraft)) {
+        params.put("includeDraft", List.of(includeDraft));
+      }
+      if (StringUtils.isNotBlank(activeOnly)) {
+        params.put("activeOnly", List.of(activeOnly));
+      }
     }
     String query =
         params.entrySet().stream()

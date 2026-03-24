@@ -57,7 +57,6 @@ class FhirTerminologyServiceWebClientTest {
             .profile(null)
             .includeDraft(null)
             .activeOnly("false")
-            .manifestExpansion(new ManifestExpansion())
             .valueSetParams(
                 List.of(ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build()))
             .build();
