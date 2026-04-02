@@ -441,6 +441,17 @@ public class FhirTerminologyService {
 
   private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList) {
     for (CodeSystem codeSystem : codeSystemList) {
+      if (codeSystem.getVersion() == null
+          || StringUtils.isEmpty(codeSystem.getVersion().getFhirVersion())
+          || StringUtils.equalsIgnoreCase(codeSystem.getVersion().getFhirVersion(), "null")) {
+        log.warn("Skipping CodeSystem with missing FHIR version: {}", codeSystem);
+        continue;
+      }
+      if (StringUtils.isBlank(codeSystem.getFullUrl())
+          || StringUtils.equalsIgnoreCase(codeSystem.getFullUrl(), "null")) {
+        log.warn("Skipping CodeSystem with missing fullUrl: {}", codeSystem);
+        continue;
+      }
       try {
         Optional<CodeSystem> existingCodeSystemOptional =
             codeSystemRepository.findByOidAndVersionFhirVersion(

@@ -402,6 +402,136 @@ class FhirTerminologyServiceTest {
   }
 
   @Test
+  void testRetrieveAllCodeSystemsSkipsNullStringFhirVersion() {
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+
+    // Bundle with a single entry whose version is the literal string "null"
+    String nullVersionBundle =
+        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
+            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
+            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
+            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
+            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
+            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
+            + "\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
+            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
+            + "\"version\":\"null\",\"name\":\"ObservationInterpretation\","
+            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
+
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(nullVersionBundle);
+
+    List<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
+
+    assertEquals(1, result.size());
+    assertEquals(
+        "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        result.get(0).getFullUrl());
+    assertEquals("null", result.get(0).getVersion().getFhirVersion());
+    verify(codeSystemRepository, never())
+        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
+    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
+  }
+
+  @Test
+  void testRetrieveAllCodeSystemsSkipsBlankFhirVersion() {
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+
+    // Bundle with a single entry whose version is missing.
+    String blankVersionBundle =
+        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
+            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
+            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
+            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
+            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
+            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
+            + "\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
+            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
+            // missing version field.
+            + " \"name\":\"ObservationInterpretation\","
+            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
+
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(blankVersionBundle);
+
+    List<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
+
+    assertEquals(1, result.size());
+    assertEquals(
+        "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+        result.get(0).getFullUrl());
+    assertNull(result.get(0).getVersion().getFhirVersion());
+    verify(codeSystemRepository, never())
+        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
+    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
+  }
+
+  @Test
+  void testRetrieveAllCodeSystemsSkipsNullFullUrl() {
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+
+    // Bundle with a single entry whose resource has no url (fullUrl will be null)
+    String nullStringUrlBundle =
+        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
+            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
+            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
+            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
+            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
+            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
+            + "\"url\":\"null\","
+            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
+            + "\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\","
+            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
+
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(nullStringUrlBundle);
+
+    List<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
+
+    assertEquals(1, result.size());
+    assertEquals("null", result.get(0).getFullUrl());
+    verify(codeSystemRepository, never())
+        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
+    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
+  }
+
+  @Test
+  void testRetrieveAllCodeSystemsSkipsBlankFullUrl() {
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+
+    // Bundle with a single entry whose resource has no url (fullUrl will be null)
+    String noUrlBundle =
+        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
+            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
+            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
+            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
+            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
+            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
+            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
+            + "\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\","
+            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
+
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(noUrlBundle);
+
+    List<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
+
+    assertEquals(1, result.size());
+    assertNull(result.get(0).getFullUrl());
+    verify(codeSystemRepository, never())
+        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
+    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
+  }
+
+  @Test
   void testGetAllCodeSystems() {
     var c1 = new gov.cms.madie.terminology.models.CodeSystem();
     c1.setTitle("t1");
@@ -1426,7 +1556,7 @@ class FhirTerminologyServiceTest {
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(
-            "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
+            "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
     // Call the method under test
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
