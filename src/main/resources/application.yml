@@ -4,6 +4,7 @@ server:
     context-path: /api
 
 madie:
+  fhir-cache: ${FHIR_CACHE_DIR:}
   allowedApi: http://localhost:9000
   user-service:
     base-url: ${USER_SERVICE_URL:http://localhost:8088/api}

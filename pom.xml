@@ -117,7 +117,13 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-java-models</artifactId>
-      <version>0.8.5-SNAPSHOT</version>
+      <version>0.8.9-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
+      <groupId>gov.cms.madie</groupId>
+      <artifactId>madie-translator-commons</artifactId>
+      <version>3.0.6-SNAPSHOT</version>
     </dependency>
 
     <dependency>
