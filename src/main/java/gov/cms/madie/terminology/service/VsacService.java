@@ -136,11 +136,13 @@ public class VsacService {
       return;
     }
 
-    // if all code system versions are listed as NOT IN VSAC, then it is a valid FHIR code system.
+    // if FHIR and any code system version is listed as NOT IN VSAC, then it is a valid FHIR code
+    // system.
     cqlCode.getCodeSystem().setValid(true);
     if (targetCodeSystemVersions.stream()
+        .filter(CodeSystem::isFhir)
         .map(CodeSystem::getOid)
-        .allMatch(oid -> oid.contains("NOT.IN.VSAC"))) {
+        .anyMatch(oid -> oid.contains("NOT.IN.VSAC"))) {
       return;
     }
 
