@@ -1,11 +1,7 @@
 package gov.cms.madie.terminology.models;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -38,8 +34,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 @NoArgsConstructor
-@Document(collection = "valueSets")
-@CompoundIndex(name = "oid_version_idx", def = "{'oid': 1, 'version': 1}", unique = true)
+@Document(collection = "valueSetExpansion")
+@EqualsAndHashCode(of = {"url", "version"})
 public class MadieValueSet {
 
   @Id private String id; // MongoDB internal ID
