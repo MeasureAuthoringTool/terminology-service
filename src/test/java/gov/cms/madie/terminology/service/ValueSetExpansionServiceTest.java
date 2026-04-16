@@ -1,18 +1,30 @@
 package gov.cms.madie.terminology.service;
 
-import gov.cms.madie.cql_elm_translator.utils.ImplementationGuideLoader;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
-import gov.cms.madie.terminology.util.ImplementationGuideProcessor;
-import org.hl7.fhir.r5.model.ImplementationGuide;
+import gov.cms.madie.terminology.util.ImplementationGuideManager;
+import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
+import gov.cms.madie.terminology.webclient.TxTerminologyServiceWebClient;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatusCode;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -20,118 +32,134 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ValueSetExpansionServiceTest {
 
-  @Mock private ImplementationGuideProcessor implementationGuideProcessor;
+  @Mock private ImplementationGuideManager implementationGuideManager;
   @Mock private ValueSetExpansionRepository vseRepo;
+  @Mock private TxTerminologyServiceWebClient txTerminologyServiceWebClient;
+  @Mock private FhirContext fhirContext;
+  @Mock private FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
+  @Mock private FhirTerminologyService fhirTerminologyService;
 
-  /** Builds a minimal IG with a name and version for filtering tests. */
-  private static ImplementationGuide buildIg(String name, String version) {
-    ImplementationGuide ig = new ImplementationGuide();
-    ig.setName(name);
-    ig.setVersion(version);
-    return ig;
-  }
+  @InjectMocks private ValueSetExpansionService valueSetExpansionService;
 
-  /** Builds a MadieValueSet with a url and optional version. */
-  private static MadieValueSet buildValueSet(String url, String version) {
-    return MadieValueSet.builder().url(url).version(version).build();
+  private static final String VS_URL = "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3";
+  private static final String VS_VERSION = "20230401";
+  private static final String IG_NAME = "hl7.fhir.us.core";
+  private static final String IG_VERSION = "6.1.0";
+
+  // Minimal FHIR ValueSet JSON for parsing tests
+  private static final String MOCK_VALUE_SET_JSON =
+      """
+      {
+        "resourceType": "ValueSet",
+        "id": "test-vs",
+        "url": "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3",
+        "version": "20230401",
+        "status": "active",
+        "expansion": {
+          "contains": [
+            { "system": "http://snomed.info/sct", "code": "123456789", "display": "Test Concept" }
+          ]
+        }
+      }
+      """;
+
+  private MadieValueSet madieValueSet;
+  private IParser realParser;
+
+  @BeforeEach
+  void setUp() {
+    madieValueSet = MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build();
+    realParser = FhirContext.forR4().newJsonParser();
   }
 
   // ---------------------------------------------------------------------------
-  // getValueSetDependencies(String igName, String version)
+  // getImplementationGuides()
   // ---------------------------------------------------------------------------
 
   @Test
-  void getValueSetDependenciesByNameAndVersionReturnsEmptySetWhenNoIgsLoaded() {
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(Collections.emptyList());
+  void getImplementationGuidesReturnsList() {
+    when(implementationGuideManager.getImplementationGuides())
+        .thenReturn(List.of("hl7.fhir.us.core v6.1.0", "hl7.fhir.us.qicore v6.0.0"));
 
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
+    List<String> result = valueSetExpansionService.getImplementationGuides();
 
-      Set<MadieValueSet> result = service.getValueSetDependencies("hl7.fhir.us.core", "6.1.0");
-
-      assertNotNull(result);
-      assertTrue(result.isEmpty());
-      verify(implementationGuideProcessor, never()).collectValueSetDependencies(any());
-    }
+    assertThat(result.size(), is(equalTo(2)));
+    assertTrue(result.contains("hl7.fhir.us.core v6.1.0"));
+    assertTrue(result.contains("hl7.fhir.us.qicore v6.0.0"));
+    verify(implementationGuideManager, times(1)).getImplementationGuides();
   }
 
   @Test
-  void getValueSetDependenciesByNameAndVersionReturnsEmptySetWhenIgNotFound() {
-    ImplementationGuide ig = buildIg("hl7.fhir.us.core", "6.1.0");
+  void getImplementationGuidesReturnsEmptyListWhenManagerThrows() {
+    when(implementationGuideManager.getImplementationGuides())
+        .thenThrow(new RuntimeException("IG load failure"));
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+    List<String> result = valueSetExpansionService.getImplementationGuides();
 
-      when(implementationGuideProcessor.collectValueSetDependencies(isNull()))
-          .thenReturn(new HashMap<>());
-
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
-
-      // Request a name/version that doesn't match the loaded IG
-      Set<MadieValueSet> result = service.getValueSetDependencies("hl7.fhir.us.qicore", "5.0.0");
-
-      assertNotNull(result);
-      assertTrue(result.isEmpty());
-    }
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
   }
 
   @Test
-  void getValueSetDependenciesByNameAndVersionReturnsValueSetsForMatchingIg() {
-    ImplementationGuide ig = buildIg("hl7.fhir.us.core", "6.1.0");
-    MadieValueSet vs1 = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3", "20230401");
-    MadieValueSet vs2 = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6", null);
+  void getImplementationGuidesReturnsEmptyListWhenNoneLoaded() {
+    when(implementationGuideManager.getImplementationGuides()).thenReturn(Collections.emptyList());
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap = new HashMap<>();
-    Map<String, Set<MadieValueSet>> sdMap = new HashMap<>();
-    sdMap.put("StructureDefinition-us-core-patient.json", Set.of(vs1, vs2));
-    igMap.put("hl7.fhir.us.core6.1.0", sdMap);
+    List<String> result = valueSetExpansionService.getImplementationGuides();
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
+  }
 
-      when(implementationGuideProcessor.collectValueSetDependencies(ig)).thenReturn(igMap);
+  // ---------------------------------------------------------------------------
+  // getValueSetDependencies(String igName, String igVersion)
+  // ---------------------------------------------------------------------------
 
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
+  @Test
+  void getValueSetDependenciesByIgReturnsFormattedUrlWithVersion() {
+    MadieValueSet vs = MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build();
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(vs));
 
-      Set<MadieValueSet> result = service.getValueSetDependencies("hl7.fhir.us.core", "6.1.0");
+    List<String> result = valueSetExpansionService.getValueSetDependencies(IG_NAME, IG_VERSION);
 
-      assertEquals(2, result.size());
-      assertTrue(result.contains(vs1));
-      assertTrue(result.contains(vs2));
-      verify(implementationGuideProcessor, times(1)).collectValueSetDependencies(ig);
-    }
+    assertThat(result.size(), is(equalTo(1)));
+    assertThat(result.get(0), is(equalTo(VS_URL + "|" + VS_VERSION)));
+    verify(implementationGuideManager, times(1)).getValueSetDependencies(IG_NAME, IG_VERSION);
   }
 
   @Test
-  void getValueSetDependenciesByNameAndVersionIsCaseInsensitive() {
-    ImplementationGuide ig = buildIg("hl7.fhir.us.core", "6.1.0");
-    MadieValueSet vs = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3", "20230401");
+  void getValueSetDependenciesByIgOmitsVersionSuffixWhenVersionIsNull() {
+    MadieValueSet vs = MadieValueSet.builder().url(VS_URL).version(null).build();
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(vs));
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap = new HashMap<>();
-    Map<String, Set<MadieValueSet>> sdMap = new HashMap<>();
-    sdMap.put("StructureDefinition-us-core-patient.json", Set.of(vs));
-    igMap.put("hl7.fhir.us.core6.1.0", sdMap);
+    List<String> result = valueSetExpansionService.getValueSetDependencies(IG_NAME, IG_VERSION);
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+    assertThat(result.size(), is(equalTo(1)));
+    assertThat(result.get(0), is(equalTo(VS_URL)));
+  }
 
-      when(implementationGuideProcessor.collectValueSetDependencies(ig)).thenReturn(igMap);
+  @Test
+  void getValueSetDependenciesByIgOmitsVersionSuffixWhenVersionIsBlank() {
+    MadieValueSet vs = MadieValueSet.builder().url(VS_URL).version("  ").build();
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(vs));
 
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
+    List<String> result = valueSetExpansionService.getValueSetDependencies(IG_NAME, IG_VERSION);
 
-      // Pass name/version in different case
-      Set<MadieValueSet> result = service.getValueSetDependencies("HL7.FHIR.US.CORE", "6.1.0");
+    assertThat(result.size(), is(equalTo(1)));
+    assertThat(result.get(0), is(equalTo(VS_URL)));
+  }
 
-      assertEquals(1, result.size());
-    }
+  @Test
+  void getValueSetDependenciesByIgReturnsEmptyListWhenNoneFound() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(Collections.emptyList());
+
+    List<String> result = valueSetExpansionService.getValueSetDependencies(IG_NAME, IG_VERSION);
+
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
   }
 
   // ---------------------------------------------------------------------------
@@ -139,54 +167,136 @@ class ValueSetExpansionServiceTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void getValueSetDependenciesReturnsEmptyMapWhenNoIgsLoaded() {
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(Collections.emptyList());
+  void getValueSetDependenciesReturnsFormattedUrlsAcrossAllIgs() {
+    MadieValueSet vs1 = MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build();
+    MadieValueSet vs2 =
+        MadieValueSet.builder()
+            .url("http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6")
+            .version(null)
+            .build();
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(vs1, vs2));
 
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
+    List<String> result = valueSetExpansionService.getValueSetDependencies();
 
-      Map<String, Map<String, Set<MadieValueSet>>> result = service.getValueSetDependencies();
-
-      assertNotNull(result);
-      assertTrue(result.isEmpty());
-      verify(implementationGuideProcessor, never()).collectValueSetDependencies(any());
-    }
+    assertThat(result.size(), is(equalTo(2)));
+    assertTrue(result.contains(VS_URL + "|" + VS_VERSION));
+    assertTrue(result.contains("http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6"));
+    verify(implementationGuideManager, times(1)).getValueSetDependencies();
   }
 
   @Test
-  void getValueSetDependenciesAggregatesAcrossMultipleIgs() {
-    ImplementationGuide ig1 = buildIg("hl7.fhir.us.core", "6.1.0");
-    ImplementationGuide ig2 = buildIg("hl7.fhir.us.qicore", "5.0.0");
+  void getValueSetDependenciesReturnsEmptyListWhenNoneFound() {
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(Collections.emptyList());
 
-    MadieValueSet vs1 = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3", "20230401");
-    MadieValueSet vs2 = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6", null);
+    List<String> result = valueSetExpansionService.getValueSetDependencies();
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap1 = new HashMap<>();
-    igMap1.put("hl7.fhir.us.core6.1.0", Map.of("sd1.json", Set.of(vs1)));
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
+  }
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap2 = new HashMap<>();
-    igMap2.put("hl7.fhir.us.qicore5.0.0", Map.of("sd2.json", Set.of(vs2)));
+  // ---------------------------------------------------------------------------
+  // updateIgValueSetDependencies(String igName, String version)
+  // ---------------------------------------------------------------------------
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig1, ig2));
+  @Test
+  void updateIgValueSetDependenciesExpandsAndSavesNewValueSet() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
 
-      when(implementationGuideProcessor.collectValueSetDependencies(ig1)).thenReturn(igMap1);
-      when(implementationGuideProcessor.collectValueSetDependencies(ig2)).thenReturn(igMap2);
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
 
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
+    verify(vseRepo, times(1))
+        .save(argThat(vs -> vs.getValueSet() != null && VS_URL.equals(vs.getUrl())));
+  }
 
-      Map<String, Map<String, Set<MadieValueSet>>> result = service.getValueSetDependencies();
+  @Test
+  void updateIgValueSetDependenciesDoesNotSaveWhenExpansionAlreadyPresent() {
+    MadieValueSet existing =
+        MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet("{}").build();
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
 
-      assertEquals(2, result.size());
-      assertTrue(result.containsKey("hl7.fhir.us.core6.1.0"));
-      assertTrue(result.containsKey("hl7.fhir.us.qicore5.0.0"));
-      verify(implementationGuideProcessor, times(1)).collectValueSetDependencies(ig1);
-      verify(implementationGuideProcessor, times(1)).collectValueSetDependencies(ig2);
-    }
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    // existing already has a valueSet — should not overwrite
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void updateIgValueSetDependenciesUpdatesExistingValueSetWhenExpansionIsNull() {
+    MadieValueSet existing =
+        MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet(null).build();
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getValueSet());
+  }
+
+  @Test
+  void updateIgValueSetDependenciesDoesNotSaveWhenExpansionFails() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION)).thenReturn(null);
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void updateIgValueSetDependenciesDoesNotSaveWhenNoValueSetsFound() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(Collections.emptyList());
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void updateIgValueSetDependenciesHandlesVsacValueSetExpansionException() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new VsacValueSetExpansionException(
+                "expansion failed", HttpStatusCode.valueOf(423), "expansion failed", "", "", ""));
+
+    // Should not throw — exception is caught and logged
+    assertDoesNotThrow(
+        () -> valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION));
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void updateIgValueSetDependenciesFallsBackToVsacWhenTxFhirReturnsNotFound() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new VsacResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+
+    // VSAC fallback also returns nothing (TODO: MAT-10003)
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    verify(vseRepo, never()).save(any());
   }
 
   // ---------------------------------------------------------------------------
@@ -194,158 +304,133 @@ class ValueSetExpansionServiceTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void updateValueSetDependenciesSavesNewValueSetsNotAlreadyInRepository() {
-    ImplementationGuide ig = buildIg("hl7.fhir.us.core", "6.1.0");
-    MadieValueSet newVs = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/new-vs", "20230401");
-    MadieValueSet existingVs =
-        buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/existing-vs", "20220401");
+  void updateValueSetDependenciesExpandsAndSavesNewValueSet() {
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap = new HashMap<>();
-    igMap.put("hl7.fhir.us.core6.1.0", Map.of("sd.json", new HashSet<>(Set.of(newVs, existingVs))));
+    valueSetExpansionService.updateValueSetDependencies();
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
-
-      when(implementationGuideProcessor.collectValueSetDependencies(ig)).thenReturn(igMap);
-      // Repository already contains existingVs but not newVs
-      when(vseRepo.findAll()).thenReturn(List.of(existingVs));
-
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
-      service.updateValueSetDependencies();
-
-      verify(vseRepo, times(1))
-          .saveAll(
-              argThat(
-                  saved -> {
-                    List<MadieValueSet> savedList =
-                        new ArrayList<>((Collection<MadieValueSet>) saved);
-                    return savedList.size() == 1
-                        && savedList
-                            .get(0)
-                            .getUrl()
-                            .equals("http://cts.nlm.nih.gov/fhir/ValueSet/new-vs");
-                  }));
-    }
+    verify(vseRepo, times(1))
+        .save(argThat(vs -> vs.getValueSet() != null && VS_URL.equals(vs.getUrl())));
   }
 
   @Test
-  void updateValueSetDependenciesSavesNothingWhenAllValueSetsAlreadyExist() {
-    ImplementationGuide ig = buildIg("hl7.fhir.us.core", "6.1.0");
-    MadieValueSet vs = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3", "20230401");
+  void updateValueSetDependenciesDoesNotSaveWhenExpansionAlreadyPresent() {
+    MadieValueSet existing =
+        MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet("{}").build();
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap = new HashMap<>();
-    igMap.put("hl7.fhir.us.core6.1.0", Map.of("sd.json", new HashSet<>(Set.of(vs))));
+    valueSetExpansionService.updateValueSetDependencies();
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
-
-      when(implementationGuideProcessor.collectValueSetDependencies(ig)).thenReturn(igMap);
-      when(vseRepo.findAll()).thenReturn(List.of(vs));
-
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
-      service.updateValueSetDependencies();
-
-      verify(vseRepo, times(1))
-          .saveAll(
-              argThat(
-                  saved -> {
-                    List<MadieValueSet> savedList =
-                        new ArrayList<>((Collection<MadieValueSet>) saved);
-                    return savedList.isEmpty();
-                  }));
-    }
+    verify(vseRepo, never()).save(any());
   }
 
   @Test
-  void updateValueSetDependenciesSavesAllValueSetsWhenRepositoryIsEmpty() {
-    ImplementationGuide ig = buildIg("hl7.fhir.us.core", "6.1.0");
-    MadieValueSet vs1 = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3", "20230401");
-    MadieValueSet vs2 = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6", null);
+  void updateValueSetDependenciesUpdatesExistingValueSetWhenExpansionIsNull() {
+    MadieValueSet existing =
+        MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet(null).build();
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap = new HashMap<>();
-    igMap.put("hl7.fhir.us.core6.1.0", Map.of("sd.json", new HashSet<>(Set.of(vs1, vs2))));
+    valueSetExpansionService.updateValueSetDependencies();
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
-
-      when(implementationGuideProcessor.collectValueSetDependencies(ig)).thenReturn(igMap);
-      when(vseRepo.findAll()).thenReturn(Collections.emptyList());
-
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
-      service.updateValueSetDependencies();
-
-      verify(vseRepo, times(1))
-          .saveAll(
-              argThat(
-                  saved -> {
-                    List<MadieValueSet> savedList =
-                        new ArrayList<>((Collection<MadieValueSet>) saved);
-                    return savedList.size() == 2;
-                  }));
-    }
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getValueSet());
   }
 
   @Test
-  void updateValueSetDependenciesSavesNothingWhenNoIgsLoaded() {
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(Collections.emptyList());
-      when(vseRepo.findAll()).thenReturn(Collections.emptyList());
+  void updateValueSetDependenciesDoesNotSaveWhenExpansionFails() {
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION)).thenReturn(null);
 
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
-      service.updateValueSetDependencies();
+    valueSetExpansionService.updateValueSetDependencies();
 
-      // findAll is still called but saveAll receives an empty collection
-      verify(vseRepo, times(1)).findAll();
-      verify(vseRepo, times(1))
-          .saveAll(
-              argThat(
-                  saved -> {
-                    List<MadieValueSet> savedList =
-                        new ArrayList<>((Collection<MadieValueSet>) saved);
-                    return savedList.isEmpty();
-                  }));
-    }
+    verify(vseRepo, never()).save(any());
   }
 
   @Test
-  void updateValueSetDependenciesMatchesExistingByUrlAndVersionNullVersion() {
-    ImplementationGuide ig = buildIg("hl7.fhir.us.core", "6.1.0");
+  void updateValueSetDependenciesDoesNotSaveWhenNoValueSetsFound() {
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(Collections.emptyList());
 
-    // Both incoming and existing have null version — should be treated as a match
-    MadieValueSet incoming = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3", null);
-    MadieValueSet existing = buildValueSet("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3", null);
+    valueSetExpansionService.updateValueSetDependencies();
 
-    Map<String, Map<String, Set<MadieValueSet>>> igMap = new HashMap<>();
-    igMap.put("hl7.fhir.us.core6.1.0", Map.of("sd.json", new HashSet<>(Set.of(incoming))));
+    verify(vseRepo, never()).save(any());
+  }
 
-    try (MockedStatic<ImplementationGuideLoader> loader =
-        mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+  @Test
+  void updateValueSetDependenciesHandlesVsacValueSetExpansionException() {
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new VsacValueSetExpansionException(
+                "expansion failed", HttpStatusCode.valueOf(423), "expansion failed", "", "", ""));
 
-      when(implementationGuideProcessor.collectValueSetDependencies(ig)).thenReturn(igMap);
-      when(vseRepo.findAll()).thenReturn(List.of(existing));
+    assertDoesNotThrow(() -> valueSetExpansionService.updateValueSetDependencies());
+    verify(vseRepo, never()).save(any());
+  }
 
-      ValueSetExpansionService service =
-          new ValueSetExpansionService(implementationGuideProcessor, vseRepo);
-      service.updateValueSetDependencies();
+  @Test
+  void updateValueSetDependenciesHandlesMultipleValueSetsIndependently() {
+    MadieValueSet vs1 = MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build();
+    MadieValueSet vs2 =
+        MadieValueSet.builder()
+            .url("http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6")
+            .version("20220101")
+            .build();
 
-      // The incoming VS matches the existing one — nothing should be saved
-      verify(vseRepo, times(1))
-          .saveAll(
-              argThat(
-                  saved -> {
-                    List<MadieValueSet> savedList =
-                        new ArrayList<>((Collection<MadieValueSet>) saved);
-                    return savedList.isEmpty();
-                  }));
-    }
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(vs1, vs2));
+    // vs1 expands successfully
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    // vs2 throws
+    when(txTerminologyServiceWebClient.getValueSetExpansion(
+            "http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6", "20220101"))
+        .thenThrow(
+            new VsacValueSetExpansionException(
+                "expansion failed", HttpStatusCode.valueOf(423), "expansion failed", "", "", ""));
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateValueSetDependencies();
+
+    // Only vs1 should be saved
+    verify(vseRepo, times(1)).save(argThat(vs -> VS_URL.equals(vs.getUrl())));
+  }
+
+  @Test
+  void updateValueSetDependenciesSetsLastUpdatedOnSuccessfulExpansion() {
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateValueSetDependencies();
+
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getLastUpdated());
+  }
+
+  @Test
+  void updateValueSetDependenciesDoesNotSetLastUpdatedWhenExpansionFails() {
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION)).thenReturn(null);
+
+    valueSetExpansionService.updateValueSetDependencies();
+
+    assertNull(madieValueSet.getLastUpdated());
+    verify(vseRepo, never()).save(any());
   }
 }

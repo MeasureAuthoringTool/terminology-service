@@ -36,6 +36,12 @@ client:
     manifests-urn: /Library?_sort=-effective
     code-system-urn: /CodeSystem
     code-lookups: /CodeSystem/$lookup?system={fullUrl}&code={code}&version={version}
+  tx-terminology-service:
+    base-url: ${TX_TERMINOLOGY_BASE_URL:https://tx.fhir.org/r4}
+    value-set-urn: /ValueSet
+    expansion-urn: /ValueSet/$expand?url={fullUrl}&valueSetVersion={version}
+    code-system-urn: /CodeSystem
+    code-lookups: /CodeSystem/$lookup
 
 spring:
   session:

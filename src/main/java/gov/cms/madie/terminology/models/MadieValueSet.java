@@ -5,7 +5,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
-import java.util.List;
 
 /**
  * A unified ValueSet model that serves as an intermediary storage for value set expansions.
@@ -27,7 +26,7 @@ import java.util.List;
  *   <li>displayName - FHIR: name/title
  *   <li>version - FHIR: version
  *   <li>url - FHIR: url (canonical URL)
- *   <li>concepts - FHIR: expansion.contains
+ *   <li>valueSet - FHIR: The FHIR ValueSet Resource
  * </ul>
  */
 @Data
@@ -57,6 +56,6 @@ public class MadieValueSet {
   // Timestamps for cache management
   private Instant lastUpdated; // When this record was last fetched/updated locally
 
-  // Expansion concepts
-  private List<Concept> concepts; // List of codes/concepts in the expansion
+  // FHIR ValueSet
+  private String valueSet;
 }

@@ -1,81 +1,197 @@
 package gov.cms.madie.terminology.service;
 
-import gov.cms.madie.cql_elm_translator.utils.ImplementationGuideLoader;
+import ca.uhn.fhir.context.FhirContext;
+import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
-import gov.cms.madie.terminology.util.ImplementationGuideProcessor;
+import gov.cms.madie.terminology.util.ImplementationGuideManager;
+import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
+import gov.cms.madie.terminology.webclient.TxTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
-import org.hl7.fhir.r5.model.ImplementationGuide;
+import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.r4.model.ValueSet;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/** VSES */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class ValueSetExpansionService {
 
-  private final List<ImplementationGuide> parentIgs = ImplementationGuideLoader.load();
-  private final ImplementationGuideProcessor implementationGuideProcessor;
+  private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;
+  private final TxTerminologyServiceWebClient txTerminologyServiceWebClient;
+  private final FhirContext fhirContext;
+  private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient; // VSAC client
 
-  public Set<MadieValueSet> getValueSetDependencies(String igName, String version) {
-    if (CollectionUtils.isEmpty(parentIgs)) {
-      log.info("No implementation guides found.");
-      return Collections.emptySet();
+  @Value("${code-system-refresh-task.terminology-key}")
+  String systemVsacApiKey;
+
+  public List<String> getImplementationGuides() {
+    try {
+      return implementationGuideManager.getImplementationGuides();
+    } catch (Exception e) {
+      log.error("Unable to retrieve loaded implementation guides.", e);
     }
-
-    ImplementationGuide parentIg =
-        parentIgs.stream()
-            .filter(
-                guide ->
-                    guide.getName().equalsIgnoreCase(igName)
-                        && guide.getVersion().equalsIgnoreCase(version))
-            .findFirst()
-            .orElse(null);
-
-    return implementationGuideProcessor.collectValueSetDependencies(parentIg).entrySet().stream()
-        .flatMap(pkgEntry -> pkgEntry.getValue().entrySet().stream())
-        .flatMap(sdEntry -> sdEntry.getValue().stream())
-        .collect(Collectors.toSet());
+    return Collections.emptyList();
   }
 
-  public Map<String, Map<String, Set<MadieValueSet>>> getValueSetDependencies() {
-    if (CollectionUtils.isEmpty(parentIgs)) {
-      return new HashMap<>();
-    }
-    Map<String, Map<String, Set<MadieValueSet>>> valueSetDependencies = new HashMap<>();
-    for (ImplementationGuide ig : parentIgs) {
-      valueSetDependencies.putAll(implementationGuideProcessor.collectValueSetDependencies(ig));
-    }
-    return valueSetDependencies;
+  public List<String> getValueSetDependencies(String igName, String igVersion) {
+    return implementationGuideManager.getValueSetDependencies(igName, igVersion).stream()
+        .map(
+            vs ->
+                vs.getUrl()
+                    + (StringUtils.isNotBlank(vs.getVersion()) ? "|" + vs.getVersion() : ""))
+        .collect(Collectors.toList());
   }
 
+  public List<String> getValueSetDependencies() {
+    return implementationGuideManager.getValueSetDependencies().stream()
+        .map(
+            vs ->
+                vs.getUrl()
+                    + (StringUtils.isNotBlank(vs.getVersion()) ? "|" + vs.getVersion() : ""))
+        .collect(Collectors.toList());
+  }
+
+  @Async
+  public void updateIgValueSetDependencies(String igName, String version) {
+    Instant now = Instant.now();
+    List<MadieValueSet> madieValueSets =
+        implementationGuideManager.getValueSetDependencies(igName, version);
+    log.info(
+        "Found {} value set dependencies for IG {}, version {}.",
+        madieValueSets.size(),
+        igName,
+        version);
+
+    expandValueSets(madieValueSets);
+    List<MadieValueSet> expandedValueSets =
+        madieValueSets.stream().filter(vs -> vs.getValueSet() != null).toList();
+
+    log.info(
+        "{} value set expansions retrieved for IG {}, version {}.",
+        expandedValueSets.size(),
+        igName,
+        version);
+
+    saveValueSetExpansions(expandedValueSets);
+    log.info(
+        "Update of Value Set expansions completed for IG {}, version {} in {} seconds.",
+        igName,
+        version,
+        Instant.now().getEpochSecond() - now.getEpochSecond());
+  }
+
+  @Async
   public void updateValueSetDependencies() {
-    Set<MadieValueSet> madieValueSets =
-        getValueSetDependencies().entrySet().stream()
-            .filter(entry -> entry.getKey() != null && entry.getValue() != null)
-            .flatMap(igEntry -> igEntry.getValue().entrySet().stream())
-            .flatMap(sdEntry -> sdEntry.getValue().stream())
-            .collect(Collectors.toSet());
-
-    List<MadieValueSet> existingValueSets = vseRepo.findAll();
-
+    Instant now = Instant.now();
+    List<MadieValueSet> madieValueSets = implementationGuideManager.getValueSetDependencies();
     log.info("Found {} value set dependencies.", madieValueSets.size());
 
-    madieValueSets.removeIf(
-        vs ->
-            existingValueSets.stream()
-                .anyMatch(
-                    existingVs ->
-                        existingVs.getUrl().equals(vs.getUrl())
-                            && Objects.equals(existingVs.getVersion(), vs.getVersion())));
+    expandValueSets(madieValueSets);
+    List<MadieValueSet> expandedValueSets =
+        madieValueSets.stream().filter(vs -> vs.getValueSet() != null).toList();
 
-    log.info("Saving {} new value set dependencies.", madieValueSets.size());
+    log.info("{} value set expansions retrieved.", expandedValueSets.size());
 
-    vseRepo.saveAll(madieValueSets);
+    saveValueSetExpansions(expandedValueSets);
+    log.info(
+        "Update of all Value set expansions completed in {} seconds.",
+        Instant.now().getEpochSecond() - now.getEpochSecond());
+  }
+
+  private void saveValueSetExpansions(List<MadieValueSet> madieValueSets) {
+    for (MadieValueSet madieValueSet : madieValueSets) {
+      Optional<MadieValueSet> existingValueSet =
+        vseRepo.findByUrlAndVersion(madieValueSet.getUrl(), madieValueSet.getVersion());
+
+      if (existingValueSet.isEmpty()) {
+        vseRepo.save(madieValueSet);
+      } else {
+        existingValueSet.get().setValueSet(madieValueSet.getValueSet());
+        vseRepo.save(existingValueSet.get());
+      }
+    }
+    log.info("Saved {} value set expansions.", madieValueSets.size());
+  }
+
+  private void expandValueSets(List<MadieValueSet> madieValueSets) {
+    int failedExpansions = 0;
+    log.info("Expanding {} value sets.", madieValueSets.size());
+    for (MadieValueSet madieValueSet : madieValueSets) {
+      try {
+        ValueSet valueSet = expandValueSet(madieValueSet);
+        if (valueSet != null) {
+          madieValueSet.setValueSet(fhirContext.newJsonParser().encodeResourceToString(valueSet));
+          madieValueSet.setLastUpdated(Instant.now());
+        } else {
+          log.warn(
+              "Failed to expand ValueSet {} version {}.",
+              madieValueSet.getUrl(),
+              madieValueSet.getVersion());
+          failedExpansions++;
+        }
+      } catch (VsacValueSetExpansionException e) {
+        failedExpansions++;
+      }
+    }
+    log.warn("{} expansions could not be retrieved", failedExpansions);
+  }
+
+  private ValueSet expandValueSet(MadieValueSet madieValueSet) {
+    Optional<ValueSet> expansion = fetchExpansionFromTxFhir(madieValueSet);
+    return expansion.orElseGet(() -> fetchExpansionFromVsac(madieValueSet).orElse(null));
+  }
+
+  private Optional<ValueSet> fetchExpansionFromTxFhir(MadieValueSet madieValueSet) {
+    log.debug(
+        "Attempting to expand ValueSet {} version {} using TxFHIR service.",
+        madieValueSet.getUrl(),
+        madieValueSet.getVersion());
+    try {
+      String txFhirResult =
+          txTerminologyServiceWebClient.getValueSetExpansion(
+              madieValueSet.getUrl(), madieValueSet.getVersion());
+      return parseExpansionResponse(txFhirResult);
+    } catch (VsacResourceNotFoundException e) {
+      // no-op. If not found in TxFHIR, fallback to VSAC.
+      log.debug(
+          "Value Set not found in TxFHIR, ValueSet {} version {}",
+          madieValueSet.getUrl(),
+          madieValueSet.getVersion());
+    }
+    return Optional.empty();
+  }
+
+  private Optional<ValueSet> fetchExpansionFromVsac(MadieValueSet madieValueSet) {
+    log.debug(
+        "Attempting to expand ValueSet {} version {} using VSAC FHIR Terminology Service.",
+        madieValueSet.getUrl(),
+        madieValueSet.getVersion());
+    // TODO MAT-10003: FHIR Value Set info retrieved from Structure Definitions provide URLs, but
+    // not their OIDs. This necessitates using the URL query-param when requesting
+    // expansions from VSAC, which differs from our current flow.
+
+    return Optional.empty();
+  }
+
+  private Optional<ValueSet> parseExpansionResponse(String rawResponse) {
+    if (StringUtils.isNotBlank(rawResponse)) {
+      try {
+        return Optional.of(fhirContext.newJsonParser().parseResource(ValueSet.class, rawResponse));
+      } catch (Exception e) {
+        log.error("Failed to parse ValueSetExpansion response", e);
+      }
+    }
+    return Optional.empty();
   }
 }
