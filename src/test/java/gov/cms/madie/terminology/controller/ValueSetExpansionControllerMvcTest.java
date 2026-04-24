@@ -61,7 +61,7 @@ class ValueSetExpansionControllerMvcTest {
   }
 
   // ---------------------------------------------------------------------------
-  // GET /admin/terminology/implementation-guide/{ig}/version/{version}/value-sets
+  // GET /terminology/admin/implementation-guide/{ig}/version/{version}/value-sets
   // ---------------------------------------------------------------------------
 
   @Test
@@ -73,7 +73,7 @@ class ValueSetExpansionControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.get(
-                        "/admin/terminology/implementation-guide/{ig}/version/{version}/value-sets",
+                        "/terminology/admin/implementation-guide/{ig}/version/{version}/value-sets",
                         IG_NAME,
                         IG_VERSION)
                     .with(user(TEST_USR).roles("MADIE-ADMIN"))
@@ -92,7 +92,7 @@ class ValueSetExpansionControllerMvcTest {
     mockMvc
         .perform(
             MockMvcRequestBuilders.get(
-                    "/admin/terminology/implementation-guide/{ig}/version/{version}/value-sets",
+                    "/terminology/admin/implementation-guide/{ig}/version/{version}/value-sets",
                     IG_NAME,
                     IG_VERSION)
                 .with(user(TEST_USR))
@@ -109,7 +109,7 @@ class ValueSetExpansionControllerMvcTest {
     mockMvc
         .perform(
             MockMvcRequestBuilders.get(
-                    "/admin/terminology/implementation-guide/{ig}/version/{version}/value-sets",
+                    "/terminology/admin/implementation-guide/{ig}/version/{version}/value-sets",
                     IG_NAME,
                     IG_VERSION)
                 .accept(MediaType.APPLICATION_JSON_VALUE))
@@ -127,7 +127,7 @@ class ValueSetExpansionControllerMvcTest {
         mockMvc
             .perform(
                 MockMvcRequestBuilders.get(
-                        "/admin/terminology/implementation-guide/{ig}/version/{version}/value-sets",
+                        "/terminology/admin/implementation-guide/{ig}/version/{version}/value-sets",
                         IG_NAME,
                         IG_VERSION)
                     .with(user(TEST_USR).roles("MADIE-ADMIN"))
@@ -142,7 +142,7 @@ class ValueSetExpansionControllerMvcTest {
   }
 
   // ---------------------------------------------------------------------------
-  // GET /admin/terminology/implementation-guide/value-sets
+  // GET /terminology/admin/implementation-guide/value-sets
   // ---------------------------------------------------------------------------
 
   @Test
@@ -157,7 +157,7 @@ class ValueSetExpansionControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/admin/terminology/implementation-guide/value-sets")
+                MockMvcRequestBuilders.get("/terminology/admin/implementation-guide/value-sets")
                     .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf())
                     .accept(MediaType.APPLICATION_JSON_VALUE))
@@ -173,7 +173,7 @@ class ValueSetExpansionControllerMvcTest {
   void getAllValueSetDependenciesReturnsForbiddenWithoutAdminRole() throws Exception {
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/admin/terminology/implementation-guide/value-sets")
+            MockMvcRequestBuilders.get("/terminology/admin/implementation-guide/value-sets")
                 .with(user(TEST_USR))
                 .with(csrf())
                 .accept(MediaType.APPLICATION_JSON_VALUE))
@@ -186,7 +186,7 @@ class ValueSetExpansionControllerMvcTest {
   void getAllValueSetDependenciesReturnsUnauthorizedWithoutAuthentication() throws Exception {
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/admin/terminology/implementation-guide/value-sets")
+            MockMvcRequestBuilders.get("/terminology/admin/implementation-guide/value-sets")
                 .accept(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isUnauthorized());
 
@@ -200,7 +200,7 @@ class ValueSetExpansionControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/admin/terminology/implementation-guide/value-sets")
+                MockMvcRequestBuilders.get("/terminology/admin/implementation-guide/value-sets")
                     .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf())
                     .accept(MediaType.APPLICATION_JSON_VALUE))
@@ -213,7 +213,7 @@ class ValueSetExpansionControllerMvcTest {
   }
 
   // ---------------------------------------------------------------------------
-  // GET /admin/terminology/implementation-guide/update-value-sets
+  // GET /terminology/admin/implementation-guide/update-value-sets
   // ---------------------------------------------------------------------------
 
   @Test
@@ -222,7 +222,7 @@ class ValueSetExpansionControllerMvcTest {
 
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/admin/terminology/implementation-guide/update-value-sets")
+            MockMvcRequestBuilders.get("/terminology/admin/implementation-guide/update-value-sets")
                 .with(user(TEST_USR).roles("MADIE-ADMIN"))
                 .with(csrf()))
         .andExpect(status().isOk());
@@ -234,7 +234,7 @@ class ValueSetExpansionControllerMvcTest {
   void updateValueSetDependenciesReturnsForbiddenWithoutAdminRole() throws Exception {
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/admin/terminology/implementation-guide/update-value-sets")
+            MockMvcRequestBuilders.get("/terminology/admin/implementation-guide/update-value-sets")
                 .with(user(TEST_USR))
                 .with(csrf()))
         .andExpect(status().isForbidden());
@@ -246,7 +246,7 @@ class ValueSetExpansionControllerMvcTest {
   void updateValueSetDependenciesReturnsUnauthorizedWithoutAuthentication() throws Exception {
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/admin/terminology/implementation-guide/update-value-sets"))
+            MockMvcRequestBuilders.get("/terminology/admin/implementation-guide/update-value-sets"))
         .andExpect(status().isUnauthorized());
 
     verify(valueSetExpansionService, never()).updateValueSetDependencies();
