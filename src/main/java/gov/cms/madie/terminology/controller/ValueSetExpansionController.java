@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 @RestController
-@RequestMapping(path = "/admin/terminology")
+@RequestMapping(path = "/terminology/admin")
 @Slf4j
 @RequiredArgsConstructor
 public class ValueSetExpansionController {
