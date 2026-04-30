@@ -239,6 +239,8 @@ public class TerminologyServiceUtilTest {
         TerminologyServiceUtil.buildValueSetResourceUri(
             params, profile, includeDraft, activeOnly, manifestExpansion);
     String uriStr = uri.toString();
-    assertEquals("/ValueSet/1.2.3.4.5/$expand?offset=0&count=1000&manifest=test-manifest", uriStr);
+    assertEquals(
+        "/ValueSet/1.2.3.4.5/$expand?offset=0&count=1000&manifest=test-manifest&includeDraft=true",
+        uriStr);
   }
 }
