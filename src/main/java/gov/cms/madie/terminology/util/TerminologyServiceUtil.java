@@ -125,13 +125,15 @@ public class TerminologyServiceUtil {
         params.put("manifest", List.of(manifestUrl));
       }
     } else {
-      if (StringUtils.isNotBlank(includeDraft)) {
-        params.put("includeDraft", List.of(includeDraft));
-      }
       if (StringUtils.isNotBlank(activeOnly)) {
         params.put("activeOnly", List.of(activeOnly));
       }
     }
+
+    if (StringUtils.isNotBlank(includeDraft)) {
+      params.put("includeDraft", List.of(includeDraft));
+    }
+
     String query =
         params.entrySet().stream()
             .flatMap(e -> e.getValue().stream().map(v -> e.getKey() + "=" + v))
