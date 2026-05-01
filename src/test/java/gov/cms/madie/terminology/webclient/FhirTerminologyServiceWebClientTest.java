@@ -155,7 +155,7 @@ class FhirTerminologyServiceWebClientTest {
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertThat(
         recordedRequest.getBody().readUtf8(),
-        containsString("ValueSet/test-vs-id/$expand?includeDraft=true&activeOnly=false"));
+        containsString("ValueSet/test-vs-id/$expand?activeOnly=false&includeDraft=true"));
   }
 
   @Test

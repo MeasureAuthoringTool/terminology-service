@@ -132,6 +132,12 @@
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-translator-commons</artifactId>
       <version>3.0.6-SNAPSHOT</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jetbrains.kotlinx</groupId>
+          <artifactId>kotlinx-serialization-json-jvm</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
