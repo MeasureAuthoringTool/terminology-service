@@ -1,9 +1,13 @@
 package gov.cms.madie.terminology;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.mongock.runner.springboot.EnableMongock;
+import java.util.concurrent.TimeUnit;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -17,6 +21,14 @@ public class TerminologyServiceApplication {
 
   public static void main(String[] args) {
     SpringApplication.run(TerminologyServiceApplication.class, args);
+  }
+
+  @Bean
+  public CacheManager cacheManager() {
+    CaffeineCacheManager cacheManager = new CaffeineCacheManager("manifest-list");
+    cacheManager.setCaffeine(
+        Caffeine.newBuilder().maximumSize(500).expireAfterWrite(24, TimeUnit.HOURS));
+    return cacheManager;
   }
 
   @Bean
