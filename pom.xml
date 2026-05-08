@@ -16,7 +16,7 @@
   <properties>
     <hapifhir.version>8.8.0</hapifhir.version>
     <java.version>16</java.version>
-    <jxbmavenplugin.version>2.5.0</jxbmavenplugin.version>
+    <jxbmavenplugin.version>3.2.0</jxbmavenplugin.version>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
 
