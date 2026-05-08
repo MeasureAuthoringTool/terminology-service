@@ -2,8 +2,8 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
@@ -226,8 +226,8 @@ class ValueSetExpansionServiceTest {
 
     valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
 
-    // existing already has a valueSet — should not overwrite
-    verify(vseRepo, never()).save(any());
+    // existing already has a valueSet — should overwrite
+    verify(vseRepo, times(1)).save(any());
   }
 
   @Test
@@ -275,7 +275,7 @@ class ValueSetExpansionServiceTest {
         .thenReturn(List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenThrow(
-            new VsacValueSetExpansionException(
+            new ValueSetExpansionException(
                 "expansion failed", HttpStatusCode.valueOf(423), "expansion failed", "", "", ""));
 
     // Should not throw — exception is caught and logged
@@ -290,7 +290,7 @@ class ValueSetExpansionServiceTest {
         .thenReturn(List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenThrow(
-            new VsacResourceNotFoundException(
+            new ResourceNotFoundException(
                 "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
 
     // VSAC fallback also returns nothing (TODO: MAT-10003)
@@ -329,7 +329,7 @@ class ValueSetExpansionServiceTest {
 
     valueSetExpansionService.updateValueSetDependencies();
 
-    verify(vseRepo, never()).save(any());
+    verify(vseRepo, times(1)).save(any());
   }
 
   @Test
@@ -373,7 +373,7 @@ class ValueSetExpansionServiceTest {
     when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenThrow(
-            new VsacValueSetExpansionException(
+            new ValueSetExpansionException(
                 "expansion failed", HttpStatusCode.valueOf(423), "expansion failed", "", "", ""));
 
     assertDoesNotThrow(() -> valueSetExpansionService.updateValueSetDependencies());
@@ -397,7 +397,7 @@ class ValueSetExpansionServiceTest {
     when(txTerminologyServiceWebClient.getValueSetExpansion(
             "http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6", "20220101"))
         .thenThrow(
-            new VsacValueSetExpansionException(
+            new ValueSetExpansionException(
                 "expansion failed", HttpStatusCode.valueOf(423), "expansion failed", "", "", ""));
     when(fhirContext.newJsonParser()).thenReturn(realParser);
     when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());

@@ -1,8 +1,8 @@
 package gov.cms.madie.terminology.webclient;
 
 import ca.uhn.fhir.context.FhirContext;
-import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.*;
@@ -109,14 +109,14 @@ public class TxTerminologyServiceWebClient {
                             case NOTFOUND -> {
                               log.warn("Resource not found in TX Terminology Service: {}", uri);
                               yield Mono.error(
-                                  new VsacResourceNotFoundException(
+                                  new ResourceNotFoundException(
                                       "not-found", HttpStatus.NOT_FOUND, "not-found", body, uri));
                             }
                             case TOOCOSTLY -> {
                               log.warn(
                                   "Operation too costly in TX Terminology Service for {}", uri);
                               yield Mono.error(
-                                  new VsacValueSetExpansionException(
+                                  new ValueSetExpansionException(
                                       "too-costly",
                                       HttpStatus.UNPROCESSABLE_ENTITY,
                                       "too-costly",
@@ -131,7 +131,7 @@ public class TxTerminologyServiceWebClient {
                                   .flatMap(
                                       ex ->
                                           Mono.error(
-                                              new VsacValueSetExpansionException(
+                                              new ValueSetExpansionException(
                                                   "error",
                                                   ex.getStatusCode(),
                                                   ex.getStatusText(),

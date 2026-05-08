@@ -3,8 +3,8 @@ package gov.cms.madie.terminology.webclient;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
-import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
@@ -177,7 +177,7 @@ public class FhirTerminologyServiceWebClient {
                     .flatMap(
                         ex ->
                             Mono.error(
-                                new VsacResourceNotFoundException(
+                                new ResourceNotFoundException(
                                     "",
                                     ex.getStatusCode(),
                                     ex.getStatusText(),
@@ -191,7 +191,7 @@ public class FhirTerminologyServiceWebClient {
                     .flatMap(
                         ex ->
                             Mono.error(
-                                new VsacValueSetExpansionException(
+                                new ValueSetExpansionException(
                                     "",
                                     ex.getStatusCode(),
                                     ex.getStatusText(),

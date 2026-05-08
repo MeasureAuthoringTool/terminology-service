@@ -1,8 +1,8 @@
 package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
-import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
@@ -112,7 +112,7 @@ public class ValueSetExpansionService {
   private void saveValueSetExpansions(List<MadieValueSet> madieValueSets) {
     for (MadieValueSet madieValueSet : madieValueSets) {
       Optional<MadieValueSet> existingValueSet =
-        vseRepo.findByUrlAndVersion(madieValueSet.getUrl(), madieValueSet.getVersion());
+          vseRepo.findByUrlAndVersion(madieValueSet.getUrl(), madieValueSet.getVersion());
 
       if (existingValueSet.isEmpty()) {
         vseRepo.save(madieValueSet);
@@ -140,7 +140,7 @@ public class ValueSetExpansionService {
               madieValueSet.getVersion());
           failedExpansions++;
         }
-      } catch (VsacValueSetExpansionException e) {
+      } catch (ValueSetExpansionException e) {
         failedExpansions++;
       }
     }
@@ -162,7 +162,7 @@ public class ValueSetExpansionService {
           txTerminologyServiceWebClient.getValueSetExpansion(
               madieValueSet.getUrl(), madieValueSet.getVersion());
       return parseExpansionResponse(txFhirResult);
-    } catch (VsacResourceNotFoundException e) {
+    } catch (ResourceNotFoundException e) {
       // no-op. If not found in TxFHIR, fallback to VSAC.
       log.debug(
           "Value Set not found in TxFHIR, ValueSet {} version {}",

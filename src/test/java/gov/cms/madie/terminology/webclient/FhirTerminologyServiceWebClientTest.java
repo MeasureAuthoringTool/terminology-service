@@ -3,8 +3,9 @@ package gov.cms.madie.terminology.webclient;
 import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
+import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -113,7 +114,7 @@ class FhirTerminologyServiceWebClientTest {
             fhirContext);
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     assertThrows(
-        VsacValueSetExpansionException.class,
+        ValueSetExpansionException.class,
         () -> fhirTerminologyServiceWebClient.getManifestBundle(MOCK_API_KEY));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertEquals("/manifestUrn", recordedRequest.getPath());
@@ -267,7 +268,7 @@ class FhirTerminologyServiceWebClientTest {
             fhirContext);
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     assertThrows(
-        gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException.class,
+        ValueSetExpansionException.class,
         () -> fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, MOCK_API_KEY));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertEquals("/codeSystemUrn?_offset=0&_count=50", recordedRequest.getPath());
@@ -344,10 +345,11 @@ class FhirTerminologyServiceWebClientTest {
     var queryParams = new java.util.HashMap<String, String>();
     queryParams.put("url", "http://cts.nlm.nih.gov/fhir/ValueSet/12345");
     assertThrows(
-        VsacValueSetExpansionException.class,
+        ValueSetExpansionException.class,
         () -> fhirTerminologyServiceWebClient.searchValueSets(MOCK_API_KEY, queryParams));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     String path = recordedRequest.getPath();
+    assertNotNull(path);
     assertTrue(path.contains("url=http%3A%2F%2Fcts.nlm.nih.gov%2Ffhir%2FValueSet%2F12345"));
   }
 
@@ -365,10 +367,11 @@ class FhirTerminologyServiceWebClientTest {
     queryParams.put("foo", "bar");
     queryParams.put("baz", "qux");
     assertThrows(
-        VsacValueSetExpansionException.class,
+        ValueSetExpansionException.class,
         () -> fhirTerminologyServiceWebClient.searchValueSets(MOCK_API_KEY, queryParams));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     String path = recordedRequest.getPath();
+    assertNotNull(path);
     assertTrue(path.contains("foo=bar"));
     assertTrue(path.contains("baz=qux"));
   }
@@ -390,6 +393,7 @@ class FhirTerminologyServiceWebClientTest {
     assertEquals(MOCK_RESPONSE_STRING, response);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     String path = recordedRequest.getPath();
+    assertNotNull(path);
     assertTrue(path.contains("url=http%3A%2F%2Fcts.nlm.nih.gov%2Ffhir%2FValueSet%2F12345"));
   }
 
@@ -397,7 +401,7 @@ class FhirTerminologyServiceWebClientTest {
    * if (clientResponse.statusCode().equals(HttpStatus.NOT_FOUND))
    */
   @Test
-  void searchValueSetsThrowsVsacResourceNotFoundExceptionOn404() throws InterruptedException {
+  void searchValueSetsThrowsResourceNotFoundExceptionOn404() throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(404)
@@ -406,10 +410,11 @@ class FhirTerminologyServiceWebClientTest {
     var queryParams = new java.util.HashMap<String, String>();
     queryParams.put("url", "12345");
     assertThrows(
-        gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException.class,
+        ResourceNotFoundException.class,
         () -> fhirTerminologyServiceWebClient.searchValueSets(MOCK_API_KEY, queryParams));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     String path = recordedRequest.getPath();
+    assertNotNull(path);
     assertTrue(path.contains("url=http%3A%2F%2Fcts.nlm.nih.gov%2Ffhir%2FValueSet%2F12345"));
   }
 }

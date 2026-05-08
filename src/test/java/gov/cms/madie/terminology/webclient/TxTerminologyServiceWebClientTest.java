@@ -1,8 +1,8 @@
 package gov.cms.madie.terminology.webclient;
 
 import ca.uhn.fhir.context.FhirContext;
-import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -123,7 +123,7 @@ class TxTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/json+fhir"));
 
     assertThrows(
-        VsacResourceNotFoundException.class, () -> client.getValueSetExpansion(VS_URL, VS_VERSION));
+        ResourceNotFoundException.class, () -> client.getValueSetExpansion(VS_URL, VS_VERSION));
 
     mockBackEnd.takeRequest();
   }
@@ -138,8 +138,7 @@ class TxTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/json+fhir"));
 
     assertThrows(
-        VsacValueSetExpansionException.class,
-        () -> client.getValueSetExpansion(VS_URL, VS_VERSION));
+        ValueSetExpansionException.class, () -> client.getValueSetExpansion(VS_URL, VS_VERSION));
 
     mockBackEnd.takeRequest();
   }
@@ -154,8 +153,7 @@ class TxTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/json+fhir"));
 
     assertThrows(
-        VsacValueSetExpansionException.class,
-        () -> client.getValueSetExpansion(VS_URL, VS_VERSION));
+        ValueSetExpansionException.class, () -> client.getValueSetExpansion(VS_URL, VS_VERSION));
 
     mockBackEnd.takeRequest();
   }
@@ -207,7 +205,7 @@ class TxTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/json+fhir"));
 
     assertThrows(
-        VsacResourceNotFoundException.class,
+        ResourceNotFoundException.class,
         () -> client.fetchResource("/ValueSet/$expand?url=" + VS_URL));
 
     mockBackEnd.takeRequest();
@@ -223,7 +221,7 @@ class TxTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/json+fhir"));
 
     assertThrows(
-        VsacValueSetExpansionException.class,
+        ValueSetExpansionException.class,
         () -> client.fetchResource("/ValueSet/$expand?url=" + VS_URL));
 
     mockBackEnd.takeRequest();
@@ -239,7 +237,7 @@ class TxTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/json+fhir"));
 
     assertThrows(
-        VsacValueSetExpansionException.class,
+        ValueSetExpansionException.class,
         () -> client.fetchResource("/ValueSet/$expand?url=" + VS_URL));
 
     mockBackEnd.takeRequest();
