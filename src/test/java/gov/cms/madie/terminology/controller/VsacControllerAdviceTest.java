@@ -66,73 +66,73 @@ class VsacControllerAdviceTest {
   }
 
   @Test
-  void onVsacValueSetExpansionException_manifestBranch() {
+  void onValueSetExpansionException_manifestBranch() {
     OperationOutcome outcome = new OperationOutcome();
     outcome.addIssue().setDiagnostics("diag");
     String opOutcomeJson = fhirContext.newJsonParser().encodeResourceToString(outcome);
-    VsacValueSetExpansionException ex =
-        new VsacValueSetExpansionException(
+    ValueSetExpansionException ex =
+        new ValueSetExpansionException(
             "msg",
             HttpStatusCode.valueOf(HttpStatus.BAD_REQUEST.value()),
             "bad",
             opOutcomeJson,
             "manifest",
             "ValueSet/Library/test/$");
-    var resp = advice.onVsacValueSetExpansionException(ex, webRequest);
+    var resp = advice.onValueSetExpansionException(ex, webRequest);
     assertEquals("diag", resp.get("diagnostic"));
     assertTrue(resp.containsKey("manifest"));
   }
 
   @Test
-  void onVsacValueSetExpansionException_nonManifestBranch() {
+  void onValueSetExpansionException_nonManifestBranch() {
     OperationOutcome outcome = new OperationOutcome();
     outcome.addIssue().setDiagnostics("diag");
     String opOutcomeJson = fhirContext.newJsonParser().encodeResourceToString(outcome);
-    VsacValueSetExpansionException ex =
-        new VsacValueSetExpansionException(
+    ValueSetExpansionException ex =
+        new ValueSetExpansionException(
             "msg",
             HttpStatusCode.valueOf(HttpStatus.BAD_REQUEST.value()),
             "bad",
             opOutcomeJson,
             "other",
             "ValueSet/test/$");
-    var resp = advice.onVsacValueSetExpansionException(ex, webRequest);
+    var resp = advice.onValueSetExpansionException(ex, webRequest);
     assertEquals("diag", resp.get("diagnostic"));
     assertFalse(resp.containsKey("manifest"));
   }
 
   @Test
-  void onVsacValueSetExpansionException_filterNotManifest_branch() {
+  void onValueSetExpansionException_filterNotManifest_branch() {
     OperationOutcome outcome = new OperationOutcome();
     outcome.addIssue().setDiagnostics("diag");
     String opOutcomeJson = fhirContext.newJsonParser().encodeResourceToString(outcome);
-    VsacValueSetExpansionException ex =
-        new VsacValueSetExpansionException(
+    ValueSetExpansionException ex =
+        new ValueSetExpansionException(
             "msg",
             HttpStatusCode.valueOf(HttpStatus.BAD_REQUEST.value()),
             "bad",
             opOutcomeJson,
             "other",
             "ValueSet/Library/test/$");
-    var resp = advice.onVsacValueSetExpansionException(ex, webRequest);
+    var resp = advice.onValueSetExpansionException(ex, webRequest);
     assertEquals("diag", resp.get("diagnostic"));
     assertFalse(resp.containsKey("manifest"));
   }
 
   @Test
-  void onVsacValueSetExpansionException_uriNotLibrary_branch() {
+  void onValueSetExpansionException_uriNotLibrary_branch() {
     OperationOutcome outcome = new OperationOutcome();
     outcome.addIssue().setDiagnostics("diag");
     String opOutcomeJson = fhirContext.newJsonParser().encodeResourceToString(outcome);
-    VsacValueSetExpansionException ex =
-        new VsacValueSetExpansionException(
+    ValueSetExpansionException ex =
+        new ValueSetExpansionException(
             "msg",
             HttpStatusCode.valueOf(HttpStatus.BAD_REQUEST.value()),
             "bad",
             opOutcomeJson,
             "manifest",
             "ValueSet/test/$");
-    var resp = advice.onVsacValueSetExpansionException(ex, webRequest);
+    var resp = advice.onValueSetExpansionException(ex, webRequest);
     assertEquals("diag", resp.get("diagnostic"));
     assertFalse(resp.containsKey("manifest"));
   }
@@ -147,18 +147,18 @@ class VsacControllerAdviceTest {
   }
 
   @Test
-  void onVsacResourceNotFoundException() {
+  void onResourceNotFoundException() {
     OperationOutcome outcome = new OperationOutcome();
     outcome.addIssue().setDiagnostics("diag");
     String opOutcomeJson = fhirContext.newJsonParser().encodeResourceToString(outcome);
-    VsacResourceNotFoundException ex =
-        new VsacResourceNotFoundException(
+    ResourceNotFoundException ex =
+        new ResourceNotFoundException(
             "msg",
             HttpStatusCode.valueOf(HttpStatus.NOT_FOUND.value()),
             "not found",
             opOutcomeJson,
             "ValueSet/test/$");
-    var resp = advice.onVsacResourceNotFoundException(ex, webRequest);
+    var resp = advice.onResourceNotFoundException(ex, webRequest);
     assertEquals("diag", resp.get("diagnostic"));
   }
 

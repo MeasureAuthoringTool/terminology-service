@@ -9,22 +9,15 @@ import java.nio.charset.Charset;
 
 @Getter
 @Setter
-public class VsacValueSetExpansionException extends WebClientResponseException {
+public class ResourceNotFoundException extends WebClientResponseException {
 
   private String body;
-  private String filter;
-  private String valueSetUri;
+  private String resourceUri;
 
-  public VsacValueSetExpansionException(
-      String message,
-      HttpStatusCode status,
-      String statusText,
-      String body,
-      String filter,
-      String valueSetUri) {
+  public ResourceNotFoundException(
+      String message, HttpStatusCode status, String statusText, String body, String resourceUri) {
     super(message, status, statusText, null, body.getBytes(), Charset.defaultCharset(), null);
     this.body = body;
-    this.filter = filter;
-    this.valueSetUri = valueSetUri;
+    this.resourceUri = resourceUri;
   }
 }
