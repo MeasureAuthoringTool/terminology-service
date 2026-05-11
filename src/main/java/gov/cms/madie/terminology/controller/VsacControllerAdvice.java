@@ -4,7 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
-import gov.cms.madie.terminology.exceptions.VsacValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -24,7 +24,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
-import gov.cms.madie.terminology.exceptions.VsacResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 
 import java.util.HashMap;
@@ -84,11 +84,11 @@ public class VsacControllerAdvice {
     return errorAttributes;
   }
 
-  @ExceptionHandler(VsacValueSetExpansionException.class)
+  @ExceptionHandler(ValueSetExpansionException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   @ResponseBody
-  Map<String, Object> onVsacValueSetExpansionException(
-      VsacValueSetExpansionException ex, WebRequest request) {
+  Map<String, Object> onValueSetExpansionException(
+      ValueSetExpansionException ex, WebRequest request) {
     IParser parser = fhirContext.newJsonParser();
     OperationOutcome outcome = parser.parseResource(OperationOutcome.class, ex.getBody());
 
@@ -142,11 +142,11 @@ public class VsacControllerAdvice {
     return errorAttributes;
   }
 
-  @ExceptionHandler(VsacResourceNotFoundException.class)
+  @ExceptionHandler(ResourceNotFoundException.class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
   @ResponseBody
-  Map<String, Object> onVsacResourceNotFoundException(
-      VsacResourceNotFoundException ex, WebRequest request) {
+  Map<String, Object> onResourceNotFoundException(
+      ResourceNotFoundException ex, WebRequest request) {
     IParser parser = fhirContext.newJsonParser();
     OperationOutcome outcome1 = parser.parseResource(OperationOutcome.class, ex.getBody());
 

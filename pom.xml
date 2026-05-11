@@ -16,7 +16,7 @@
   <properties>
     <hapifhir.version>8.8.0</hapifhir.version>
     <java.version>16</java.version>
-    <jxbmavenplugin.version>2.5.0</jxbmavenplugin.version>
+    <jxbmavenplugin.version>3.2.0</jxbmavenplugin.version>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
 
@@ -131,7 +131,7 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-translator-commons</artifactId>
-      <version>3.0.6-SNAPSHOT</version>
+      <version>3.1.1</version>
       <exclusions>
         <exclusion>
           <groupId>org.jetbrains.kotlinx</groupId>
