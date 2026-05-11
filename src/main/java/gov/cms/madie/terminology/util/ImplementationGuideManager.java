@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -44,13 +46,16 @@ public class ImplementationGuideManager {
 
   private void loadImplementationGuides() {
     log.info("Implementation guide manager::loading implementation guide packages.");
+    Instant now = Instant.now();
     igLoadingState = IgLoadingState.LOADING;
     List<ImplementationGuide> madieIgs = ImplementationGuideLoader.load();
     for (ImplementationGuide madieIg : madieIgs) {
       collectValueSetDependencies(madieIg);
     }
     igLoadingState = IgLoadingState.LOADED;
-    log.info("Implementation guide manager::IG loading complete.");
+    log.info(
+        "Implementation guide manager::IG loading complete in {} milliseconds.",
+        Duration.between(now, Instant.now()).toMillis());
   }
 
   private IgLoadingState igsLoading() {
