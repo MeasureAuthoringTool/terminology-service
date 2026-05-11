@@ -50,7 +50,6 @@ public class ValueSetExpansionAdminController {
       @RequestParam(required = false) String ig,
       @RequestParam(required = false) String version,
       Principal principal) {
-    Instant start = Instant.now();
     if (StringUtils.isNotBlank(ig) && StringUtils.isNotBlank(version)) {
       log.info(
           "Admin User [{}] is updating Value Set dependencies for IG {} version {}.",
@@ -63,10 +62,6 @@ public class ValueSetExpansionAdminController {
           "Admin User [{}] is updating Value Set dependencies for all IGs.", principal.getName());
       vses.updateValueSetDependencies();
     }
-    log.info(
-        "Admin User [{}] update of Value Set dependencies completed in {} seconds.",
-        principal.getName(),
-        Instant.now().getEpochSecond() - start.getEpochSecond());
     return ResponseEntity.status(HttpStatus.ACCEPTED).build();
   }
 
