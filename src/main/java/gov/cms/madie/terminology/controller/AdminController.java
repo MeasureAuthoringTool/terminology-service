@@ -7,6 +7,7 @@ import gov.cms.madie.terminology.service.VsacService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -24,6 +26,7 @@ public class AdminController {
 
   private final FhirTerminologyService fhirTerminologyService;
   private final VsacService vsacService;
+  private final CacheManager cacheManager;
 
   @PostMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasRole('MADIE-ADMIN')")
@@ -78,5 +81,14 @@ public class AdminController {
     log.info("Admin user [{}] is deleting code system with id: [{}]", principal.getName(), id);
     fhirTerminologyService.deleteCodeSystem(id);
     return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping(path = "/cache/evict")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<List<String>> evictAllCaches(Principal principal) {
+    List<String> evictedCaches = new ArrayList<>(cacheManager.getCacheNames());
+    log.info("Admin user [{}] is evicting all caches: {}", principal.getName(), evictedCaches);
+    evictedCaches.forEach(cacheName -> cacheManager.getCache(cacheName).clear());
+    return ResponseEntity.ok(evictedCaches);
   }
 }
