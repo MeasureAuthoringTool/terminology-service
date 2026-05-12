@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.models;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -41,7 +42,10 @@ public class MadieValueSet {
 
   // Core identifiers (required for both QDM and FHIR)
   private String oid; // Value set OID (e.g., "2.16.840.1.113883.3.464.1003.101.12.1001")
+
+  @NotBlank(message = "FHIR canonical URL is required")
   private String url; // FHIR canonical URL (e.g., "http://cts.nlm.nih.gov/fhir/ValueSet/{oid}")
+
   private String version; // Value set version
 
   // Display information
@@ -56,6 +60,10 @@ public class MadieValueSet {
   // Timestamps for cache management
   private Instant lastUpdated; // When this record was last fetched/updated locally
 
+  // Admin management
+  private boolean manuallyModified; // true when directly set by an admin via the admin API
+
   // FHIR ValueSet
+  @NotBlank(message = "Value set expansion is required")
   private String valueSet;
 }

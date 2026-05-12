@@ -1,6 +1,8 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -11,7 +13,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -68,5 +69,28 @@ public class ValueSetExpansionAdminController {
   @GetMapping(value = "/implementation-guides", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<String>> getImplementationGuides() {
     return ResponseEntity.ok(vses.getImplementationGuides());
+  }
+
+  @PutMapping(
+      value = "/value-set",
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<MadieValueSet> upsertValueSet(
+      Principal principal, @Valid @RequestBody MadieValueSet valueSet) {
+    log.info(
+        "Admin user [{}] is upserting value set with url: [{}] version: [{}]",
+        principal.getName(),
+        valueSet.getUrl(),
+        valueSet.getVersion());
+    return ResponseEntity.ok().body(vses.upsertValueSet(valueSet));
+  }
+
+  @DeleteMapping(value = "/value-set/{id}")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<Void> deleteValueSet(Principal principal, @PathVariable String id) {
+    log.info("Admin user [{}] is deleting value set with id: [{}]", principal.getName(), id);
+    vses.deleteValueSet(id);
+    return ResponseEntity.noContent().build();
   }
 }

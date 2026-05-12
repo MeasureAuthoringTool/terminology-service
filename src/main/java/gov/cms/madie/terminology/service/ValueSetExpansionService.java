@@ -3,6 +3,7 @@ package gov.cms.madie.terminology.service;
 import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
@@ -87,8 +88,8 @@ public class ValueSetExpansionService {
     saveValueSetExpansions(expandedValueSets);
     log.info(
         "Update of {} Value Set expansions completed for IG {}, version {} in {} milliseconds.",
-      expandedValueSets.size(),
-      igName,
+        expandedValueSets.size(),
+        igName,
         version,
         Duration.between(now, Instant.now()).toMillis());
   }
@@ -118,7 +119,7 @@ public class ValueSetExpansionService {
 
       if (existingValueSet.isEmpty()) {
         vseRepo.save(madieValueSet);
-      } else {
+      } else if (!existingValueSet.get().isManuallyModified()) {
         existingValueSet.get().setValueSet(madieValueSet.getValueSet());
         vseRepo.save(existingValueSet.get());
       }
@@ -186,6 +187,51 @@ public class ValueSetExpansionService {
     // expansions from VSAC, which differs from our current flow.
 
     return Optional.empty();
+  }
+
+  public MadieValueSet upsertValueSet(MadieValueSet valueSet) {
+    valueSet.setLastUpdated(Instant.now());
+    valueSet.setManuallyModified(true);
+
+    Optional<MadieValueSet> existing =
+        vseRepo.findByUrlAndVersion(valueSet.getUrl(), valueSet.getVersion());
+    boolean isUpdate = existing.isPresent();
+
+    if (isUpdate) {
+      valueSet.setId(existing.get().getId());
+      log.info(
+          "Updating existing value set with url: [{}] version: [{}]",
+          valueSet.getUrl(),
+          valueSet.getVersion());
+    } else {
+      log.info(
+          "Creating new value set with url: [{}] version: [{}]",
+          valueSet.getUrl(),
+          valueSet.getVersion());
+    }
+
+    MadieValueSet saved = vseRepo.save(valueSet);
+    log.info(
+        "Successfully {} value set with id: [{}] url: [{}] version: [{}]",
+        isUpdate ? "updated" : "created",
+        saved.getId(),
+        saved.getUrl(),
+        saved.getVersion());
+    return saved;
+  }
+
+  public void deleteValueSet(String id) {
+    MadieValueSet existing =
+        vseRepo
+            .findById(id)
+            .orElseThrow(() -> new ValueSetNotFoundException("ValueSet not found for id: " + id));
+    log.info(
+        "Deleting value set with id: [{}] url: [{}] version: [{}]",
+        id,
+        existing.getUrl(),
+        existing.getVersion());
+    vseRepo.deleteById(id);
+    log.info("Successfully deleted value set with id: [{}]", id);
   }
 
   private Optional<ValueSet> parseExpansionResponse(String rawResponse) {
