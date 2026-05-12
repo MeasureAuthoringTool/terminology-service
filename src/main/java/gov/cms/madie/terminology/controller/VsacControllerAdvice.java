@@ -25,6 +25,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
+import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 
 import java.util.HashMap;
@@ -176,6 +177,19 @@ public class VsacControllerAdvice {
   Map<String, Object> onCodeSystemNotFoundException(
       CodeSystemNotFoundException ex, WebRequest request) {
     log.warn("CodeSystem not found exception: {}", ex.getMessage());
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.NOT_FOUND);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(ValueSetNotFoundException.class)
+  @ResponseStatus(HttpStatus.NOT_FOUND)
+  @ResponseBody
+  Map<String, Object> onValueSetNotFoundException(
+      ValueSetNotFoundException ex, WebRequest request) {
+    log.warn("ValueSet not found exception: {}", ex.getMessage());
     Map<String, String> validationErrors = new HashMap<>();
     validationErrors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.NOT_FOUND);

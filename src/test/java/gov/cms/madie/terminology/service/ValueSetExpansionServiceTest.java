@@ -4,6 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
+import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
@@ -214,7 +215,7 @@ class ValueSetExpansionServiceTest {
   }
 
   @Test
-  void updateIgValueSetDependenciesDoesNotSaveWhenExpansionAlreadyPresent() {
+  void updateIgValueSetDependenciesOverwritesExistingWhenNotManuallyModified() {
     MadieValueSet existing =
         MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet("{}").build();
     when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
@@ -226,8 +227,28 @@ class ValueSetExpansionServiceTest {
 
     valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
 
-    // existing already has a valueSet — should overwrite
     verify(vseRepo, times(1)).save(any());
+  }
+
+  @Test
+  void updateIgValueSetDependenciesDoesNotSaveWhenManuallyModified() {
+    MadieValueSet existing =
+        MadieValueSet.builder()
+            .url(VS_URL)
+            .version(VS_VERSION)
+            .valueSet("{}")
+            .manuallyModified(true)
+            .build();
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    verify(vseRepo, never()).save(any());
   }
 
   @Test
@@ -318,7 +339,7 @@ class ValueSetExpansionServiceTest {
   }
 
   @Test
-  void updateValueSetDependenciesDoesNotSaveWhenExpansionAlreadyPresent() {
+  void updateValueSetDependenciesOverwritesExistingWhenNotManuallyModified() {
     MadieValueSet existing =
         MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet("{}").build();
     when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
@@ -330,6 +351,26 @@ class ValueSetExpansionServiceTest {
     valueSetExpansionService.updateValueSetDependencies();
 
     verify(vseRepo, times(1)).save(any());
+  }
+
+  @Test
+  void updateValueSetDependenciesDoesNotSaveWhenManuallyModified() {
+    MadieValueSet existing =
+        MadieValueSet.builder()
+            .url(VS_URL)
+            .version(VS_VERSION)
+            .valueSet("{}")
+            .manuallyModified(true)
+            .build();
+    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
+
+    valueSetExpansionService.updateValueSetDependencies();
+
+    verify(vseRepo, never()).save(any());
   }
 
   @Test
@@ -432,5 +473,82 @@ class ValueSetExpansionServiceTest {
 
     assertNull(madieValueSet.getLastUpdated());
     verify(vseRepo, never()).save(any());
+  }
+
+  // ---------------------------------------------------------------------------
+  // upsertValueSet()
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void upsertValueSetCreatesNewWhenNoExistingUrlVersionMatch() {
+    MadieValueSet incoming =
+        MadieValueSet.builder()
+            .url(VS_URL)
+            .version(VS_VERSION)
+            .valueSet(MOCK_VALUE_SET_JSON)
+            .build();
+
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+    when(vseRepo.save(any(MadieValueSet.class))).thenReturn(incoming);
+
+    MadieValueSet result = valueSetExpansionService.upsertValueSet(incoming);
+
+    assertTrue(result.isManuallyModified());
+    assertNotNull(result.getLastUpdated());
+    verify(vseRepo, times(1)).save(incoming);
+  }
+
+  @Test
+  void upsertValueSetPreservesExistingIdWhenUrlAndVersionMatch() {
+    MadieValueSet existing =
+        MadieValueSet.builder()
+            .id("existing-id")
+            .url(VS_URL)
+            .version(VS_VERSION)
+            .valueSet(MOCK_VALUE_SET_JSON)
+            .build();
+    MadieValueSet incoming =
+        MadieValueSet.builder()
+            .url(VS_URL)
+            .version(VS_VERSION)
+            .valueSet(MOCK_VALUE_SET_JSON)
+            .build();
+
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
+    when(vseRepo.save(any(MadieValueSet.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    MadieValueSet result = valueSetExpansionService.upsertValueSet(incoming);
+
+    assertEquals("existing-id", result.getId());
+    assertTrue(result.isManuallyModified());
+    assertNotNull(result.getLastUpdated());
+    verify(vseRepo, times(1)).save(incoming);
+  }
+
+  // ---------------------------------------------------------------------------
+  // deleteValueSet()
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void deleteValueSetSuccessfully() {
+    MadieValueSet existing =
+        MadieValueSet.builder().id("test-id").url(VS_URL).version(VS_VERSION).build();
+
+    when(vseRepo.findById("test-id")).thenReturn(Optional.of(existing));
+
+    valueSetExpansionService.deleteValueSet("test-id");
+
+    verify(vseRepo, times(1)).deleteById("test-id");
+  }
+
+  @Test
+  void deleteValueSetThrowsNotFoundWhenIdDoesNotExist() {
+    when(vseRepo.findById("nonexistent")).thenReturn(Optional.empty());
+
+    assertThrows(
+        ValueSetNotFoundException.class,
+        () -> valueSetExpansionService.deleteValueSet("nonexistent"));
+    verify(vseRepo, never()).deleteById(anyString());
   }
 }
