@@ -297,16 +297,21 @@ public class VsacService {
   public UmlsUser saveUmlsUser(String harpId, String apiKey) {
     Instant now = Instant.now();
     UmlsUser umlsUser =
-        UmlsUser.builder().apiKey(apiKey).harpId(harpId).createdAt(now).modifiedAt(now).build();
+        UmlsUser.builder()
+            .apiKey(apiKey)
+            .harpId(harpId.toLowerCase())
+            .createdAt(now)
+            .modifiedAt(now)
+            .build();
     return umlsUserRepository.save(umlsUser);
   }
 
   public Optional<UmlsUser> findByHarpId(String harpId) {
-    return umlsUserRepository.findByHarpId(harpId);
+    return umlsUserRepository.findByHarpId(harpId.toLowerCase());
   }
 
   public boolean logoutUMLSUser(String userName) {
-    Optional<UmlsUser> deletedUser = umlsUserRepository.deleteByHarpId(userName);
+    Optional<UmlsUser> deletedUser = umlsUserRepository.deleteByHarpId(userName.toLowerCase());
     boolean deleted = deletedUser.isPresent();
     if (deleted) {
       log.info("Successfully deleted UMLS information for User Name: {}", userName);
