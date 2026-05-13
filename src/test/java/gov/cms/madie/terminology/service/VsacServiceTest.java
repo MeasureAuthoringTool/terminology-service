@@ -763,4 +763,27 @@ class VsacServiceTest {
     assertFalse(cqlCode.isValid());
     assertNull(cqlCode.getErrorMessage());
   }
+
+  @Test
+  void saveUmlsUserNormalizesHarpIdToLowerCase() {
+    ArgumentCaptor<UmlsUser> captor = ArgumentCaptor.forClass(UmlsUser.class);
+    doReturn(umlsUser).when(umlsUserRepository).save(any(UmlsUser.class));
+    vsacService.saveUmlsUser("MixedCaseUser", TEST_API_KEY);
+    verify(umlsUserRepository).save(captor.capture());
+    assertEquals("mixedcaseuser", captor.getValue().getHarpId());
+  }
+
+  @Test
+  void findByHarpIdNormalizesInputToLowerCase() {
+    doReturn(Optional.of(umlsUser)).when(umlsUserRepository).findByHarpId(anyString());
+    vsacService.findByHarpId("MixedCaseUser");
+    verify(umlsUserRepository).findByHarpId(eq("mixedcaseuser"));
+  }
+
+  @Test
+  void logoutUMLSUserNormalizesUserNameToLowerCase() {
+    doReturn(Optional.of(umlsUser)).when(umlsUserRepository).deleteByHarpId(anyString());
+    vsacService.logoutUMLSUser("MixedCaseUser");
+    verify(umlsUserRepository).deleteByHarpId(eq("mixedcaseuser"));
+  }
 }
