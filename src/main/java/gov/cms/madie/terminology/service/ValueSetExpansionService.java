@@ -4,7 +4,9 @@ import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
+import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
+import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
@@ -14,6 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Limit;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +35,7 @@ public class ValueSetExpansionService {
 
   private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;
+  private final CodeSystemRepository csRepo;
   private final TxTerminologyServiceWebClient txTerminologyServiceWebClient;
   private final FhirContext fhirContext;
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient; // VSAC client
@@ -243,5 +249,37 @@ public class ValueSetExpansionService {
       }
     }
     return Optional.empty();
+  }
+
+  public MadieValueSet getValueSet(String url, String version) {
+    MadieValueSet valueSet =
+        vseRepo
+            .findByUrlAndVersion(url, version)
+            .orElseThrow(
+                () ->
+                    new ValueSetNotFoundException(
+                        String.format("ValueSet not found for url: %s version: %s", url, version)));
+    log.info(
+        "Successfully retrieved ValueSet with url: [{}] version: [{}] valueSet: [{}]",
+        url,
+        version,
+        valueSet);
+    return valueSet;
+  }
+
+  // In ValueSetExpansionService.java
+  public List<CodeSystem> getCodeSystem(String url, Integer count) {
+    List<CodeSystem> codeSystems =
+        csRepo.findAllByFullUrl(
+            url, count == null || count <= 0 ? Limit.unlimited() : Limit.of(count));
+    if (codeSystems.isEmpty()) {
+      throw new ResourceNotFoundException(
+          String.format("CodeSystem not found for url: %s", url),
+          HttpStatusCode.valueOf(HttpStatus.NOT_FOUND.value()),
+          "not found",
+          "not found",
+          null);
+    }
+    return codeSystems;
   }
 }
