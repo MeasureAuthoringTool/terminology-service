@@ -4,12 +4,11 @@ import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.net.URL;
 import java.util.List;
 
 @RestController
@@ -20,10 +19,24 @@ public class ValueSetExpansionController {
 
   private final ValueSetExpansionService vses;
 
+  @Value("${madie.api-key}")
+  private String apiKey;
+
   @GetMapping("/ValueSet")
   public ResponseEntity<String> expandValueSet(
       @RequestParam String url, @RequestParam(required = false) String version) {
     log.info("Expanding ValueSet with URL: {} and version: {}", url, version);
+
+    // Validate URL format
+    if (!isValidUrl(url)) {
+      throw new IllegalArgumentException("Invalid URL format");
+    }
+
+    // Validate version if provided
+    if (version != null && !isValidVersion(version)) {
+      throw new IllegalArgumentException("Invalid version format");
+    }
+
     return ResponseEntity.ok(vses.getValueSet(url, version).getValueSet());
   }
 
@@ -31,6 +44,26 @@ public class ValueSetExpansionController {
   public ResponseEntity<List<CodeSystem>> expandCodeSystem(
       @RequestParam String url, @RequestParam(required = false) Integer count) {
     log.info("Expanding CodeSystem with URL: {} and count: {}", url, count);
+
+    // Validate URL format
+    if (!isValidUrl(url)) {
+      throw new IllegalArgumentException("Invalid URL format");
+    }
+
     return ResponseEntity.ok(vses.getCodeSystem(url, count));
+  }
+
+  private boolean isValidUrl(String url) {
+    try {
+      new URL(url).toURI();
+      return url.startsWith("http://") || url.startsWith("https://");
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  private boolean isValidVersion(String version) {
+    // Validate version format (e.g., "1.0", "2.1.0")
+    return version.matches("^[\\d.]+$");
   }
 }

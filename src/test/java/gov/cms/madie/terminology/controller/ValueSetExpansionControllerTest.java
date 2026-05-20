@@ -65,7 +65,7 @@ class ValueSetExpansionControllerTest {
         .thenThrow(new ValueSetNotFoundException("ValueSet not found"));
 
     assertThrows(
-        ValueSetNotFoundException.class, () -> controller.expandValueSet("nonexistent", null));
+        ValueSetNotFoundException.class, () -> controller.expandValueSet("http://example.com/cs", null));
     verify(vses, times(1)).getValueSet(anyString(), any());
   }
 
@@ -98,4 +98,101 @@ class ValueSetExpansionControllerTest {
     assertTrue(response.getBody().isEmpty());
     verify(vses, times(1)).getCodeSystem(anyString(), any());
   }
+
+  @Test
+void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
+  String invalidUrl = "not-a-url";
+
+  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(invalidUrl, null));
+  verify(vses, never()).getValueSet(anyString(), any());
+}
+
+@Test
+void expandValueSetAcceptsHttpsUrl() {
+  String httpsUrl = "https://example.com/vs";
+  String version = "1.0";
+  String vsJson = "{\"resourceType\":\"ValueSet\"}";
+  MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
+
+  when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
+
+  ResponseEntity<String> response = controller.expandValueSet(httpsUrl, version);
+
+  assertEquals(HttpStatus.OK, response.getStatusCode());
+  verify(vses, times(1)).getValueSet(httpsUrl, version);
+}
+
+@Test
+void expandValueSetThrowsIllegalArgumentExceptionWhenVersionFormatIsInvalid() {
+  String url = "https://example.com/vs";
+  String invalidVersion = "v1.0.0-alpha";
+
+  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(url, invalidVersion));
+  verify(vses, never()).getValueSet(anyString(), any());
+}
+
+@Test
+void expandValueSetAcceptsValidVersionFormat() {
+  String url = "https://example.com/vs";
+  String version = "1.2.3";
+  String vsJson = "{\"resourceType\":\"ValueSet\"}";
+  MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
+
+  when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
+
+  ResponseEntity<String> response = controller.expandValueSet(url, version);
+
+  assertEquals(HttpStatus.OK, response.getStatusCode());
+  verify(vses, times(1)).getValueSet(url, version);
+}
+
+@Test
+void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
+  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet("", null));
+  verify(vses, never()).getValueSet(anyString(), any());
+}
+
+@Test
+void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
+  String invalidUrl = "invalid-url";
+
+  assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem(invalidUrl, null));
+  verify(vses, never()).getCodeSystem(anyString(), any());
+}
+
+@Test
+void expandCodeSystemAcceptsHttpsUrl() {
+  String httpsUrl = "https://example.com/cs";
+  Integer count = 5;
+  List<CodeSystem> csList = List.of(mock(CodeSystem.class));
+
+  when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
+
+  ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(httpsUrl, count);
+
+  assertEquals(HttpStatus.OK, response.getStatusCode());
+  verify(vses, times(1)).getCodeSystem(httpsUrl, count);
+}
+
+@Test
+void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
+  assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem("", null));
+  verify(vses, never()).getCodeSystem(anyString(), any());
+}
+
+@Test
+void expandValueSetThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
+  String malformedUrl = "ht!tp://example.com/vs";
+
+  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(malformedUrl, null));
+  verify(vses, never()).getValueSet(anyString(), any());
+}
+
+@Test
+void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
+  String malformedUrl = "ht!tp://example.com/cs";
+
+  assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem(malformedUrl, null));
+  verify(vses, never()).getCodeSystem(anyString(), any());
+}
 }
