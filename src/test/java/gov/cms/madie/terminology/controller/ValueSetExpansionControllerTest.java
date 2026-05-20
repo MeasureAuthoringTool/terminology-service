@@ -4,6 +4,7 @@ import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -11,7 +12,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -23,176 +26,188 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ValueSetExpansionControllerTest {
 
-  @Mock private ValueSetExpansionService vses;
-  @InjectMocks private ValueSetExpansionController controller;
+    @Mock
+    private ValueSetExpansionService vses;
+    @InjectMocks
+    private ValueSetExpansionController controller;
 
-  @Test
-  void expandValueSetReturnsOkAndBodyWhenValueSetExists() {
-    String url = "http://example.com/vs";
-    String version = "20240101";
-    String vsJson = "{\"resourceType\":\"ValueSet\",\"id\":\"vs1\"}";
-    MadieValueSet madieValueSet =
-        MadieValueSet.builder().id("id1").url(url).version(version).valueSet(vsJson).build();
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(controller, "allowedHosts", Arrays.asList(".com", ".gov", ".org"));
+    }
 
-    when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
+    @Test
+    void expandValueSetReturnsOkAndBodyWhenValueSetExists() {
+        String url = "http://example.com/vs";
+        String version = "20240101";
+        String vsJson = "{\"resourceType\":\"ValueSet\",\"id\":\"vs1\"}";
+        MadieValueSet madieValueSet =
+                MadieValueSet.builder().id("id1").url(url).version(version).valueSet(vsJson).build();
 
-    ResponseEntity<String> response = controller.expandValueSet(url, version);
+        when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
 
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(vsJson, response.getBody());
-    verify(vses, times(1)).getValueSet(anyString(), any());
-  }
+        ResponseEntity<String> response = controller.expandValueSet(url, version);
 
-  @Test
-  void expandValueSetReturnsOkWhenVersionIsNull() {
-    String url = "http://example.com/vs";
-    String vsJson = "{\"resourceType\":\"ValueSet\",\"id\":\"vs2\"}";
-    MadieValueSet madieValueSet =
-        MadieValueSet.builder().id("id2").url(url).version(null).valueSet(vsJson).build();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(vsJson, response.getBody());
+        verify(vses, times(1)).getValueSet(anyString(), any());
+    }
 
-    when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
+    @Test
+    void expandValueSetReturnsOkWhenVersionIsNull() {
+        String url = "http://example.com/vs";
+        String vsJson = "{\"resourceType\":\"ValueSet\",\"id\":\"vs2\"}";
+        MadieValueSet madieValueSet =
+                MadieValueSet.builder().id("id2").url(url).version(null).valueSet(vsJson).build();
 
-    ResponseEntity<String> response = controller.expandValueSet(url, null);
+        when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
 
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(vsJson, response.getBody());
-    verify(vses, times(1)).getValueSet(anyString(), any());
-  }
+        ResponseEntity<String> response = controller.expandValueSet(url, null);
 
-  @Test
-  void expandValueSetThrowsValueSetNotFoundExceptionWhenServiceDoesNotFindValueSet() {
-    when(vses.getValueSet(anyString(), any()))
-        .thenThrow(new ValueSetNotFoundException("ValueSet not found"));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(vsJson, response.getBody());
+        verify(vses, times(1)).getValueSet(anyString(), any());
+    }
 
-    assertThrows(
-        ValueSetNotFoundException.class, () -> controller.expandValueSet("http://example.com/cs", null));
-    verify(vses, times(1)).getValueSet(anyString(), any());
-  }
+    @Test
+    void expandValueSetThrowsValueSetNotFoundExceptionWhenServiceDoesNotFindValueSet() {
+        when(vses.getValueSet(anyString(), any()))
+                .thenThrow(new ValueSetNotFoundException("ValueSet not found"));
 
-  @Test
-  void expandCodeSystemReturnsOkAndListWhenCodeSystemsExistWithCount() {
-    String url = "http://example.com/cs";
-    Integer count = 2;
-    CodeSystem cs1 = mock(CodeSystem.class);
-    CodeSystem cs2 = mock(CodeSystem.class);
-    List<CodeSystem> csList = List.of(cs1, cs2);
+        assertThrows(
+                ValueSetNotFoundException.class,
+                () -> controller.expandValueSet("http://example.com/cs", null));
+        verify(vses, times(1)).getValueSet(anyString(), any());
+    }
 
-    when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
+    @Test
+    void expandCodeSystemReturnsOkAndListWhenCodeSystemsExistWithCount() {
+        String url = "http://example.com/cs";
+        Integer count = 2;
+        CodeSystem cs1 = mock(CodeSystem.class);
+        CodeSystem cs2 = mock(CodeSystem.class);
+        List<CodeSystem> csList = List.of(cs1, cs2);
 
-    ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(url, count);
+        when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
 
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(csList, response.getBody());
-    verify(vses, times(1)).getCodeSystem(anyString(), any());
-  }
+        ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(url, count);
 
-  @Test
-  void expandCodeSystemReturnsEmptyListWhenNoCodeSystemsFound() {
-    String url = "http://example.com/cs-empty";
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(csList, response.getBody());
+        verify(vses, times(1)).getCodeSystem(anyString(), any());
+    }
 
-    when(vses.getCodeSystem(anyString(), any())).thenReturn(Collections.emptyList());
+    @Test
+    void expandCodeSystemReturnsEmptyListWhenNoCodeSystemsFound() {
+        String url = "http://example.com/cs-empty";
 
-    ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(url, null);
+        when(vses.getCodeSystem(anyString(), any())).thenReturn(Collections.emptyList());
 
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertTrue(response.getBody().isEmpty());
-    verify(vses, times(1)).getCodeSystem(anyString(), any());
-  }
+        ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(url, null);
 
-  @Test
-void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
-  String invalidUrl = "not-a-url";
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().isEmpty());
+        verify(vses, times(1)).getCodeSystem(anyString(), any());
+    }
 
-  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(invalidUrl, null));
-  verify(vses, never()).getValueSet(anyString(), any());
-}
+    @Test
+    void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
+        String invalidUrl = "not-a-url";
 
-@Test
-void expandValueSetAcceptsHttpsUrl() {
-  String httpsUrl = "https://example.com/vs";
-  String version = "1.0";
-  String vsJson = "{\"resourceType\":\"ValueSet\"}";
-  MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
+        assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(invalidUrl, null));
+        verify(vses, never()).getValueSet(anyString(), any());
+    }
 
-  when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
+    @Test
+    void expandValueSetAcceptsHttpsUrl() {
+        String httpsUrl = "https://example.com/vs";
+        String version = "1.0";
+        String vsJson = "{\"resourceType\":\"ValueSet\"}";
+        MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
 
-  ResponseEntity<String> response = controller.expandValueSet(httpsUrl, version);
+        when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
 
-  assertEquals(HttpStatus.OK, response.getStatusCode());
-  verify(vses, times(1)).getValueSet(httpsUrl, version);
-}
+        ResponseEntity<String> response = controller.expandValueSet(httpsUrl, version);
 
-@Test
-void expandValueSetThrowsIllegalArgumentExceptionWhenVersionFormatIsInvalid() {
-  String url = "https://example.com/vs";
-  String invalidVersion = "v1.0.0-alpha";
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(vses, times(1)).getValueSet(httpsUrl, version);
+    }
 
-  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(url, invalidVersion));
-  verify(vses, never()).getValueSet(anyString(), any());
-}
+    @Test
+    void expandValueSetThrowsIllegalArgumentExceptionWhenVersionFormatIsInvalid() {
+        String url = "https://example.com/vs";
+        String invalidVersion = "v1.0.0-alpha";
 
-@Test
-void expandValueSetAcceptsValidVersionFormat() {
-  String url = "https://example.com/vs";
-  String version = "1.2.3";
-  String vsJson = "{\"resourceType\":\"ValueSet\"}";
-  MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
+        assertThrows(
+                IllegalArgumentException.class, () -> controller.expandValueSet(url, invalidVersion));
+        verify(vses, never()).getValueSet(anyString(), any());
+    }
 
-  when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
+    @Test
+    void expandValueSetAcceptsValidVersionFormat() {
+        String url = "https://example.com/vs";
+        String version = "1.2.3";
+        String vsJson = "{\"resourceType\":\"ValueSet\"}";
+        MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
 
-  ResponseEntity<String> response = controller.expandValueSet(url, version);
+        when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
 
-  assertEquals(HttpStatus.OK, response.getStatusCode());
-  verify(vses, times(1)).getValueSet(url, version);
-}
+        ResponseEntity<String> response = controller.expandValueSet(url, version);
 
-@Test
-void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet("", null));
-  verify(vses, never()).getValueSet(anyString(), any());
-}
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(vses, times(1)).getValueSet(url, version);
+    }
 
-@Test
-void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
-  String invalidUrl = "invalid-url";
+    @Test
+    void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
+        assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet("", null));
+        verify(vses, never()).getValueSet(anyString(), any());
+    }
 
-  assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem(invalidUrl, null));
-  verify(vses, never()).getCodeSystem(anyString(), any());
-}
+    @Test
+    void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
+        String invalidUrl = "https://example.invalid/cs";
 
-@Test
-void expandCodeSystemAcceptsHttpsUrl() {
-  String httpsUrl = "https://example.com/cs";
-  Integer count = 5;
-  List<CodeSystem> csList = List.of(mock(CodeSystem.class));
+        assertThrows(
+                IllegalArgumentException.class, () -> controller.expandCodeSystem(invalidUrl, null));
+        verify(vses, never()).getCodeSystem(anyString(), any());
+    }
 
-  when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
+    @Test
+    void expandCodeSystemAcceptsHttpsUrl() {
+        String httpsUrl = "https://example.com/cs";
+        Integer count = 5;
+        List<CodeSystem> csList = List.of(mock(CodeSystem.class));
 
-  ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(httpsUrl, count);
+        when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
 
-  assertEquals(HttpStatus.OK, response.getStatusCode());
-  verify(vses, times(1)).getCodeSystem(httpsUrl, count);
-}
+        ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(httpsUrl, count);
 
-@Test
-void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-  assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem("", null));
-  verify(vses, never()).getCodeSystem(anyString(), any());
-}
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(vses, times(1)).getCodeSystem(httpsUrl, count);
+    }
 
-@Test
-void expandValueSetThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
-  String malformedUrl = "ht!tp://example.com/vs";
+    @Test
+    void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
+        assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem("", null));
+        verify(vses, never()).getCodeSystem(anyString(), any());
+    }
 
-  assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(malformedUrl, null));
-  verify(vses, never()).getValueSet(anyString(), any());
-}
+    @Test
+    void expandValueSetThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
+        String malformedUrl = "ht!tp://example.com/vs";
 
-@Test
-void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
-  String malformedUrl = "ht!tp://example.com/cs";
+        assertThrows(
+                IllegalArgumentException.class, () -> controller.expandValueSet(malformedUrl, null));
+        verify(vses, never()).getValueSet(anyString(), any());
+    }
 
-  assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem(malformedUrl, null));
-  verify(vses, never()).getCodeSystem(anyString(), any());
-}
+    @Test
+    void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
+        String malformedUrl = "ht!tp://example.com/cs";
+
+        assertThrows(
+                IllegalArgumentException.class, () -> controller.expandCodeSystem(malformedUrl, null));
+        verify(vses, never()).getCodeSystem(anyString(), any());
+    }
 }

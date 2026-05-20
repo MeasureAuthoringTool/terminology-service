@@ -19,8 +19,8 @@ public class ValueSetExpansionController {
 
   private final ValueSetExpansionService vses;
 
-  @Value("${madie.api-key}")
-  private String apiKey;
+  @Value("${madie.allowed-hosts}")
+  private List<String> allowedHosts;
 
   @GetMapping("/ValueSet")
   public ResponseEntity<String> expandValueSet(
@@ -54,6 +54,10 @@ public class ValueSetExpansionController {
   }
 
   private boolean isValidUrl(String url) {
+    if (allowedHosts.stream().noneMatch(url::contains)) {
+      return false;
+    }
+
     try {
       new URL(url).toURI();
       return url.startsWith("http://") || url.startsWith("https://");

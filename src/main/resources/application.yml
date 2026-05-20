@@ -10,6 +10,7 @@ madie:
     base-url: ${USER_SERVICE_URL:http://localhost:8088/api}
   api-key: ${TERMINOLOGY_API_KEY:0a51991c}
   api-key-header: ${API_KEY_HEADER:api-key}
+  allowed-hosts: ${ALLOWED_HOSTS:.gov, .info, .org}
 
 management:
   endpoints:
