@@ -58,12 +58,7 @@ public class ValueSetExpansionController {
       return false;
     }
 
-    try {
-      new URL(url).toURI();
-      return url.startsWith("http://") || url.startsWith("https://");
-    } catch (Exception e) {
-      return false;
-    }
+    return url.startsWith("http://") || url.startsWith("https://");
   }
 
   private boolean isValidVersion(String version) {
