@@ -60,6 +60,7 @@ class ApiKeyFilterTest {
 
                     @Override
                     public void setWriteListener(WriteListener writeListener) {
+                        // No-op for testing
                     }
 
                     @Override
