@@ -134,31 +134,6 @@ class ValueSetExpansionControllerTest {
     }
 
     @Test
-    void expandValueSetThrowsIllegalArgumentExceptionWhenVersionFormatIsInvalid() {
-        String url = "https://example.com/vs";
-        String invalidVersion = "v1.0.0-alpha";
-
-        assertThrows(
-                IllegalArgumentException.class, () -> controller.expandValueSet(url, invalidVersion));
-        verify(vses, never()).getValueSet(anyString(), any());
-    }
-
-    @Test
-    void expandValueSetAcceptsValidVersionFormat() {
-        String url = "https://example.com/vs";
-        String version = "1.2.3";
-        String vsJson = "{\"resourceType\":\"ValueSet\"}";
-        MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
-
-        when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
-
-        ResponseEntity<String> response = controller.expandValueSet(url, version);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(vses, times(1)).getValueSet(url, version);
-    }
-
-    @Test
     void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
         assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet("", null));
         verify(vses, never()).getValueSet(anyString(), any());

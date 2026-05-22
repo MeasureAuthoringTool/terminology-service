@@ -32,11 +32,6 @@ public class ValueSetExpansionController {
       throw new IllegalArgumentException("Invalid URL format");
     }
 
-    // Validate version if provided
-    if (version != null && !isValidVersion(version)) {
-      throw new IllegalArgumentException("Invalid version format");
-    }
-
     return ResponseEntity.ok(vses.getValueSet(url, version).getValueSet());
   }
 
@@ -61,8 +56,4 @@ public class ValueSetExpansionController {
     return url.startsWith("http://") || url.startsWith("https://");
   }
 
-  private boolean isValidVersion(String version) {
-    // Validate version format (e.g., "1.0", "2.1.0")
-    return version.matches("^[\\d.]+$");
-  }
 }
