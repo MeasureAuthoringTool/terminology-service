@@ -4,6 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
+import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
@@ -12,6 +13,7 @@ import gov.cms.madie.terminology.webclient.TxTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -27,6 +29,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class ValueSetExpansionService {
+
+  private static final String VSAC_BULK_EXPAND_URL = "https://cts.nlm.nih.gov/fhir/ValueSet/$expand?url=";
 
   private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;
@@ -178,15 +182,33 @@ public class ValueSetExpansionService {
   }
 
   private Optional<ValueSet> fetchExpansionFromVsac(MadieValueSet madieValueSet) {
+    return fetchExpansionFromVsac(madieValueSet.getUrl(), madieValueSet.getVersion(), 0);
+  }
+
+  private Optional<ValueSet> fetchExpansionFromVsac(String url, String version, int offset) {
     log.debug(
         "Attempting to expand ValueSet {} version {} using VSAC FHIR Terminology Service.",
-        madieValueSet.getUrl(),
-        madieValueSet.getVersion());
-    // TODO MAT-10003: FHIR Value Set info retrieved from Structure Definitions provide URLs, but
-    // not their OIDs. This necessitates using the URL query-param when requesting
-    // expansions from VSAC, which differs from our current flow.
+        url,
+        version);
 
-    return Optional.empty();
+    String urlWithVersion =
+        StringUtils.isNotBlank(version) ? url + "&valueSetVersion=" + version : url;
+    String urlWithOffset = offset > 0 ? urlWithVersion + "&offset=" + offset : urlWithVersion;
+    String expandUrl = VSAC_BULK_EXPAND_URL + urlWithOffset;
+
+    String vsacResponse = "";
+    try {
+      vsacResponse =
+          fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+              List.of(expandUrl), systemVsacApiKey, "ValueSet");
+    } catch (VsacBatchValueSetExpansionException e) {
+      log.warn(
+          "Unable to retrieve expansion from VSAC for Value Set {} version {}: ", url, version, e);
+    }
+
+    return StringUtils.isNotBlank(vsacResponse)
+        ? parseVsacExpansionResponse(vsacResponse)
+        : Optional.empty();
   }
 
   public MadieValueSet upsertValueSet(MadieValueSet valueSet) {
@@ -243,5 +265,28 @@ public class ValueSetExpansionService {
       }
     }
     return Optional.empty();
+  }
+
+  private Optional<ValueSet> parseVsacExpansionResponse(String rawResponse) {
+    if (StringUtils.isBlank(rawResponse)) {
+      return Optional.empty();
+    }
+    Bundle bundle = fhirContext.newJsonParser().parseResource(Bundle.class, rawResponse);
+    ValueSet valueSet = (ValueSet) bundle.getEntry().get(0).getResource();
+
+    if (valueSet != null && valueSet.getExpansion().getTotal() > 1000) {
+      fetchRemainingPages(valueSet);
+    }
+    return Optional.ofNullable(valueSet);
+  }
+
+  private void fetchRemainingPages(ValueSet valueSet) {
+    int offset = valueSet.getExpansion().getOffset();
+    while (offset < valueSet.getExpansion().getTotal()) {
+      fetchExpansionFromVsac(valueSet.getUrl(), valueSet.getVersion(), offset += 1000)
+          .ifPresent(
+              page ->
+                  valueSet.getExpansion().getContains().addAll(page.getExpansion().getContains()));
+    }
   }
 }
