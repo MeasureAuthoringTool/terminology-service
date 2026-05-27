@@ -12,7 +12,6 @@ import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -103,9 +102,5 @@ public class VsacFhirTerminologyController {
     UmlsUser user = vsacService.verifyUmlsAccess(username);
     return ResponseEntity.ok()
         .body(fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, user.getApiKey()));
-  }
-
-  private String serializeFhirValueSet(ValueSet fhirValueSet) {
-    return fhirContext.newJsonParser().encodeResourceToString(fhirValueSet);
   }
 }
