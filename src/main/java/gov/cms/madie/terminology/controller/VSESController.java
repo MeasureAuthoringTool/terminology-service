@@ -21,7 +21,7 @@ public class VSESController {
   @Value("${madie.allowed-hosts}")
   private List<String> allowedHosts;
 
-  @GetMapping("/value-set")
+  @GetMapping("/value-sets")
   public ResponseEntity<String> expandValueSet(
       @RequestParam String url, @RequestParam(required = false) String version) {
     log.info("Expanding ValueSet with URL: {} and version: {}", url, version);
@@ -34,7 +34,7 @@ public class VSESController {
     return ResponseEntity.ok(vses.getValueSet(url, version).getValueSet());
   }
 
-  @GetMapping("/code-system")
+  @GetMapping("/code-systems")
   public ResponseEntity<List<CodeSystem>> retrieveCodeSystem(
       @RequestParam String url, @RequestParam(required = false) Integer count) {
     log.info("Expanding CodeSystem with URL: {} and count: {}", url, count);
