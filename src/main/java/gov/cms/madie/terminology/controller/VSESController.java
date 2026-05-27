@@ -22,7 +22,7 @@ public class VSESController {
   private List<String> allowedHosts;
 
   @GetMapping("/value-sets")
-  public ResponseEntity<String> expandValueSet(
+  public ResponseEntity<String> expandValueSets(
       @RequestParam String url, @RequestParam(required = false) String version) {
     log.info("Expanding ValueSet with URL: {} and version: {}", url, version);
 
@@ -35,7 +35,7 @@ public class VSESController {
   }
 
   @GetMapping("/code-systems")
-  public ResponseEntity<List<CodeSystem>> retrieveCodeSystem(
+  public ResponseEntity<List<CodeSystem>> retrieveCodeSystems(
       @RequestParam String url, @RequestParam(required = false) Integer count) {
     log.info("Expanding CodeSystem with URL: {} and count: {}", url, count);
 

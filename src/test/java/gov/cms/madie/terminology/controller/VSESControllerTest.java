@@ -44,7 +44,7 @@ class VSESControllerTest {
 
     when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
 
-    ResponseEntity<String> response = controller.expandValueSet(url, version);
+    ResponseEntity<String> response = controller.expandValueSets(url, version);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(vsJson, response.getBody());
@@ -60,7 +60,7 @@ class VSESControllerTest {
 
     when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
 
-    ResponseEntity<String> response = controller.expandValueSet(url, null);
+    ResponseEntity<String> response = controller.expandValueSets(url, null);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(vsJson, response.getBody());
@@ -74,7 +74,7 @@ class VSESControllerTest {
 
     assertThrows(
         ValueSetNotFoundException.class,
-        () -> controller.expandValueSet("http://example.com/cs", null));
+        () -> controller.expandValueSets("http://example.com/cs", null));
     verify(vses, times(1)).getValueSet(anyString(), any());
   }
 
@@ -88,7 +88,7 @@ class VSESControllerTest {
 
     when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
 
-    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystem(url, count);
+    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystems(url, count);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(csList, response.getBody());
@@ -101,7 +101,7 @@ class VSESControllerTest {
 
     when(vses.getCodeSystem(anyString(), any())).thenReturn(Collections.emptyList());
 
-    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystem(url, null);
+    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystems(url, null);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertTrue(response.getBody().isEmpty());
@@ -112,7 +112,7 @@ class VSESControllerTest {
   void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
     String invalidUrl = "not-a-url";
 
-    assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet(invalidUrl, null));
+    assertThrows(IllegalArgumentException.class, () -> controller.expandValueSets(invalidUrl, null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
@@ -125,7 +125,7 @@ class VSESControllerTest {
 
     when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
 
-    ResponseEntity<String> response = controller.expandValueSet(httpsUrl, version);
+    ResponseEntity<String> response = controller.expandValueSets(httpsUrl, version);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     verify(vses, times(1)).getValueSet(httpsUrl, version);
@@ -133,7 +133,7 @@ class VSESControllerTest {
 
   @Test
   void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-    assertThrows(IllegalArgumentException.class, () -> controller.expandValueSet("", null));
+    assertThrows(IllegalArgumentException.class, () -> controller.expandValueSets("", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
@@ -142,7 +142,7 @@ class VSESControllerTest {
     String invalidUrl = "https://example.invalid/cs";
 
     assertThrows(
-        IllegalArgumentException.class, () -> controller.retrieveCodeSystem(invalidUrl, null));
+        IllegalArgumentException.class, () -> controller.retrieveCodeSystems(invalidUrl, null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
@@ -154,7 +154,7 @@ class VSESControllerTest {
 
     when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
 
-    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystem(httpsUrl, count);
+    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystems(httpsUrl, count);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     verify(vses, times(1)).getCodeSystem(httpsUrl, count);
@@ -162,7 +162,7 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-    assertThrows(IllegalArgumentException.class, () -> controller.retrieveCodeSystem("", null));
+    assertThrows(IllegalArgumentException.class, () -> controller.retrieveCodeSystems("", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
@@ -171,7 +171,7 @@ class VSESControllerTest {
     String malformedUrl = "ht!tp://example.com/vs";
 
     assertThrows(
-        IllegalArgumentException.class, () -> controller.expandValueSet(malformedUrl, null));
+        IllegalArgumentException.class, () -> controller.expandValueSets(malformedUrl, null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
@@ -180,7 +180,7 @@ class VSESControllerTest {
     String malformedUrl = "ht!tp://example.com/cs";
 
     assertThrows(
-        IllegalArgumentException.class, () -> controller.retrieveCodeSystem(malformedUrl, null));
+        IllegalArgumentException.class, () -> controller.retrieveCodeSystems(malformedUrl, null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 }
