@@ -30,7 +30,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ValueSetExpansionService {
 
-  private static final String VSAC_BULK_EXPAND_URL = "https://cts.nlm.nih.gov/fhir/ValueSet/$expand?url=";
+  private static final String VSAC_BULK_EXPAND_URL =
+      "https://cts.nlm.nih.gov/fhir/ValueSet/$expand?url=";
 
   private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;
@@ -131,7 +132,7 @@ public class ValueSetExpansionService {
     log.info("Saved {} value set expansions.", madieValueSets.size());
   }
 
-  private void expandValueSets(List<MadieValueSet> madieValueSets) {
+  public void expandValueSets(List<MadieValueSet> madieValueSets) {
     int failedExpansions = 0;
     log.debug("Expanding {} value sets.", madieValueSets.size());
     for (MadieValueSet madieValueSet : madieValueSets) {

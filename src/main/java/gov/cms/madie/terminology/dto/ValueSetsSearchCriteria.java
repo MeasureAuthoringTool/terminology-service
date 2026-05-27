@@ -20,6 +20,7 @@ public class ValueSetsSearchCriteria {
   @Builder
   public static class ValueSetParams {
     private String oid;
+    private String url;
     private String release;
     private String version;
     private Integer count;
