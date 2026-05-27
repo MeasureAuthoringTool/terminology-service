@@ -35,7 +35,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ValueSetExpansionService {
 
-  private static final String VSAC_BULK_EXPAND_URL = "https://cts.nlm.nih.gov/fhir/ValueSet/$expand?url=";
+  private static final String VSAC_BULK_EXPAND_URL =
+      "https://cts.nlm.nih.gov/fhir/ValueSet/$expand?url=";
 
   private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;

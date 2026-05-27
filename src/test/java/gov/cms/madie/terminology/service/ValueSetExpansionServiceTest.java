@@ -56,9 +56,9 @@ class ValueSetExpansionServiceTest {
   private MadieValueSet madieValueSet;
   private IParser realParser;
 
-  /** Minimal FHIR ValueSet JSON for TxFHIR parsing tests. **/
+  /** Minimal FHIR ValueSet JSON for TxFHIR parsing tests. * */
   private static final String MOCK_VALUE_SET_JSON =
-    """
+      """
     {
       "resourceType": "ValueSet",
       "id": "test-vs",
@@ -75,7 +75,7 @@ class ValueSetExpansionServiceTest {
 
   /** Minimal FHIR Bundle wrapping a ValueSet — mirrors what VSAC returns (no pagination). */
   private static final String MOCK_VSAC_BUNDLE_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -100,7 +100,7 @@ class ValueSetExpansionServiceTest {
 
   /** Bundle with expansion.total = 1000 — boundary: pagination must NOT trigger. */
   private static final String MOCK_VSAC_BUNDLE_TOTAL_1000_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -129,7 +129,7 @@ class ValueSetExpansionServiceTest {
    * Bundle with expansion.total = 1001 (page 1 of 2) — pagination must trigger a second request.
    */
   private static final String MOCK_VSAC_BUNDLE_PAGINATED_PAGE1_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -156,7 +156,7 @@ class ValueSetExpansionServiceTest {
 
   /** Bundle page 2 of 2 for the paginated expansion test. */
   private static final String MOCK_VSAC_BUNDLE_PAGINATED_PAGE2_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -593,7 +593,6 @@ class ValueSetExpansionServiceTest {
   // fetchExpansionFromVsac()  (tested via updateIgValueSetDependencies fallback)
   // ---------------------------------------------------------------------------
 
-
   @Test
   void fetchExpansionFromVsacBuildsUrlWithVersionAndSavesValueSet() {
     // TxFHIR throws → VSAC fallback is invoked
@@ -730,7 +729,6 @@ class ValueSetExpansionServiceTest {
   // parseVsacExpansionResponse() / fetchRemainingPages() — pagination
   // ---------------------------------------------------------------------------
 
-
   @Test
   void parseVsacExpansionResponseFetchesAdditionalPagesWhenTotalExceeds1000() {
     // TxFHIR throws → VSAC fallback invoked
@@ -770,7 +768,6 @@ class ValueSetExpansionServiceTest {
     assertTrue(savedValueSet.contains("111111111"), "Should contain page-1 concept");
     assertTrue(savedValueSet.contains("222222222"), "Should contain page-2 concept");
   }
-
 
   @Test
   void parseVsacExpansionResponseDoesNotFetchAdditionalPagesWhenTotalIsExactly1000() {

@@ -54,5 +54,4 @@ public class VSESController {
 
     return url.startsWith("http://") || url.startsWith("https://");
   }
-
 }
