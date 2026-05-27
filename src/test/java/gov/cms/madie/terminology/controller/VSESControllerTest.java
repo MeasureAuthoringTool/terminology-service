@@ -24,12 +24,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ValueSetExpansionControllerTest {
+class VSESControllerTest {
 
     @Mock
     private ValueSetExpansionService vses;
     @InjectMocks
-    private ValueSetExpansionController controller;
+    private VSESController controller;
 
     @BeforeEach
     void setUp() {
@@ -90,7 +90,7 @@ class ValueSetExpansionControllerTest {
 
         when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
 
-        ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(url, count);
+        ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystem(url, count);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(csList, response.getBody());
@@ -103,7 +103,7 @@ class ValueSetExpansionControllerTest {
 
         when(vses.getCodeSystem(anyString(), any())).thenReturn(Collections.emptyList());
 
-        ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(url, null);
+        ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystem(url, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().isEmpty());
@@ -144,7 +144,7 @@ class ValueSetExpansionControllerTest {
         String invalidUrl = "https://example.invalid/cs";
 
         assertThrows(
-                IllegalArgumentException.class, () -> controller.expandCodeSystem(invalidUrl, null));
+                IllegalArgumentException.class, () -> controller.retrieveCodeSystem(invalidUrl, null));
         verify(vses, never()).getCodeSystem(anyString(), any());
     }
 
@@ -156,7 +156,7 @@ class ValueSetExpansionControllerTest {
 
         when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
 
-        ResponseEntity<List<CodeSystem>> response = controller.expandCodeSystem(httpsUrl, count);
+        ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystem(httpsUrl, count);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(vses, times(1)).getCodeSystem(httpsUrl, count);
@@ -164,7 +164,7 @@ class ValueSetExpansionControllerTest {
 
     @Test
     void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-        assertThrows(IllegalArgumentException.class, () -> controller.expandCodeSystem("", null));
+        assertThrows(IllegalArgumentException.class, () -> controller.retrieveCodeSystem("", null));
         verify(vses, never()).getCodeSystem(anyString(), any());
     }
 
@@ -182,7 +182,7 @@ class ValueSetExpansionControllerTest {
         String malformedUrl = "ht!tp://example.com/cs";
 
         assertThrows(
-                IllegalArgumentException.class, () -> controller.expandCodeSystem(malformedUrl, null));
+                IllegalArgumentException.class, () -> controller.retrieveCodeSystem(malformedUrl, null));
         verify(vses, never()).getCodeSystem(anyString(), any());
     }
 }
