@@ -5,6 +5,7 @@ import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
+import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
@@ -35,6 +36,12 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ValueSetExpansionServiceTest {
+  private static final String VS_URL = "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3";
+  private static final String VS_VERSION = "20230401";
+  private static final String IG_NAME = "hl7.fhir.us.core";
+  private static final String IG_VERSION = "6.1.0";
+  private static final String VSAC_BASE_EXPAND_URL =
+      "https://cts.nlm.nih.gov/fhir/ValueSet/$expand?url=";
 
   @Mock private ImplementationGuideManager implementationGuideManager;
   @Mock private ValueSetExpansionRepository vseRepo;
@@ -46,30 +53,133 @@ class ValueSetExpansionServiceTest {
 
   @InjectMocks private ValueSetExpansionService valueSetExpansionService;
 
-  private static final String VS_URL = "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3";
-  private static final String VS_VERSION = "20230401";
-  private static final String IG_NAME = "hl7.fhir.us.core";
-  private static final String IG_VERSION = "6.1.0";
-
-  // Minimal FHIR ValueSet JSON for parsing tests
-  private static final String MOCK_VALUE_SET_JSON =
-      """
-      {
-        "resourceType": "ValueSet",
-        "id": "test-vs",
-        "url": "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3",
-        "version": "20230401",
-        "status": "active",
-        "expansion": {
-          "contains": [
-            { "system": "http://snomed.info/sct", "code": "123456789", "display": "Test Concept" }
-          ]
-        }
-      }
-      """;
-
   private MadieValueSet madieValueSet;
   private IParser realParser;
+
+  /** Minimal FHIR ValueSet JSON for TxFHIR parsing tests. **/
+  private static final String MOCK_VALUE_SET_JSON =
+    """
+    {
+      "resourceType": "ValueSet",
+      "id": "test-vs",
+      "url": "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3",
+      "version": "20230401",
+      "status": "active",
+      "expansion": {
+        "contains": [
+          { "system": "http://snomed.info/sct", "code": "123456789", "display": "Test Concept" }
+        ]
+      }
+    }
+    """;
+
+  /** Minimal FHIR Bundle wrapping a ValueSet — mirrors what VSAC returns (no pagination). */
+  private static final String MOCK_VSAC_BUNDLE_JSON =
+    """
+    {
+      "resourceType": "Bundle",
+      "type": "searchset",
+      "entry": [
+        {
+          "resource": {
+            "resourceType": "ValueSet",
+            "id": "vsac-vs",
+            "url": "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3",
+            "version": "20230401",
+            "status": "active",
+            "expansion": {
+              "contains": [
+                { "system": "http://snomed.info/sct", "code": "987654321", "display": "VSAC Concept" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    """;
+
+  /** Bundle with expansion.total = 1000 — boundary: pagination must NOT trigger. */
+  private static final String MOCK_VSAC_BUNDLE_TOTAL_1000_JSON =
+    """
+    {
+      "resourceType": "Bundle",
+      "type": "searchset",
+      "entry": [
+        {
+          "resource": {
+            "resourceType": "ValueSet",
+            "id": "vsac-vs-exact-1000",
+            "url": "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3",
+            "version": "20230401",
+            "status": "active",
+            "expansion": {
+              "total": 1000,
+              "offset": 0,
+              "contains": [
+                { "system": "http://snomed.info/sct", "code": "111111111", "display": "Concept" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    """;
+
+  /**
+   * Bundle with expansion.total = 1001 (page 1 of 2) — pagination must trigger a second request.
+   */
+  private static final String MOCK_VSAC_BUNDLE_PAGINATED_PAGE1_JSON =
+    """
+    {
+      "resourceType": "Bundle",
+      "type": "searchset",
+      "entry": [
+        {
+          "resource": {
+            "resourceType": "ValueSet",
+            "id": "vsac-vs-paged",
+            "url": "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3",
+            "version": "20230401",
+            "status": "active",
+            "expansion": {
+              "total": 1001,
+              "offset": 0,
+              "contains": [
+                { "system": "http://snomed.info/sct", "code": "111111111", "display": "Page1 Concept" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    """;
+
+  /** Bundle page 2 of 2 for the paginated expansion test. */
+  private static final String MOCK_VSAC_BUNDLE_PAGINATED_PAGE2_JSON =
+    """
+    {
+      "resourceType": "Bundle",
+      "type": "searchset",
+      "entry": [
+        {
+          "resource": {
+            "resourceType": "ValueSet",
+            "id": "vsac-vs-paged",
+            "url": "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3",
+            "version": "20230401",
+            "status": "active",
+            "expansion": {
+              "total": 1001,
+              "offset": 1000,
+              "contains": [
+                { "system": "http://snomed.info/sct", "code": "222222222", "display": "Page2 Concept" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    """;
 
   @BeforeEach
   void setUp() {
@@ -476,6 +586,256 @@ class ValueSetExpansionServiceTest {
     valueSetExpansionService.updateValueSetDependencies();
 
     assertNull(madieValueSet.getLastUpdated());
+    verify(vseRepo, never()).save(any());
+  }
+
+  // ---------------------------------------------------------------------------
+  // fetchExpansionFromVsac()  (tested via updateIgValueSetDependencies fallback)
+  // ---------------------------------------------------------------------------
+
+
+  @Test
+  void fetchExpansionFromVsacBuildsUrlWithVersionAndSavesValueSet() {
+    // TxFHIR throws → VSAC fallback is invoked
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(VSAC_BASE_EXPAND_URL + VS_URL + "&valueSetVersion=" + VS_VERSION),
+            null,
+            "ValueSet"))
+        .thenReturn(MOCK_VSAC_BUNDLE_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getValueSet());
+    assertTrue(captor.getValue().getValueSet().contains("vsac-vs"));
+  }
+
+  @Test
+  void fetchExpansionFromVsacBuildsUrlWithoutVersionWhenVersionIsBlank() {
+    MadieValueSet vsNoVersion = MadieValueSet.builder().url(VS_URL).version("").build();
+
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(vsNoVersion));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, ""))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+    // Expect URL without "|version" suffix
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(VSAC_BASE_EXPAND_URL + VS_URL), null, "ValueSet"))
+        .thenReturn(MOCK_VSAC_BUNDLE_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, "")).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getValueSet());
+  }
+
+  @Test
+  void fetchExpansionFromVsacBuildsUrlWithoutVersionWhenVersionIsNull() {
+    MadieValueSet vsNullVersion = MadieValueSet.builder().url(VS_URL).version(null).build();
+
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(vsNullVersion));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, null))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(VSAC_BASE_EXPAND_URL + VS_URL), null, "ValueSet"))
+        .thenReturn(MOCK_VSAC_BUNDLE_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, null)).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    assertNotNull(captor.getValue().getValueSet());
+  }
+
+  @Test
+  void fetchExpansionFromVsacReturnsEmptyWhenVsacResponseIsBlank() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(VSAC_BASE_EXPAND_URL + VS_URL + "&valueSetVersion=" + VS_VERSION),
+            null,
+            "ValueSet"))
+        .thenReturn("   "); // blank response
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    // Expansion failed → nothing saved
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void fetchExpansionFromVsacReturnsEmptyWhenVsacResponseIsNull() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(VSAC_BASE_EXPAND_URL + VS_URL + "&valueSetVersion=" + VS_VERSION),
+            null,
+            "ValueSet"))
+        .thenReturn(null);
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void fetchExpansionFromVsacReturnsEmptyAndDoesNotThrowWhenVsacClientThrows() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(VSAC_BASE_EXPAND_URL + VS_URL + "&valueSetVersion=" + VS_VERSION),
+            null,
+            "ValueSet"))
+        .thenThrow(
+            new VsacBatchValueSetExpansionException(
+                "VSAC error", HttpStatusCode.valueOf(500), "Internal Server Error", ""));
+
+    // Exception is caught and logged — must not propagate
+    assertDoesNotThrow(
+        () -> valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION));
+    verify(vseRepo, never()).save(any());
+  }
+
+  // ---------------------------------------------------------------------------
+  // parseVsacExpansionResponse() / fetchRemainingPages() — pagination
+  // ---------------------------------------------------------------------------
+
+
+  @Test
+  void parseVsacExpansionResponseFetchesAdditionalPagesWhenTotalExceeds1000() {
+    // TxFHIR throws → VSAC fallback invoked
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+
+    String page1Url = VSAC_BASE_EXPAND_URL + VS_URL + "&valueSetVersion=" + VS_VERSION;
+    String page2Url = page1Url + "&offset=1000";
+
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(page1Url), null, "ValueSet"))
+        .thenReturn(MOCK_VSAC_BUNDLE_PAGINATED_PAGE1_JSON);
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(page2Url), null, "ValueSet"))
+        .thenReturn(MOCK_VSAC_BUNDLE_PAGINATED_PAGE2_JSON);
+
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    // Both pages fetched
+    verify(fhirTerminologyServiceWebClient, times(1))
+        .fetchBatchResourcesFromVsac(List.of(page1Url), null, "ValueSet");
+    verify(fhirTerminologyServiceWebClient, times(1))
+        .fetchBatchResourcesFromVsac(List.of(page2Url), null, "ValueSet");
+
+    // Saved ValueSet should contain concepts from both pages
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    String savedValueSet = captor.getValue().getValueSet();
+    assertNotNull(savedValueSet);
+    assertTrue(savedValueSet.contains("111111111"), "Should contain page-1 concept");
+    assertTrue(savedValueSet.contains("222222222"), "Should contain page-2 concept");
+  }
+
+
+  @Test
+  void parseVsacExpansionResponseDoesNotFetchAdditionalPagesWhenTotalIsExactly1000() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+
+    String page1Url = VSAC_BASE_EXPAND_URL + VS_URL + "&valueSetVersion=" + VS_VERSION;
+
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(page1Url), null, "ValueSet"))
+        .thenReturn(MOCK_VSAC_BUNDLE_TOTAL_1000_JSON);
+
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    // total == 1000 is not > 1000, so only one VSAC call made — no pagination
+    verify(fhirTerminologyServiceWebClient, times(1))
+        .fetchBatchResourcesFromVsac(anyList(), any(), anyString());
+  }
+
+  @Test
+  void parseVsacExpansionResponseDoesNotFetchAdditionalPagesWhenTotalIs1000OrLess() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+
+    String page1Url = VSAC_BASE_EXPAND_URL + VS_URL + "&valueSetVersion=" + VS_VERSION;
+
+    // Bundle with total = 1000 — no second page needed
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
+            List.of(page1Url), null, "ValueSet"))
+        .thenReturn(MOCK_VSAC_BUNDLE_JSON); // total not set → 0, which is ≤ 1000
+
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
+    // Only one call to VSAC — no pagination
+    verify(fhirTerminologyServiceWebClient, times(1))
+        .fetchBatchResourcesFromVsac(anyList(), any(), anyString());
+  }
+
+  @Test
+  void parseVsacExpansionResponseReturnsEmptyWhenResponseIsBlank() {
+    when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
+        .thenReturn(List.of(madieValueSet));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "not found", "not found", ""));
+    when(fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(anyList(), any(), anyString()))
+        .thenReturn("  ");
+
+    valueSetExpansionService.updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+
     verify(vseRepo, never()).save(any());
   }
 
