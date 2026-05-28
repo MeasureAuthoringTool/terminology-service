@@ -112,7 +112,8 @@ class VSESControllerTest {
   void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
     String invalidUrl = "not-a-url";
 
-    assertThrows(IllegalArgumentException.class, () -> controller.expandValueSets(invalidUrl, null));
+    assertThrows(
+        IllegalArgumentException.class, () -> controller.expandValueSets(invalidUrl, null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 

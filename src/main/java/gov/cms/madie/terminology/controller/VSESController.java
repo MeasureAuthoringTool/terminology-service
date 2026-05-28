@@ -27,7 +27,7 @@ public class VSESController {
     log.info("Expanding ValueSet with URL: {} and version: {}", url, version);
 
     // Validate URL format
-    if (!isAllowableUrl(url)) {
+    if (!isValidFhirTerminologyUrl(url)) {
       throw new IllegalArgumentException("Invalid URL format");
     }
 
@@ -40,14 +40,14 @@ public class VSESController {
     log.info("Expanding CodeSystem with URL: {} and count: {}", url, count);
 
     // Validate URL format
-    if (!isAllowableUrl(url)) {
+    if (!isValidFhirTerminologyUrl(url)) {
       throw new IllegalArgumentException("Invalid URL format");
     }
 
     return ResponseEntity.ok(vses.getCodeSystem(url, count));
   }
 
-  private boolean isAllowableUrl(String url) {
+  private boolean isValidFhirTerminologyUrl(String url) {
     if (allowedHosts.stream().noneMatch(url::contains)) {
       return false;
     }
