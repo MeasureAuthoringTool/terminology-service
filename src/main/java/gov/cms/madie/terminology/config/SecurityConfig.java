@@ -7,6 +7,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.HeaderWriterFilter;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue;
 
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -18,7 +19,8 @@ public class SecurityConfig {
   private static final String[] AUTH_WHITELIST = {"/actuator/**"};
 
   @Bean
-  protected SecurityFilterChain filterChain(HttpSecurity http, UserRoleConverter roleConverter)
+  protected SecurityFilterChain filterChain(
+      HttpSecurity http, UserRoleConverter roleConverter, ApiKeyFilter apiKeyFilter)
       throws Exception {
     http.cors(withDefaults())
         .csrf(withDefaults())
@@ -31,6 +33,7 @@ public class SecurityConfig {
                     .hasRole("MADIE-ADMIN")
                     .anyRequest()
                     .authenticated())
+        .addFilterAfter(apiKeyFilter, HeaderWriterFilter.class)
         .sessionManagement(
             sessionMgt -> sessionMgt.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2ResourceServer(

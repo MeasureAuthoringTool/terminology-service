@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.repositories;
 
 import gov.cms.madie.terminology.models.CodeSystem;
 import lombok.NonNull;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
@@ -22,4 +23,6 @@ public interface CodeSystemRepository extends MongoRepository<CodeSystem, String
   List<CodeSystem> findAllByOid(String oid);
 
   List<CodeSystem> findAllByFullUrl(String url);
+
+  List<CodeSystem> findAllByFullUrl(String url, Limit limit);
 }

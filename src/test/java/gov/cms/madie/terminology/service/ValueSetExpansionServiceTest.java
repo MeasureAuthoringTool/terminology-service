@@ -6,7 +6,9 @@ import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacBatchValueSetExpansionException;
+import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
+import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
@@ -18,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Limit;
 import org.springframework.http.HttpStatusCode;
 
 import java.util.Collections;
@@ -42,6 +45,7 @@ class ValueSetExpansionServiceTest {
 
   @Mock private ImplementationGuideManager implementationGuideManager;
   @Mock private ValueSetExpansionRepository vseRepo;
+  @Mock private CodeSystemRepository csRepo;
   @Mock private TxTerminologyServiceWebClient txTerminologyServiceWebClient;
   @Mock private FhirContext fhirContext;
   @Mock private FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
@@ -52,9 +56,9 @@ class ValueSetExpansionServiceTest {
   private MadieValueSet madieValueSet;
   private IParser realParser;
 
-  /** Minimal FHIR ValueSet JSON for TxFHIR parsing tests. **/
+  /** Minimal FHIR ValueSet JSON for TxFHIR parsing tests. * */
   private static final String MOCK_VALUE_SET_JSON =
-    """
+      """
     {
       "resourceType": "ValueSet",
       "id": "test-vs",
@@ -71,7 +75,7 @@ class ValueSetExpansionServiceTest {
 
   /** Minimal FHIR Bundle wrapping a ValueSet — mirrors what VSAC returns (no pagination). */
   private static final String MOCK_VSAC_BUNDLE_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -96,7 +100,7 @@ class ValueSetExpansionServiceTest {
 
   /** Bundle with expansion.total = 1000 — boundary: pagination must NOT trigger. */
   private static final String MOCK_VSAC_BUNDLE_TOTAL_1000_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -125,7 +129,7 @@ class ValueSetExpansionServiceTest {
    * Bundle with expansion.total = 1001 (page 1 of 2) — pagination must trigger a second request.
    */
   private static final String MOCK_VSAC_BUNDLE_PAGINATED_PAGE1_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -152,7 +156,7 @@ class ValueSetExpansionServiceTest {
 
   /** Bundle page 2 of 2 for the paginated expansion test. */
   private static final String MOCK_VSAC_BUNDLE_PAGINATED_PAGE2_JSON =
-    """
+      """
     {
       "resourceType": "Bundle",
       "type": "searchset",
@@ -589,7 +593,6 @@ class ValueSetExpansionServiceTest {
   // fetchExpansionFromVsac()  (tested via updateIgValueSetDependencies fallback)
   // ---------------------------------------------------------------------------
 
-
   @Test
   void fetchExpansionFromVsacBuildsUrlWithVersionAndSavesValueSet() {
     // TxFHIR throws → VSAC fallback is invoked
@@ -726,7 +729,6 @@ class ValueSetExpansionServiceTest {
   // parseVsacExpansionResponse() / fetchRemainingPages() — pagination
   // ---------------------------------------------------------------------------
 
-
   @Test
   void parseVsacExpansionResponseFetchesAdditionalPagesWhenTotalExceeds1000() {
     // TxFHIR throws → VSAC fallback invoked
@@ -766,7 +768,6 @@ class ValueSetExpansionServiceTest {
     assertTrue(savedValueSet.contains("111111111"), "Should contain page-1 concept");
     assertTrue(savedValueSet.contains("222222222"), "Should contain page-2 concept");
   }
-
 
   @Test
   void parseVsacExpansionResponseDoesNotFetchAdditionalPagesWhenTotalIsExactly1000() {
@@ -910,5 +911,90 @@ class ValueSetExpansionServiceTest {
         ValueSetNotFoundException.class,
         () -> valueSetExpansionService.deleteValueSet("nonexistent"));
     verify(vseRepo, never()).deleteById(anyString());
+  }
+
+  @Test
+  void returnsValueSetWhenFound() {
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(madieValueSet));
+
+    MadieValueSet result = valueSetExpansionService.getValueSet(VS_URL, VS_VERSION);
+
+    assertThat(result, is(equalTo(madieValueSet)));
+    verify(vseRepo, times(1)).findByUrlAndVersion(VS_URL, VS_VERSION);
+  }
+
+  @Test
+  void throwsValueSetNotFoundExceptionWhenValueSetMissing() {
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    ValueSetNotFoundException exception =
+        assertThrows(
+            ValueSetNotFoundException.class,
+            () -> valueSetExpansionService.getValueSet(VS_URL, VS_VERSION));
+
+    assertTrue(exception.getMessage().contains(VS_URL));
+    assertTrue(exception.getMessage().contains(VS_VERSION));
+    verify(vseRepo, times(1)).findByUrlAndVersion(VS_URL, VS_VERSION);
+  }
+
+  @Test
+  void returnsValueSetWhenVersionIsNull() {
+    MadieValueSet vsNoVersion = MadieValueSet.builder().url(VS_URL).version(null).build();
+    when(vseRepo.findByUrlAndVersion(VS_URL, null)).thenReturn(Optional.of(vsNoVersion));
+
+    MadieValueSet result = valueSetExpansionService.getValueSet(VS_URL, null);
+
+    assertNotNull(result);
+    assertNull(result.getVersion());
+    assertThat(result.getUrl(), is(equalTo(VS_URL)));
+    verify(vseRepo, times(1)).findByUrlAndVersion(VS_URL, null);
+  }
+
+  @Test
+  void getCodeSystemReturnsCodeSystemsWhenFound() {
+    String url = "http://example.com/CodeSystem";
+    CodeSystem cs1 = mock(CodeSystem.class);
+    CodeSystem cs2 = mock(CodeSystem.class);
+    List<CodeSystem> csList = List.of(cs1, cs2);
+
+    when(csRepo.findAllByFullUrl(eq(url), any(Limit.class))).thenReturn(csList);
+
+    List<CodeSystem> result = valueSetExpansionService.getCodeSystem(url, null);
+
+    assertThat(result.size(), is(equalTo(2)));
+    assertThat(result, is(equalTo(csList)));
+    verify(csRepo, times(1)).findAllByFullUrl(url, Limit.unlimited());
+  }
+
+  @Test
+  void getCodeSystemReturnsLimitedCodeSystemsWhenCountProvided() {
+    String url = "http://example.com/CodeSystem";
+    Integer count = 3;
+    CodeSystem cs1 = mock(CodeSystem.class);
+    CodeSystem cs2 = mock(CodeSystem.class);
+    List<CodeSystem> csList = List.of(cs1, cs2);
+
+    when(csRepo.findAllByFullUrl(url, Limit.of(count))).thenReturn(csList);
+
+    List<CodeSystem> result = valueSetExpansionService.getCodeSystem(url, count);
+
+    assertThat(result.size(), is(equalTo(2)));
+    verify(csRepo, times(1)).findAllByFullUrl(url, Limit.of(count));
+  }
+
+  @Test
+  void getCodeSystemThrowsResourceNotFoundExceptionWithCorrectMessage() {
+    String url = "http://example.com/CodeSystem/missing";
+
+    when(csRepo.findAllByFullUrl(eq(url), any(Limit.class))).thenReturn(Collections.emptyList());
+
+    ResourceNotFoundException exception =
+        assertThrows(
+            ResourceNotFoundException.class,
+            () -> valueSetExpansionService.getCodeSystem(url, null));
+
+    assertTrue(exception.getMessage().contains(url));
+
+    verify(csRepo, times(1)).findAllByFullUrl(url, Limit.unlimited());
   }
 }
