@@ -13,6 +13,7 @@ import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionExcep
 // local resource helpers used instead of the shared TestHelpers to avoid
 // sure-fire single-test compilation issues during focused runs
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
@@ -58,6 +59,7 @@ class FhirTerminologyServiceTest {
   @Mock FhirContext fhirContext;
   @Mock CodeSystemRepository codeSystemRepository;
   @Mock VsacService vsacService;
+  @Mock ValueSetExpansionService valueSetExpansionService;
   @InjectMocks FhirTerminologyService fhirTerminologyService;
 
   private UmlsUser umlsUser;
@@ -2142,5 +2144,50 @@ class FhirTerminologyServiceTest {
     assertThrows(
         CodeSystemNotFoundException.class, () -> fhirTerminologyService.deleteCodeSystem(id));
     verify(codeSystemRepository, never()).deleteById(anyString());
+  }
+
+  @Test
+  void testGetFhirValueSetsExpansion() {
+
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("2.16.840.1.113883.3.464.1003.113.11.1090")
+                        .url(
+                            "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.113.11.1090")
+                        .build()))
+            .includeDraft("true")
+            .activeOnly("false")
+            .build();
+
+    doAnswer(
+            invocation -> {
+              List<Object> arg = Collections.singletonList(invocation.getArguments()[0]);
+              List<MadieValueSet> madieValueSets = (List<MadieValueSet>) arg.get(0);
+              madieValueSets.get(0).setValueSet(mockValueSetResourceWithCodes);
+              return null;
+            })
+        .when(valueSetExpansionService)
+        .expandValueSets(any());
+    List<String> result =
+        fhirTerminologyService.getFhirValueSetsExpansion(valueSetsSearchCriteria, umlsUser);
+    assertEquals(1, result.size());
+    assertThat(result.get(0), is(equalTo(mockValueSetResourceWithCodes)));
+  }
+
+  @Test
+  void getsFhirValueSetsExpansionsForIfSearchCriteriaIsEmpty() {
+    var valueSetsSearchCriteria = ValueSetsSearchCriteria.builder().build();
+    List<String> result =
+        fhirTerminologyService.getFhirValueSetsExpansion(valueSetsSearchCriteria, umlsUser);
+    assertEquals(0, result.size());
+  }
+
+  @Test
+  void getsFhirValueSetsExpansionsForIfSearchCriteriaIsNull() {
+    List<String> result = fhirTerminologyService.getFhirValueSetsExpansion(null, umlsUser);
+    assertEquals(0, result.size());
   }
 }

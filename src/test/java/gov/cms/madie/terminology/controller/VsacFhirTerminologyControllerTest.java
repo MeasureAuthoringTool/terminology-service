@@ -253,10 +253,11 @@ class VsacFhirTerminologyControllerTest {
             .map(bundleEntryComponent -> (ValueSet) bundleEntryComponent.getResource())
             .toList();
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(fhirTerminologyService.getValueSetsExpansion(
+    when(fhirTerminologyService.getFhirValueSetsExpansion(
             any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
-        .thenReturn(valueSet);
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+        .thenReturn(
+            Collections.singletonList(
+                FhirContext.forR4().newJsonParser().encodeResourceToString(valueSet.get(0))));
 
     ResponseEntity<String> response =
         vsacFhirTerminologyController.getFhirValueSetsExpansions(

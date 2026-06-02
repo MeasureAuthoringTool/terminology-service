@@ -12,7 +12,6 @@ import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = "/terminology")
@@ -56,12 +54,10 @@ public class VsacFhirTerminologyController {
     final String username = principal.getName();
     log.info("User [{}] is attempting to fetch FHIR value sets expansions.", username);
     UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
-    List<ValueSet> fhirValueSets =
-        fhirTerminologyService.getValueSetsExpansion(searchCriteria, umlsUser);
-    String serializedValueSets =
-        fhirValueSets.stream().map(this::serializeFhirValueSet).collect(Collectors.joining(", "));
+    List<String> fhirValueSets =
+        fhirTerminologyService.getFhirValueSetsExpansion(searchCriteria, umlsUser);
 
-    return ResponseEntity.ok().body("[" + serializedValueSets + "]");
+    return ResponseEntity.ok().body(fhirValueSets.toString());
   }
 
   @GetMapping(path = "/get-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -106,9 +102,5 @@ public class VsacFhirTerminologyController {
     UmlsUser user = vsacService.verifyUmlsAccess(username);
     return ResponseEntity.ok()
         .body(fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, user.getApiKey()));
-  }
-
-  private String serializeFhirValueSet(ValueSet fhirValueSet) {
-    return fhirContext.newJsonParser().encodeResourceToString(fhirValueSet);
   }
 }
