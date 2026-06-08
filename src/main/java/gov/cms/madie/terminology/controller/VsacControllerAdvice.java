@@ -185,7 +185,7 @@ public class VsacControllerAdvice {
   }
 
   @ExceptionHandler(ValueSetNotFoundException.class)
-  @ResponseStatus(HttpStatus.NOT_FOUND)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
   @ResponseBody
   Map<String, Object> onValueSetNotFoundException(
       ValueSetNotFoundException ex, WebRequest request) {
