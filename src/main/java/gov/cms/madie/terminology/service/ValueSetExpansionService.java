@@ -138,7 +138,7 @@ public class ValueSetExpansionService {
     log.info("Saved {} value set expansions.", madieValueSets.size());
   }
 
-  public void expandValueSets(List<MadieValueSet> madieValueSets) {
+  private void expandValueSets(List<MadieValueSet> madieValueSets) {
     int failedExpansions = 0;
     log.debug("Expanding {} value sets.", madieValueSets.size());
     for (MadieValueSet madieValueSet : madieValueSets) {

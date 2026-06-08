@@ -8,7 +8,6 @@ import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
-import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
@@ -35,7 +34,6 @@ public class FhirTerminologyService {
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   private final CodeSystemRepository codeSystemRepository;
   private final VsacService vsacService;
-  private final ValueSetExpansionService valueSetExpansionService;
 
   @Cacheable("manifest-list")
   public List<ManifestExpansion> getManifests(UmlsUser umlsUser) {
@@ -157,21 +155,6 @@ public class FhirTerminologyService {
             .build();
     newSearch.setValueSetParams(List.of(newParams));
     return newSearch;
-  }
-
-  public List<String> getFhirValueSetsExpansion(
-      ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
-    if (valueSetsSearchCriteria == null
-        || CollectionUtils.isEmpty(valueSetsSearchCriteria.getValueSetParams())) {
-      return Collections.emptyList();
-    }
-
-    List<MadieValueSet> madieValueSets =
-        valueSetsSearchCriteria.getValueSetParams().stream()
-            .map(vs -> MadieValueSet.builder().url(vs.getUrl()).version(vs.getVersion()).build())
-            .toList();
-    valueSetExpansionService.expandValueSets(madieValueSets);
-    return madieValueSets.stream().map(MadieValueSet::getValueSet).toList();
   }
 
   public List<ValueSet> getValueSetsExpansion(
