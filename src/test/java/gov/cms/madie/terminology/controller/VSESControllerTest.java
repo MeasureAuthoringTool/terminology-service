@@ -59,15 +59,16 @@ class VSESControllerTest {
     when(vses.getValueSet(anyString(), any()))
         .thenThrow(new ValueSetNotFoundException("ValueSet not found"));
 
-    assertThrows(ValueSetNotFoundException.class,
+    assertThrows(
+        ValueSetNotFoundException.class,
         () -> controller.expandValueSets("http://example.com/cs", null));
     verify(vses, times(1)).getValueSet(anyString(), any());
   }
 
   @Test
   void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
-    assertThrows(IllegalArgumentException.class,
-        () -> controller.expandValueSets("not-a-url", null));
+    assertThrows(
+        IllegalArgumentException.class, () -> controller.expandValueSets("not-a-url", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
@@ -82,14 +83,14 @@ class VSESControllerTest {
 
   @Test
   void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-    assertThrows(IllegalArgumentException.class,
-        () -> controller.expandValueSets("", null));
+    assertThrows(IllegalArgumentException.class, () -> controller.expandValueSets("", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
   @Test
   void expandValueSetThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(
+        IllegalArgumentException.class,
         () -> controller.expandValueSets("ht!tp://example.com/vs", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
@@ -115,9 +116,12 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemReturnsOkAndBundledJsonWhenCodeSystemsExist() {
-    mockCodeSystemService("http://example.com/cs", 2, List.of(
-        buildCodeSystem("1", "http://example.com/CodeSystem/1"),
-        buildCodeSystem("2", "http://example.com/CodeSystem/2")));
+    mockCodeSystemService(
+        "http://example.com/cs",
+        2,
+        List.of(
+            buildCodeSystem("1", "http://example.com/CodeSystem/1"),
+            buildCodeSystem("2", "http://example.com/CodeSystem/2")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", 2);
 
@@ -128,7 +132,9 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemReturnsOkWithCountWhenCountIsProvided() {
-    mockCodeSystemService("http://example.com/cs", 5,
+    mockCodeSystemService(
+        "http://example.com/cs",
+        5,
         List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", 5);
@@ -139,7 +145,9 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemReturnsOkWithoutCountWhenCountIsNull() {
-    mockCodeSystemService("http://example.com/cs", null,
+    mockCodeSystemService(
+        "http://example.com/cs",
+        null,
         List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", null);
@@ -150,7 +158,9 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemReturnsContentTypeApplicationFhirJson() {
-    mockCodeSystemService("http://example.com/cs", null,
+    mockCodeSystemService(
+        "http://example.com/cs",
+        null,
         List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", null);
@@ -161,7 +171,9 @@ class VSESControllerTest {
   @Test
   void expandCodeSystemReturnsEncodedBundleAsBody() {
     String expectedBundle = "{\"resourceType\":\"Bundle\",\"type\":\"searchset\",\"total\":1}";
-    mockCodeSystemService("http://example.com/cs", null,
+    mockCodeSystemService(
+        "http://example.com/cs",
+        null,
         List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
     when(jsonParser.encodeResourceToString(any())).thenReturn(expectedBundle);
 
@@ -172,7 +184,9 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemAcceptsHttpUrl() {
-    mockCodeSystemService("http://example.com/cs", null,
+    mockCodeSystemService(
+        "http://example.com/cs",
+        null,
         List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", null);
@@ -182,7 +196,9 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemAcceptsHttpsUrlWithAllowedHost() {
-    mockCodeSystemService("https://example.com/cs", null,
+    mockCodeSystemService(
+        "https://example.com/cs",
+        null,
         List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("https://example.com/cs", null);
@@ -192,45 +208,45 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(
+        IllegalArgumentException.class,
         () -> controller.retrieveCodeSystems("https://example.invalid/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
   void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-    assertThrows(IllegalArgumentException.class,
-        () -> controller.retrieveCodeSystems("", null));
+    assertThrows(IllegalArgumentException.class, () -> controller.retrieveCodeSystems("", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
   void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlMissingProtocol() {
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(
+        IllegalArgumentException.class,
         () -> controller.retrieveCodeSystems("example.com/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
   void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasDisallowedHost() {
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(
+        IllegalArgumentException.class,
         () -> controller.retrieveCodeSystems("https://example.xyz/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
   void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(
+        IllegalArgumentException.class,
         () -> controller.retrieveCodeSystems("ht!tp://example.com/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   private void mockValueSetService(String url, String version, String vsJson) {
-    MadieValueSet madieValueSet = MadieValueSet.builder()
-        .url(url)
-        .version(version)
-        .valueSet(vsJson)
-        .build();
+    MadieValueSet madieValueSet =
+        MadieValueSet.builder().url(url).version(version).valueSet(vsJson).build();
 
     when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
     when(fhirContext.newJsonParser()).thenReturn(jsonParser);
