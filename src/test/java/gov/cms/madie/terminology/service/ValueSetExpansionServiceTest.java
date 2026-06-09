@@ -915,7 +915,7 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void returnsValueSetWhenFound() {
-    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(madieValueSet));
+    when(vseRepo.findByUrlAndVersionOrNull(VS_URL, VS_VERSION)).thenReturn(Optional.of(madieValueSet));
 
     MadieValueSet result = valueSetExpansionService.getValueSet(VS_URL, VS_VERSION);
 
@@ -940,14 +940,14 @@ class ValueSetExpansionServiceTest {
   @Test
   void returnsValueSetWhenVersionIsNull() {
     MadieValueSet vsNoVersion = MadieValueSet.builder().url(VS_URL).version(null).build();
-    when(vseRepo.findByUrlAndVersion(VS_URL, null)).thenReturn(Optional.of(vsNoVersion));
+    when(vseRepo.findByUrlAndVersionOrNull(VS_URL, null)).thenReturn(Optional.of(vsNoVersion));
 
     MadieValueSet result = valueSetExpansionService.getValueSet(VS_URL, null);
 
     assertNotNull(result);
     assertNull(result.getVersion());
     assertThat(result.getUrl(), is(equalTo(VS_URL)));
-    verify(vseRepo, times(1)).findByUrlAndVersion(VS_URL, null);
+    verify(vseRepo, times(1)).findByUrlAndVersionOrNull(VS_URL, null);
   }
 
   @Test
