@@ -920,12 +920,12 @@ class ValueSetExpansionServiceTest {
     MadieValueSet result = valueSetExpansionService.getValueSet(VS_URL, VS_VERSION);
 
     assertThat(result, is(equalTo(madieValueSet)));
-    verify(vseRepo, times(1)).findByUrlAndVersion(VS_URL, VS_VERSION);
+    verify(vseRepo, times(1)).findByUrlAndVersionOrNull(VS_URL, VS_VERSION);
   }
 
   @Test
   void throwsValueSetNotFoundExceptionWhenValueSetMissing() {
-    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+    when(vseRepo.findByUrlAndVersionOrNull(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
 
     ValueSetNotFoundException exception =
         assertThrows(
@@ -934,7 +934,7 @@ class ValueSetExpansionServiceTest {
 
     assertTrue(exception.getMessage().contains(VS_URL));
     assertTrue(exception.getMessage().contains(VS_VERSION));
-    verify(vseRepo, times(1)).findByUrlAndVersion(VS_URL, VS_VERSION);
+    verify(vseRepo, times(1)).findByUrlAndVersionOrNull(VS_URL, VS_VERSION);
   }
 
   @Test
