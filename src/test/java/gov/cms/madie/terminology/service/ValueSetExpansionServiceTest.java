@@ -915,7 +915,8 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void returnsValueSetWhenFound() {
-    when(vseRepo.findByUrlAndVersionOrNull(VS_URL, VS_VERSION)).thenReturn(Optional.of(madieValueSet));
+    when(vseRepo.findByUrlAndVersionOrNull(VS_URL, VS_VERSION))
+        .thenReturn(Optional.of(madieValueSet));
 
     MadieValueSet result = valueSetExpansionService.getValueSet(VS_URL, VS_VERSION);
 

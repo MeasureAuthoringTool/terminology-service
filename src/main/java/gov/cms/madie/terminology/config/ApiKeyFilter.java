@@ -67,7 +67,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         return;
       }
 
-      String username = parts[0];
       String password = parts[1];
 
       // Validate against your expected API key (you can use username or password)
