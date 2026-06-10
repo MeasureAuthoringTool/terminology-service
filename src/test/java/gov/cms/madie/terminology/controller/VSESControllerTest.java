@@ -117,8 +117,6 @@ class VSESControllerTest {
   @Test
   void expandCodeSystemReturnsOkAndBundledJsonWhenCodeSystemsExist() {
     mockCodeSystemService(
-        "http://example.com/cs",
-        2,
         List.of(
             buildCodeSystem("1", "http://example.com/CodeSystem/1"),
             buildCodeSystem("2", "http://example.com/CodeSystem/2")));
@@ -132,10 +130,7 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemReturnsOkWithCountWhenCountIsProvided() {
-    mockCodeSystemService(
-        "http://example.com/cs",
-        5,
-        List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", 5);
 
@@ -145,10 +140,7 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemReturnsOkWithoutCountWhenCountIsNull() {
-    mockCodeSystemService(
-        "http://example.com/cs",
-        null,
-        List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", null);
 
@@ -158,10 +150,7 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemReturnsContentTypeApplicationFhirJson() {
-    mockCodeSystemService(
-        "http://example.com/cs",
-        null,
-        List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", null);
 
@@ -171,10 +160,7 @@ class VSESControllerTest {
   @Test
   void expandCodeSystemReturnsEncodedBundleAsBody() {
     String expectedBundle = "{\"resourceType\":\"Bundle\",\"type\":\"searchset\",\"total\":1}";
-    mockCodeSystemService(
-        "http://example.com/cs",
-        null,
-        List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
     when(jsonParser.encodeResourceToString(any())).thenReturn(expectedBundle);
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", null);
@@ -184,10 +170,7 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemAcceptsHttpUrl() {
-    mockCodeSystemService(
-        "http://example.com/cs",
-        null,
-        List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("http://example.com/cs", null);
 
@@ -196,10 +179,7 @@ class VSESControllerTest {
 
   @Test
   void expandCodeSystemAcceptsHttpsUrlWithAllowedHost() {
-    mockCodeSystemService(
-        "https://example.com/cs",
-        null,
-        List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
 
     var response = controller.retrieveCodeSystems("https://example.com/cs", null);
 
@@ -253,7 +233,7 @@ class VSESControllerTest {
     when(jsonParser.encodeResourceToString(any())).thenReturn(vsJson);
   }
 
-  private void mockCodeSystemService(String url, Integer count, List<CodeSystem> codeSystems) {
+  private void mockCodeSystemService(List<CodeSystem> codeSystems) {
     when(vses.getCodeSystem(anyString(), any())).thenReturn(codeSystems);
     when(fhirContext.newJsonParser()).thenReturn(jsonParser);
     when(jsonParser.encodeResourceToString(any())).thenReturn("{\"resourceType\":\"Bundle\"}");

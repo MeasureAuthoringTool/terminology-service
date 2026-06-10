@@ -56,7 +56,9 @@ class ApiKeyFilterTest {
           }
 
           @Override
-          public void setWriteListener(WriteListener writeListener) {}
+          public void setWriteListener(WriteListener writeListener) {
+            // No-op for testing
+          }
 
           @Override
           public void write(int b) throws IOException {
@@ -94,7 +96,9 @@ class ApiKeyFilterTest {
           }
 
           @Override
-          public void setWriteListener(WriteListener writeListener) {}
+          public void setWriteListener(WriteListener writeListener) {
+            // No-op for testing
+          }
 
           @Override
           public void write(int b) throws IOException {
@@ -134,7 +138,9 @@ class ApiKeyFilterTest {
           }
 
           @Override
-          public void setWriteListener(WriteListener writeListener) {}
+          public void setWriteListener(WriteListener writeListener) {
+            // No-op for testing
+          }
 
           @Override
           public void write(int b) throws IOException {
