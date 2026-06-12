@@ -17,9 +17,6 @@ public interface ValueSetExpansionRepository extends MongoRepository<MadieValueS
       if (valueSets.isEmpty()) {
         return Optional.empty();
       }
-      if (valueSets.size() == 1) {
-        return Optional.of(valueSets.get(0));
-      }
       if (valueSets.get(0).getVersion() == null) {
         return Optional.of(valueSets.get(0));
       }
