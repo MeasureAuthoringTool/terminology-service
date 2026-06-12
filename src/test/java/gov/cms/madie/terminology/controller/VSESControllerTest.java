@@ -1,5 +1,7 @@
 package gov.cms.madie.terminology.controller;
 
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.JsonParser;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
@@ -11,11 +13,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +27,8 @@ import static org.mockito.Mockito.*;
 class VSESControllerTest {
 
   @Mock private ValueSetExpansionService vses;
+  @Mock private FhirContext fhirContext;
+  @Mock private JsonParser jsonParser;
   @InjectMocks private VSESController controller;
 
   @BeforeEach
@@ -36,34 +38,19 @@ class VSESControllerTest {
 
   @Test
   void expandValueSetReturnsOkAndBodyWhenValueSetExists() {
-    String url = "http://example.com/vs";
-    String version = "20240101";
-    String vsJson = "{\"resourceType\":\"ValueSet\",\"id\":\"vs1\"}";
-    MadieValueSet madieValueSet =
-        MadieValueSet.builder().id("id1").url(url).version(version).valueSet(vsJson).build();
-
-    when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
-
-    ResponseEntity<String> response = controller.expandValueSets(url, version);
+    mockValueSetService("http://example.com/vs", "20240101", "{\"resourceType\":\"ValueSet\"}");
+    var response = controller.expandValueSets("http://example.com/vs", "20240101");
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(vsJson, response.getBody());
     verify(vses, times(1)).getValueSet(anyString(), any());
   }
 
   @Test
   void expandValueSetReturnsOkWhenVersionIsNull() {
-    String url = "http://example.com/vs";
-    String vsJson = "{\"resourceType\":\"ValueSet\",\"id\":\"vs2\"}";
-    MadieValueSet madieValueSet =
-        MadieValueSet.builder().id("id2").url(url).version(null).valueSet(vsJson).build();
-
-    when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
-
-    ResponseEntity<String> response = controller.expandValueSets(url, null);
+    mockValueSetService("http://example.com/vs", null, "{\"resourceType\":\"ValueSet\"}");
+    var response = controller.expandValueSets("http://example.com/vs", null);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(vsJson, response.getBody());
     verify(vses, times(1)).getValueSet(anyString(), any());
   }
 
@@ -79,57 +66,19 @@ class VSESControllerTest {
   }
 
   @Test
-  void expandCodeSystemReturnsOkAndListWhenCodeSystemsExistWithCount() {
-    String url = "http://example.com/cs";
-    Integer count = 2;
-    CodeSystem cs1 = mock(CodeSystem.class);
-    CodeSystem cs2 = mock(CodeSystem.class);
-    List<CodeSystem> csList = List.of(cs1, cs2);
-
-    when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
-
-    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystems(url, count);
-
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(csList, response.getBody());
-    verify(vses, times(1)).getCodeSystem(anyString(), any());
-  }
-
-  @Test
-  void expandCodeSystemReturnsEmptyListWhenNoCodeSystemsFound() {
-    String url = "http://example.com/cs-empty";
-
-    when(vses.getCodeSystem(anyString(), any())).thenReturn(Collections.emptyList());
-
-    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystems(url, null);
-
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertTrue(response.getBody().isEmpty());
-    verify(vses, times(1)).getCodeSystem(anyString(), any());
-  }
-
-  @Test
   void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
-    String invalidUrl = "not-a-url";
-
     assertThrows(
-        IllegalArgumentException.class, () -> controller.expandValueSets(invalidUrl, null));
+        IllegalArgumentException.class, () -> controller.expandValueSets("not-a-url", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
   @Test
   void expandValueSetAcceptsHttpsUrl() {
-    String httpsUrl = "https://example.com/vs";
-    String version = "1.0";
-    String vsJson = "{\"resourceType\":\"ValueSet\"}";
-    MadieValueSet madieValueSet = MadieValueSet.builder().valueSet(vsJson).build();
-
-    when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
-
-    ResponseEntity<String> response = controller.expandValueSets(httpsUrl, version);
+    mockValueSetService("https://example.com/vs", "1.0", "{\"resourceType\":\"ValueSet\"}");
+    var response = controller.expandValueSets("https://example.com/vs", "1.0");
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    verify(vses, times(1)).getValueSet(httpsUrl, version);
+    verify(vses, times(1)).getValueSet("https://example.com/vs", "1.0");
   }
 
   @Test
@@ -139,26 +88,110 @@ class VSESControllerTest {
   }
 
   @Test
-  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
-    String invalidUrl = "https://example.invalid/cs";
-
+  void expandValueSetThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
     assertThrows(
-        IllegalArgumentException.class, () -> controller.retrieveCodeSystems(invalidUrl, null));
-    verify(vses, never()).getCodeSystem(anyString(), any());
+        IllegalArgumentException.class,
+        () -> controller.expandValueSets("ht!tp://example.com/vs", null));
+    verify(vses, never()).getValueSet(anyString(), any());
   }
 
   @Test
-  void expandCodeSystemAcceptsHttpsUrl() {
-    String httpsUrl = "https://example.com/cs";
-    Integer count = 5;
-    List<CodeSystem> csList = List.of(mock(CodeSystem.class));
+  void expandValueSetReturnsContentTypeApplicationFhirJson() {
+    mockValueSetService("http://example.com/vs", null, "{\"resourceType\":\"ValueSet\"}");
+    var response = controller.expandValueSets("http://example.com/vs", null);
 
-    when(vses.getCodeSystem(anyString(), any())).thenReturn(csList);
+    assertEquals("application/fhir+json", response.getHeaders().getContentType().toString());
+  }
 
-    ResponseEntity<List<CodeSystem>> response = controller.retrieveCodeSystems(httpsUrl, count);
+  @Test
+  void expandValueSetReturnsBundledJson() {
+    String expectedBundle = "{\"resourceType\":\"Bundle\"}";
+    mockValueSetService("http://example.com/vs", null, "{\"resourceType\":\"ValueSet\"}");
+    when(jsonParser.encodeResourceToString(any())).thenReturn(expectedBundle);
+
+    var response = controller.expandValueSets("http://example.com/vs", null);
+
+    assertEquals(expectedBundle, response.getBody());
+  }
+
+  @Test
+  void expandCodeSystemReturnsOkAndBundledJsonWhenCodeSystemsExist() {
+    mockCodeSystemService(
+        List.of(
+            buildCodeSystem("1", "http://example.com/CodeSystem/1"),
+            buildCodeSystem("2", "http://example.com/CodeSystem/2")));
+
+    var response = controller.retrieveCodeSystems("http://example.com/cs", 2);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
-    verify(vses, times(1)).getCodeSystem(httpsUrl, count);
+    assertNotNull(response.getBody());
+    verify(vses, times(1)).getCodeSystem("http://example.com/cs", 2);
+  }
+
+  @Test
+  void expandCodeSystemReturnsOkWithCountWhenCountIsProvided() {
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+
+    var response = controller.retrieveCodeSystems("http://example.com/cs", 5);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    verify(vses, times(1)).getCodeSystem("http://example.com/cs", 5);
+  }
+
+  @Test
+  void expandCodeSystemReturnsOkWithoutCountWhenCountIsNull() {
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+
+    var response = controller.retrieveCodeSystems("http://example.com/cs", null);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    verify(vses, times(1)).getCodeSystem("http://example.com/cs", null);
+  }
+
+  @Test
+  void expandCodeSystemReturnsContentTypeApplicationFhirJson() {
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+
+    var response = controller.retrieveCodeSystems("http://example.com/cs", null);
+
+    assertEquals("application/fhir+json", response.getHeaders().getContentType().toString());
+  }
+
+  @Test
+  void expandCodeSystemReturnsEncodedBundleAsBody() {
+    String expectedBundle = "{\"resourceType\":\"Bundle\",\"type\":\"searchset\",\"total\":1}";
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+    when(jsonParser.encodeResourceToString(any())).thenReturn(expectedBundle);
+
+    var response = controller.retrieveCodeSystems("http://example.com/cs", null);
+
+    assertEquals(expectedBundle, response.getBody());
+  }
+
+  @Test
+  void expandCodeSystemAcceptsHttpUrl() {
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+
+    var response = controller.retrieveCodeSystems("http://example.com/cs", null);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+  }
+
+  @Test
+  void expandCodeSystemAcceptsHttpsUrlWithAllowedHost() {
+    mockCodeSystemService(List.of(buildCodeSystem("1", "http://example.com/CodeSystem/1")));
+
+    var response = controller.retrieveCodeSystems("https://example.com/cs", null);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+  }
+
+  @Test
+  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> controller.retrieveCodeSystems("https://example.invalid/cs", null));
+    verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
@@ -168,20 +201,52 @@ class VSESControllerTest {
   }
 
   @Test
-  void expandValueSetThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
-    String malformedUrl = "ht!tp://example.com/vs";
-
+  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlMissingProtocol() {
     assertThrows(
-        IllegalArgumentException.class, () -> controller.expandValueSets(malformedUrl, null));
-    verify(vses, never()).getValueSet(anyString(), any());
+        IllegalArgumentException.class,
+        () -> controller.retrieveCodeSystems("example.com/cs", null));
+    verify(vses, never()).getCodeSystem(anyString(), any());
+  }
+
+  @Test
+  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasDisallowedHost() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> controller.retrieveCodeSystems("https://example.xyz/cs", null));
+    verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
   void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
-    String malformedUrl = "ht!tp://example.com/cs";
-
     assertThrows(
-        IllegalArgumentException.class, () -> controller.retrieveCodeSystems(malformedUrl, null));
+        IllegalArgumentException.class,
+        () -> controller.retrieveCodeSystems("ht!tp://example.com/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
+  }
+
+  private void mockValueSetService(String url, String version, String vsJson) {
+    MadieValueSet madieValueSet =
+        MadieValueSet.builder().url(url).version(version).valueSet(vsJson).build();
+
+    when(vses.getValueSet(anyString(), any())).thenReturn(madieValueSet);
+    when(fhirContext.newJsonParser()).thenReturn(jsonParser);
+    when(jsonParser.encodeResourceToString(any())).thenReturn(vsJson);
+  }
+
+  private void mockCodeSystemService(List<CodeSystem> codeSystems) {
+    when(vses.getCodeSystem(anyString(), any())).thenReturn(codeSystems);
+    when(fhirContext.newJsonParser()).thenReturn(jsonParser);
+    when(jsonParser.encodeResourceToString(any())).thenReturn("{\"resourceType\":\"Bundle\"}");
+  }
+
+  private CodeSystem buildCodeSystem(String id, String fullUrl) {
+    return CodeSystem.builder()
+        .id(id)
+        .fullUrl(fullUrl)
+        .name("codeSys" + id)
+        .oid("2.16.840.1.1")
+        .versionId("1.0")
+        .version(CodeSystem.Version.builder().fhirVersion("4.0.1").build())
+        .build();
   }
 }

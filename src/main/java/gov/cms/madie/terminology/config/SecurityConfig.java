@@ -16,7 +16,9 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-  private static final String[] AUTH_WHITELIST = {"/actuator/**"};
+  private static final String[] AUTH_WHITELIST = {
+    "/actuator/**", "/terminology/ValueSet", "/terminology/CodeSystem"
+  };
 
   @Bean
   protected SecurityFilterChain filterChain(

@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.repositories;
 
 import gov.cms.madie.terminology.models.MadieValueSet;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;
@@ -9,4 +10,14 @@ public interface ValueSetExpansionRepository extends MongoRepository<MadieValueS
   MadieValueSet findByUrlAndVersionIsNull(String url);
 
   Optional<MadieValueSet> findByUrlAndVersion(String url, String version);
+
+  default Optional<MadieValueSet> findByUrlAndVersionOrNull(String url, String version) {
+    if (version == null) {
+      return findFirstByUrl(
+          url, Sort.by(Sort.Order.by("version").with(Sort.Direction.DESC).nullsFirst()));
+    }
+    return findByUrlAndVersion(url, version);
+  }
+
+  Optional<MadieValueSet> findFirstByUrl(String url, Sort sort);
 }

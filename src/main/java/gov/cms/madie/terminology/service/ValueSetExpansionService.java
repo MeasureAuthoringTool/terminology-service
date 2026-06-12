@@ -300,7 +300,7 @@ public class ValueSetExpansionService {
   public MadieValueSet getValueSet(String url, String version) {
     MadieValueSet valueSet =
         vseRepo
-            .findByUrlAndVersion(url, version)
+            .findByUrlAndVersionOrNull(url, version)
             .orElseThrow(
                 () ->
                     new ValueSetNotFoundException(
