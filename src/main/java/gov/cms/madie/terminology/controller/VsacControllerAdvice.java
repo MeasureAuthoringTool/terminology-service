@@ -172,7 +172,7 @@ public class VsacControllerAdvice {
   }
 
   @ExceptionHandler(CodeSystemNotFoundException.class)
-  @ResponseStatus(HttpStatus.NOT_FOUND)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
   @ResponseBody
   Map<String, Object> onCodeSystemNotFoundException(
       CodeSystemNotFoundException ex, WebRequest request) {

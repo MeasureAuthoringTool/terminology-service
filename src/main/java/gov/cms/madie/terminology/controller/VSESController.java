@@ -1,6 +1,8 @@
 package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
+import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
 import gov.cms.madie.terminology.util.FhirBundleUtil;
@@ -36,7 +38,7 @@ public class VSESController {
 
     // Validate URL format
     if (!isValidFhirTerminologyUrl(url)) {
-      throw new IllegalArgumentException("Invalid URL format");
+      throw new ValueSetNotFoundException("Invalid URL format");
     }
 
     String result = vses.getValueSet(url, version).getValueSet();
@@ -56,7 +58,7 @@ public class VSESController {
 
     // Validate URL format
     if (!isValidFhirTerminologyUrl(url)) {
-      throw new IllegalArgumentException("Invalid URL format");
+      throw new CodeSystemNotFoundException("Invalid URL format");
     }
 
     List<CodeSystem> codeSystems = vses.getCodeSystem(url, count);
