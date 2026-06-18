@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
@@ -984,14 +985,14 @@ class ValueSetExpansionServiceTest {
   }
 
   @Test
-  void getCodeSystemThrowsResourceNotFoundExceptionWithCorrectMessage() {
+  void getCodeSystemThrowsCodeSystemNotFoundExceptionWithCorrectMessage() {
     String url = "http://example.com/CodeSystem/missing";
 
     when(csRepo.findAllByFullUrl(eq(url), any(Limit.class))).thenReturn(Collections.emptyList());
 
-    ResourceNotFoundException exception =
+    CodeSystemNotFoundException exception =
         assertThrows(
-            ResourceNotFoundException.class,
+            CodeSystemNotFoundException.class,
             () -> valueSetExpansionService.getCodeSystem(url, null));
 
     assertTrue(exception.getMessage().contains(url));

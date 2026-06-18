@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.JsonParser;
+import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
@@ -66,9 +67,9 @@ class VSESControllerTest {
   }
 
   @Test
-  void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
+  void expandValueSetThrowsValueSetNotFoundExceptionWhenUrlIsInvalid() {
     assertThrows(
-        IllegalArgumentException.class, () -> controller.expandValueSets("not-a-url", null));
+        ValueSetNotFoundException.class, () -> controller.expandValueSets("not-a-url", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
@@ -82,15 +83,15 @@ class VSESControllerTest {
   }
 
   @Test
-  void expandValueSetThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-    assertThrows(IllegalArgumentException.class, () -> controller.expandValueSets("", null));
+  void expandValueSetThrowsValueSetNotFoundExceptionWhenUrlIsEmpty() {
+    assertThrows(ValueSetNotFoundException.class, () -> controller.expandValueSets("", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
 
   @Test
-  void expandValueSetThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
+  void expandValueSetThrowsValueSetNotFoundExceptionWhenUrlHasInvalidFormat() {
     assertThrows(
-        IllegalArgumentException.class,
+        ValueSetNotFoundException.class,
         () -> controller.expandValueSets("ht!tp://example.com/vs", null));
     verify(vses, never()).getValueSet(anyString(), any());
   }
@@ -187,39 +188,39 @@ class VSESControllerTest {
   }
 
   @Test
-  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsInvalid() {
+  void expandCodeSystemThrowsCodeSystemNotFoundExceptionWhenUrlIsInvalid() {
     assertThrows(
-        IllegalArgumentException.class,
+        CodeSystemNotFoundException.class,
         () -> controller.retrieveCodeSystems("https://example.invalid/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
-  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlIsEmpty() {
-    assertThrows(IllegalArgumentException.class, () -> controller.retrieveCodeSystems("", null));
+  void expandCodeSystemThrowsCodeSystemNotFoundExceptionWhenUrlIsEmpty() {
+    assertThrows(CodeSystemNotFoundException.class, () -> controller.retrieveCodeSystems("", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
-  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlMissingProtocol() {
+  void expandCodeSystemThrowsCodeSystemNotFoundExceptionWhenUrlMissingProtocol() {
     assertThrows(
-        IllegalArgumentException.class,
+        CodeSystemNotFoundException.class,
         () -> controller.retrieveCodeSystems("example.com/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
-  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasDisallowedHost() {
+  void expandCodeSystemThrowsCodeSystemNotFoundExceptionWhenUrlHasDisallowedHost() {
     assertThrows(
-        IllegalArgumentException.class,
+        CodeSystemNotFoundException.class,
         () -> controller.retrieveCodeSystems("https://example.xyz/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
 
   @Test
-  void expandCodeSystemThrowsIllegalArgumentExceptionWhenUrlHasInvalidFormat() {
+  void expandCodeSystemThrowsCodeSystemNotFoundExceptionWhenUrlHasInvalidFormat() {
     assertThrows(
-        IllegalArgumentException.class,
+        CodeSystemNotFoundException.class,
         () -> controller.retrieveCodeSystems("ht!tp://example.com/cs", null));
     verify(vses, never()).getCodeSystem(anyString(), any());
   }
