@@ -231,10 +231,10 @@ class AdminControllerMvcTest {
                     .with(csrf())
                     .content(objectMapper.writeValueAsString(codeSystem))
                     .contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(status().isNotFound())
+            .andExpect(status().isNoContent())
             .andReturn();
 
-    assertThat(result.getResponse().getStatus(), is(equalTo(404)));
+    assertThat(result.getResponse().getStatus(), is(equalTo(204)));
   }
 
   @Test
@@ -279,10 +279,10 @@ class AdminControllerMvcTest {
                 MockMvcRequestBuilders.delete("/terminology/admin/code-system/nonexistent")
                     .with(user(TEST_USR).roles("MADIE-ADMIN"))
                     .with(csrf()))
-            .andExpect(status().isNotFound())
+            .andExpect(status().isNoContent())
             .andReturn();
 
-    assertThat(result.getResponse().getStatus(), is(equalTo(404)));
+    assertThat(result.getResponse().getStatus(), is(equalTo(204)));
     verify(fhirTerminologyService, times(1)).deleteCodeSystem("nonexistent");
   }
 }
