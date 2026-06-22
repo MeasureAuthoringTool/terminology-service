@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.config.migrations;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
@@ -132,7 +133,7 @@ public class LoadCodeSystemMappingData {
             "/code-system-entry.json");
         return Arrays.asList(entries);
       }
-    } catch (IOException e) {
+    } catch (JacksonException e) {
       log.error("Error deserializing CodeSystemEntry from file: {}", "/code-system-entry.json", e);
     }
     return Collections.emptyList();

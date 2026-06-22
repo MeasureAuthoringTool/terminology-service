@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.14</version>
+    <version>4.0.6</version>
     <relativePath></relativePath>
     <!-- lookup parent from repository -->
   </parent>
@@ -15,7 +15,7 @@
   <description>Terminology Service for MADiE</description>
   <properties>
     <hapifhir.version>8.10.0</hapifhir.version>
-    <java.version>16</java.version>
+    <java.version>17</java.version>
     <jxbmavenplugin.version>3.2.0</jxbmavenplugin.version>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
@@ -30,7 +30,7 @@
     <mvn.checkstyle.version>3.1.2</mvn.checkstyle.version>
     <mvnreports.version>3.2.2</mvnreports.version>
     <mvnsite.version>3.11.0</mvnsite.version>
-    <okta.springboot.starter.version>3.0.7</okta.springboot.starter.version>
+    <okta.springboot.starter.version>3.1.0</okta.springboot.starter.version>
     <puppycrawl.checkstyle.version>10.1</puppycrawl.checkstyle.version>
   </properties>
 
@@ -49,7 +49,7 @@
   <dependencies>
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
       <exclusions>
         <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
@@ -72,6 +72,18 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security-oauth2-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-restclient</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -108,6 +120,10 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webflux</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webclient</artifactId>
+    </dependency>
 
     <!-- https://mvnrepository.com/artifact/ca.uhn.hapi.fhir/hapi-fhir-structures-r4 -->
     <dependency>
@@ -125,13 +141,13 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-java-models</artifactId>
-      <version>0.8.9-SNAPSHOT</version>
+      <version>0.10.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-translator-commons</artifactId>
-      <version>3.1.1</version>
+      <version>3.5.0</version>
       <exclusions>
         <exclusion>
           <groupId>org.jetbrains.kotlinx</groupId>
@@ -153,6 +169,11 @@
     <dependency>
       <groupId>io.mongock</groupId>
       <artifactId>mongodb-springdata-v4-driver</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-webmvc-test</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>

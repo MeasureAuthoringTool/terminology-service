@@ -48,7 +48,9 @@ public class CodeSystem {
   }
 
   @Data
+  @AllArgsConstructor
   @Builder(toBuilder = true)
+  @NoArgsConstructor
   public static class Version {
     @NotBlank private String fhirVersion;
     private String vsacVersion;

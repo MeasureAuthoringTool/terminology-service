@@ -6,7 +6,7 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.web.servlet.error.ErrorAttributes;
+import org.springframework.boot.webmvc.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -19,7 +19,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class StubErrorAttributes implements org.springframework.boot.web.servlet.error.ErrorAttributes {
+class StubErrorAttributes implements org.springframework.boot.webmvc.error.ErrorAttributes {
   @Override
   public Map<String, Object> getErrorAttributes(
       WebRequest webRequest, org.springframework.boot.web.error.ErrorAttributeOptions options) {

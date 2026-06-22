@@ -168,9 +168,9 @@ public class FhirTerminologyServiceWebClient {
         .accept(new MediaType("application", "fhir+json", Charset.defaultCharset()))
         .exchangeToMono(
             clientResponse -> {
-              if (clientResponse.statusCode().equals(HttpStatus.OK)) {
+              if (clientResponse.statusCode().isSameCodeAs(HttpStatus.OK)) {
                 return clientResponse.bodyToMono(String.class);
-              } else if (clientResponse.statusCode().equals(HttpStatus.NOT_FOUND)) {
+              } else if (clientResponse.statusCode().isSameCodeAs(HttpStatus.NOT_FOUND)) {
                 log.debug("Received NOT_FOUND response while retrieving {}", resourceType);
                 return clientResponse
                     .createException()
@@ -214,7 +214,7 @@ public class FhirTerminologyServiceWebClient {
             .accept(new MediaType("application", "fhir+json", Charset.defaultCharset()))
             .exchangeToMono(
                 clientResponse -> {
-                  if (clientResponse.statusCode().equals(HttpStatus.OK)) {
+                  if (clientResponse.statusCode().isSameCodeAs(HttpStatus.OK)) {
                     return clientResponse.bodyToMono(String.class);
                   } else {
                     return clientResponse

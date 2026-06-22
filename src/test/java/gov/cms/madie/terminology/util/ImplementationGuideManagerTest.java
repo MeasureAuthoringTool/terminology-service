@@ -408,7 +408,7 @@ class ImplementationGuideManagerTest {
 
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
       loader
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
@@ -418,7 +418,7 @@ class ImplementationGuideManagerTest {
       List<MadieValueSet> result = manager.getValueSetDependencies("hl7.fhir.us.core", "6.1.0");
 
       assertFalse(result.isEmpty());
-      loader.verify(ImplementationGuideLoader::load, times(1));
+      loader.verify(() -> ImplementationGuideLoader.load(anyString()), times(1));
     }
   }
 
@@ -440,7 +440,7 @@ class ImplementationGuideManagerTest {
 
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
       loader
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
@@ -478,7 +478,7 @@ class ImplementationGuideManagerTest {
 
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
       loader
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
@@ -504,7 +504,7 @@ class ImplementationGuideManagerTest {
 
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
       loader
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
@@ -548,7 +548,7 @@ class ImplementationGuideManagerTest {
 
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig1, ig2));
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig1, ig2));
       loader
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig1)))
           .thenReturn(pm1);
@@ -567,7 +567,9 @@ class ImplementationGuideManagerTest {
   void getValueSetDependenciesReturnsEmptyListWhenNoIgsLoaded() {
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(Collections.emptyList());
+      loader
+          .when(() -> ImplementationGuideLoader.load(anyString()))
+          .thenReturn(Collections.emptyList());
 
       List<MadieValueSet> result = manager.getValueSetDependencies();
 
@@ -626,7 +628,7 @@ class ImplementationGuideManagerTest {
 
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
       loader
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
@@ -653,7 +655,7 @@ class ImplementationGuideManagerTest {
         mockStatic(ImplementationGuideLoader.class)) {
       // load() succeeds but buildPackageManager throws, leaving state in ERROR-ish state
       ImplementationGuide ig = buildTestIg("failing-ig", "1.0.0");
-      loader.when(ImplementationGuideLoader::load).thenReturn(List.of(ig));
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
       loader
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenThrow(new IOException("network failure"));

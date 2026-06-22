@@ -48,7 +48,7 @@ public class ImplementationGuideManager {
     log.info("Implementation guide manager::loading implementation guide packages.");
     Instant now = Instant.now();
     igLoadingState = IgLoadingState.LOADING;
-    List<ImplementationGuide> madieIgs = ImplementationGuideLoader.load();
+    List<ImplementationGuide> madieIgs = ImplementationGuideLoader.load("classpath*:igs/*.json");
     for (ImplementationGuide madieIg : madieIgs) {
       collectValueSetDependencies(madieIg);
     }
