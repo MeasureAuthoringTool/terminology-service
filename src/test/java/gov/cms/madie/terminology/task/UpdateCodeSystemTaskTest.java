@@ -23,7 +23,7 @@ public class UpdateCodeSystemTaskTest {
   @BeforeEach
   void setup() {
     // set apiKey manually since @Value won't inject in unit test
-    ReflectionTestUtils.setField(updateCodeSystemTask, "apiKey", "dummy-value");
+    ReflectionTestUtils.setField(updateCodeSystemTask, "apiKey", value);
   }
 
   @Test
