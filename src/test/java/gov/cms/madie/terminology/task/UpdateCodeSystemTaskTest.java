@@ -3,11 +3,13 @@ package gov.cms.madie.terminology.task;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.*;
 
@@ -18,11 +20,70 @@ public class UpdateCodeSystemTaskTest {
   @Mock private FhirTerminologyService fhirTerminologyService;
   @InjectMocks UpdateCodeSystemTask updateCodeSystemTask;
 
-  @Test
-  void updateCodeSystemTaskTest() {
-    UmlsUser umlsUser = new UmlsUser();
-    List<CodeSystem> codeSystems = Arrays.asList(new CodeSystem(), new CodeSystem());
-    updateCodeSystemTask.updateCodeSystems();
-    verify(fhirTerminologyService).retrieveAllCodeSystems(umlsUser);
+  @BeforeEach
+  void setup() {
+    // set apiKey manually since @Value won't inject in unit test
+    ReflectionTestUtils.setField(updateCodeSystemTask, "apiKey", "test-key");
   }
+
+  @Test
+  void updateCodeSystems_runsSuccessfully() {
+    when(fhirTerminologyService.retrieveAllCodeSystems(any(UmlsUser.class)))
+            .thenReturn(List.of(new CodeSystem()));
+
+    updateCodeSystemTask.updateCodeSystems();
+
+    verify(fhirTerminologyService, times(1))
+            .retrieveAllCodeSystems(any(UmlsUser.class));
+  }
+
+  @Test
+  void updateCodeSystems_skipsWhenAlreadyRunning() {
+    // running = true
+    when(fhirTerminologyService.retrieveAllCodeSystems(any()))
+            .thenAnswer(inv -> {
+              // still running
+              updateCodeSystemTask.updateCodeSystems();
+              return List.of();
+            });
+
+    updateCodeSystemTask.updateCodeSystems();
+
+    verify(fhirTerminologyService, times(1))
+            .retrieveAllCodeSystems(any());
+  }
+
+  @Test
+  void runJobAsync_handlesExceptionAndResetsRunningFlag() {
+    when(fhirTerminologyService.retrieveAllCodeSystems(any()))
+            .thenThrow(new RuntimeException("failure"));
+
+    updateCodeSystemTask.updateCodeSystems();
+
+    updateCodeSystemTask.updateCodeSystems();
+
+    verify(fhirTerminologyService, times(2))
+            .retrieveAllCodeSystems(any());
+  }
+
+  @Test
+  void runJobAsync_callsServiceWithApiKeySet() {
+    updateCodeSystemTask.updateCodeSystems();
+
+    verify(fhirTerminologyService).retrieveAllCodeSystems(argThat(user ->
+            user != null && "test-key".equals(user.getApiKey())
+    ));
+  }
+
+  @Test
+  void isRunning_returnsCorrectState() {
+    // initially false
+    assert !updateCodeSystemTask.isRunning();
+
+    // trigger task
+    updateCodeSystemTask.updateCodeSystems();
+
+    assert !updateCodeSystemTask.isRunning();
+  }
+
 }

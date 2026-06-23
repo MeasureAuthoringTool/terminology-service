@@ -1,32 +1,56 @@
 package gov.cms.madie.terminology.task;
 
-import gov.cms.madie.terminology.models.CodeSystem;
+import java.util.concurrent.atomic.AtomicBoolean;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UpdateCodeSystemTask {
+
   private final FhirTerminologyService fhirTerminologyService;
 
   @Value("${code-system-refresh-task.terminology-key}")
   private String apiKey;
 
-  @Scheduled(cron = "${code-system-refresh-task.code-system-cron-date-time}") // every midnight
-  public void updateCodeSystems() {
-    log.info("Starting scheduled task to update code systems.");
+  private final AtomicBoolean running = new AtomicBoolean(false);
 
-    UmlsUser user = new UmlsUser();
-    user.setApiKey(apiKey);
-    List<CodeSystem> response = fhirTerminologyService.retrieveAllCodeSystems(user);
-    log.info("Successfully retrieved and updated code systems for user: {}", response);
+  @Async
+  public void runJobAsync() {
+    try {
+      log.info("Starting async code system update.");
+
+      UmlsUser user = new UmlsUser();
+      user.setApiKey(apiKey);
+
+      fhirTerminologyService.retrieveAllCodeSystems(user);
+
+      log.info("Code system update completed.");
+    } catch (Exception ex) {
+      log.error("Error during code system update", ex);
+    } finally {
+      running.set(false);
+    }
+  }
+
+  @Scheduled(cron = "${code-system-refresh-task.code-system-cron-date-time}")
+  public void updateCodeSystems() {
+    if (!running.compareAndSet(false, true)) {
+      log.warn("Code system update already running. Skipping scheduled execution.");
+      return;
+    }
+
+    runJobAsync();
+  }
+
+  public boolean isRunning() {
+    return running.get();
   }
 }

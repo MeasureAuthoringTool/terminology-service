@@ -4,6 +4,7 @@ import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
+import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminController {
 
+  private final UpdateCodeSystemTask updateCodeSystemTask;
   private final FhirTerminologyService fhirTerminologyService;
   private final VsacService vsacService;
   private final CacheManager cacheManager;
@@ -90,5 +92,19 @@ public class AdminController {
     log.info("Admin user [{}] is evicting all caches: {}", principal.getName(), evictedCaches);
     evictedCaches.forEach(cacheName -> cacheManager.getCache(cacheName).clear());
     return ResponseEntity.ok(evictedCaches);
+  }
+
+  @PostMapping(path = "/trigger-code-system-refresh")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<String> triggerCodeSystemRefresh() {
+    if (!updateCodeSystemTask.isRunning()) {
+
+      new Thread(() -> updateCodeSystemTask.updateCodeSystems()).start();
+
+      return ResponseEntity.ok("Code system refresh has been started");
+    }
+
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body("Update Code System is already running. We have NOT started the job again");
   }
 }

@@ -10,6 +10,7 @@ import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,7 @@ class AdminControllerMvcTest {
   @MockitoBean private FhirTerminologyService fhirTerminologyService;
   @MockitoBean private VsacService vsacService;
   @MockitoBean private FhirContext fhirContext;
+  @MockitoBean private UpdateCodeSystemTask updateCodeSystemTask;
   @MockitoBean private UserServiceClient userServiceClient;
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
