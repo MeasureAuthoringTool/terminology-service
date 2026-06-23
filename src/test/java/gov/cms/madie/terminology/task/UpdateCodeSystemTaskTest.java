@@ -13,6 +13,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.*;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,12 +79,12 @@ public class UpdateCodeSystemTaskTest {
   @Test
   void testIsRunningReturnsCorrectState() {
     // initially false
-    assert !updateCodeSystemTask.isRunning();
+    assertFalse(updateCodeSystemTask.isRunning());
 
     // trigger task
     updateCodeSystemTask.updateCodeSystems();
 
-    assert !updateCodeSystemTask.isRunning();
+    assertFalse(updateCodeSystemTask.isRunning());
   }
 
 }
