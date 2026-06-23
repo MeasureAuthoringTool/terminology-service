@@ -27,7 +27,7 @@ public class UpdateCodeSystemTaskTest {
   }
 
   @Test
-  void updateCodeSystems_runsSuccessfully() {
+  void testUpdateCodeSystemsRunsSuccessfully() {
     when(fhirTerminologyService.retrieveAllCodeSystems(any(UmlsUser.class)))
             .thenReturn(List.of(new CodeSystem()));
 
@@ -38,7 +38,7 @@ public class UpdateCodeSystemTaskTest {
   }
 
   @Test
-  void updateCodeSystems_skipsWhenAlreadyRunning() {
+  void testUpdateCodeSystemsSkipsWhenAlreadyRunning() {
     // running = true
     when(fhirTerminologyService.retrieveAllCodeSystems(any()))
             .thenAnswer(inv -> {
@@ -54,7 +54,7 @@ public class UpdateCodeSystemTaskTest {
   }
 
   @Test
-  void runJobAsync_handlesExceptionAndResetsRunningFlag() {
+  void testRunJobAsyncHandlesExceptionAndResetsRunningFlag() {
     when(fhirTerminologyService.retrieveAllCodeSystems(any()))
             .thenThrow(new RuntimeException("failure"));
 
@@ -67,7 +67,7 @@ public class UpdateCodeSystemTaskTest {
   }
 
   @Test
-  void runJobAsync_callsServiceWithApiKeySet() {
+  void testRunJobAsyncCallsServiceWithApiKeySet() {
     updateCodeSystemTask.updateCodeSystems();
 
     verify(fhirTerminologyService).retrieveAllCodeSystems(argThat(user ->
@@ -76,7 +76,7 @@ public class UpdateCodeSystemTaskTest {
   }
 
   @Test
-  void isRunning_returnsCorrectState() {
+  void testIsRunningReturnsCorrectState() {
     // initially false
     assert !updateCodeSystemTask.isRunning();
 
