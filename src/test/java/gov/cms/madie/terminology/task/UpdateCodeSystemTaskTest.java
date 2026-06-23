@@ -23,7 +23,7 @@ public class UpdateCodeSystemTaskTest {
   @BeforeEach
   void setup() {
     // set apiKey manually since @Value won't inject in unit test
-    ReflectionTestUtils.setField(updateCodeSystemTask, "apiKey", "test-key");
+    ReflectionTestUtils.setField(updateCodeSystemTask, "apiKey", "dummy-value");
   }
 
   @Test
@@ -71,7 +71,7 @@ public class UpdateCodeSystemTaskTest {
     updateCodeSystemTask.updateCodeSystems();
 
     verify(fhirTerminologyService).retrieveAllCodeSystems(argThat(user ->
-            user != null && "test-key".equals(user.getApiKey())
+            user != null && "dummy-value".equals(user.getApiKey())
     ));
   }
 
