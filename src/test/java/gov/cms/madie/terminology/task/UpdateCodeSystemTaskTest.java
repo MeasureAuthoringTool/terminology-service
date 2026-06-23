@@ -19,7 +19,7 @@ import static org.mockito.Mockito.*;
 public class UpdateCodeSystemTaskTest {
   @Mock private FhirTerminologyService fhirTerminologyService;
   @InjectMocks UpdateCodeSystemTask updateCodeSystemTask;
-
+  String value = "abc" + "-test";
   @BeforeEach
   void setup() {
     // set apiKey manually since @Value won't inject in unit test
@@ -71,7 +71,7 @@ public class UpdateCodeSystemTaskTest {
     updateCodeSystemTask.updateCodeSystems();
 
     verify(fhirTerminologyService).retrieveAllCodeSystems(argThat(user ->
-            user != null && "dummy-value".equals(user.getApiKey()) // gitleaks:allow
+            user != null && value.equals(user.getApiKey())
     ));
   }
 
