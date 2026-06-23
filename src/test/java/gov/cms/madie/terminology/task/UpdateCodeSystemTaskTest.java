@@ -71,7 +71,7 @@ public class UpdateCodeSystemTaskTest {
     updateCodeSystemTask.updateCodeSystems();
 
     verify(fhirTerminologyService).retrieveAllCodeSystems(argThat(user ->
-            user != null && "dummy-value".equals(user.getApiKey())
+            user != null && "dummy-value".equals(user.getApiKey()) // gitleaks:allow
     ));
   }
 
