@@ -64,7 +64,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMatchingFhirAndVsacVersions() throws JacksonException {
+  void testExistingCodeSystemWithMatchingFhirAndVsacVersions() {
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
     when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
@@ -90,7 +90,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMatchingFhirAndDifferingVsacVersions() throws JacksonException {
+  void testExistingCodeSystemWithMatchingFhirAndDifferingVsacVersions() {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("9.9.9").build()));
 
@@ -117,7 +117,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMultipleVersions() throws JacksonException {
+  void testExistingCodeSystemWithMultipleVersions() {
     mappingDocEntry.setVersions(
         List.of(
             // Latest first
@@ -161,7 +161,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithOnlyVsacVersions() throws JacksonException {
+  void testExistingCodeSystemWithOnlyVsacVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
@@ -183,7 +183,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithOnlyFhirVersions() throws JacksonException {
+  void testExistingCodeSystemWithOnlyFhirVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").build()));
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
@@ -206,7 +206,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithMatchingFhirAndVsacVersions() throws JacksonException {
+  void testNewCodeSystemWithMatchingFhirAndVsacVersions() {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("1.0.0").build()));
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
@@ -233,7 +233,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithDifferingFhirAndVsacVersions() throws JacksonException {
+  void testNewCodeSystemWithDifferingFhirAndVsacVersions() {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("9.9.9").build()));
 
@@ -262,7 +262,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithOnlyVsacVersions() throws JacksonException {
+  void testNewCodeSystemWithOnlyVsacVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
@@ -290,7 +290,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithOnlyFhirVersions() throws JacksonException {
+  void testNewCodeSystemWithOnlyFhirVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").build()));
     mappingDocEntry.setOid("NOT.IN.VSAC.TEST");
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
@@ -316,7 +316,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testRollbackUsesOriginalCodeSystems() throws JacksonException {
+  void testRollbackUsesOriginalCodeSystems() {
     when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
@@ -341,7 +341,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testRollbackDoesNothingIfMappingDocFailsParsing() throws JacksonException {
+  void testRollbackDoesNothingIfMappingDocFailsParsing() {
     when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenThrow(new JacksonException("Test Exception") {});
     assertThrows(
