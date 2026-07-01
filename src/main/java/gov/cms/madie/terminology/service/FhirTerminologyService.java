@@ -402,7 +402,7 @@ public class FhirTerminologyService {
         (l) -> {
           if (l.getRelation().equals("next")) {
             // if next, call self and continue until fail.
-            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(l.getUrl());
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(l.getUrl());
             String newOffset = builder.build().getQueryParams().getFirst("_offset");
             String newCount = builder.build().getQueryParams().getFirst("_count");
             assert newOffset != null;

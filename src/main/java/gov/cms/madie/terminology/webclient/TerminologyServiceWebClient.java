@@ -81,8 +81,8 @@ public class TerminologyServiceWebClient {
         .headers(headers -> headers.setBasicAuth("apikey", apiKey))
         .exchangeToMono(
             clientResponse -> {
-              if (clientResponse.statusCode().equals(HttpStatus.BAD_REQUEST)
-                  || clientResponse.statusCode().equals(HttpStatus.OK)) {
+              if (clientResponse.statusCode().isSameCodeAs(HttpStatus.BAD_REQUEST)
+                  || clientResponse.statusCode().isSameCodeAs(HttpStatus.OK)) {
                 return clientResponse.bodyToMono(VsacCode.class);
               } else {
                 log.info("Received NON-OK response while retrieving codePath {}", codePath);

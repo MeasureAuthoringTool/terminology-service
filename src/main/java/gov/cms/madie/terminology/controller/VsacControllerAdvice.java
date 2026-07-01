@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
-import org.springframework.boot.web.servlet.error.ErrorAttributes;
+import org.springframework.boot.webmvc.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -44,17 +44,17 @@ public class VsacControllerAdvice {
       WebClientResponseException ex, WebRequest request) {
     log.error(
         "Error from WebClient - Status {}, Message {}, Body {}",
-        ex.getRawStatusCode(),
+        ex.getStatusCode().value(),
         ex.getLocalizedMessage(),
         ex.getResponseBodyAsString());
     Map<String, String> validationErrors = new HashMap<>();
     validationErrors.put(request.getContextPath(), ex.getLocalizedMessage());
 
     Map<String, Object> errorAttributes =
-        getErrorAttributes(request, HttpStatus.valueOf(ex.getRawStatusCode()));
+        getErrorAttributes(request, HttpStatus.valueOf(ex.getStatusCode().value()));
     errorAttributes.put("validationErrors", validationErrors);
 
-    return ResponseEntity.status(ex.getRawStatusCode())
+    return ResponseEntity.status(ex.getStatusCode().value())
         .contentType(MediaType.APPLICATION_JSON)
         .body(errorAttributes);
   }

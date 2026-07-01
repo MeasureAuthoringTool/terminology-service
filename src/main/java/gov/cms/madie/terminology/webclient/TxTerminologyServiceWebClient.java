@@ -93,10 +93,10 @@ public class TxTerminologyServiceWebClient {
         .accept(new MediaType("application", "json+fhir", Charset.defaultCharset()))
         .exchangeToMono(
             clientResponse -> {
-              if (clientResponse.statusCode().equals(HttpStatus.OK)) {
+              if (clientResponse.statusCode().isSameCodeAs(HttpStatus.OK)) {
                 return clientResponse.bodyToMono(String.class);
               }
-              if (clientResponse.statusCode().equals(HttpStatus.UNPROCESSABLE_ENTITY)) {
+              if (clientResponse.statusCode().isSameCodeAs(HttpStatus.UNPROCESSABLE_ENTITY)) {
                 return clientResponse
                     .bodyToMono(String.class)
                     .flatMap(

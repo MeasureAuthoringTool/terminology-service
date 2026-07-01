@@ -1,7 +1,7 @@
 package gov.cms.madie.terminology.config.migrations;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.models.mapping.CodeSystemEntry;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
@@ -64,7 +64,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMatchingFhirAndVsacVersions() throws JsonProcessingException {
+  void testExistingCodeSystemWithMatchingFhirAndVsacVersions() {
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
     when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
@@ -90,8 +90,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMatchingFhirAndDifferingVsacVersions()
-      throws JsonProcessingException {
+  void testExistingCodeSystemWithMatchingFhirAndDifferingVsacVersions() {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("9.9.9").build()));
 
@@ -118,7 +117,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithMultipleVersions() throws JsonProcessingException {
+  void testExistingCodeSystemWithMultipleVersions() {
     mappingDocEntry.setVersions(
         List.of(
             // Latest first
@@ -162,7 +161,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithOnlyVsacVersions() throws JsonProcessingException {
+  void testExistingCodeSystemWithOnlyVsacVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
@@ -184,7 +183,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testExistingCodeSystemWithOnlyFhirVersions() throws JsonProcessingException {
+  void testExistingCodeSystemWithOnlyFhirVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").build()));
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
@@ -207,7 +206,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithMatchingFhirAndVsacVersions() throws JsonProcessingException {
+  void testNewCodeSystemWithMatchingFhirAndVsacVersions() {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("1.0.0").build()));
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
@@ -234,7 +233,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithDifferingFhirAndVsacVersions() throws JsonProcessingException {
+  void testNewCodeSystemWithDifferingFhirAndVsacVersions() {
     mappingDocEntry.setVersions(
         List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").vsac("9.9.9").build()));
 
@@ -263,7 +262,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithOnlyVsacVersions() throws JsonProcessingException {
+  void testNewCodeSystemWithOnlyVsacVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().vsac("9.9.9").build()));
 
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
@@ -291,7 +290,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testNewCodeSystemWithOnlyFhirVersions() throws JsonProcessingException {
+  void testNewCodeSystemWithOnlyFhirVersions() {
     mappingDocEntry.setVersions(List.of(CodeSystemEntry.Version.builder().fhir("1.0.0").build()));
     mappingDocEntry.setOid("NOT.IN.VSAC.TEST");
     when(codeSystemRepositoryMock.findAll()).thenReturn(Collections.emptyList());
@@ -317,7 +316,7 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testRollbackUsesOriginalCodeSystems() throws JsonProcessingException {
+  void testRollbackUsesOriginalCodeSystems() {
     when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
         .thenReturn(new CodeSystemEntry[] {mappingDocEntry});
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
@@ -342,9 +341,9 @@ class LoadCodeSystemMappingDataTest {
   }
 
   @Test
-  void testRollbackDoesNothingIfMappingDocFailsParsing() throws JsonProcessingException {
+  void testRollbackDoesNothingIfMappingDocFailsParsing() {
     when(objectMapperMock.readValue(anyString(), eq(CodeSystemEntry[].class)))
-        .thenThrow(new JsonProcessingException("Test Exception") {});
+        .thenThrow(new JacksonException("Test Exception") {});
     assertThrows(
         RuntimeException.class,
         () ->

@@ -13,12 +13,15 @@ import gov.cms.madie.terminology.service.VsacService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import gov.cms.madie.terminology.config.SecurityConfig;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.security.Principal;
@@ -28,7 +31,7 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
+import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -39,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(VsacFhirTerminologyController.class)
 @ActiveProfiles("test")
+@Import(SecurityConfig.class)
 class VsacFhirTerminologyControllerMvcTest {
 
   private static final String TEST_USR = "FAKE";
@@ -169,7 +173,7 @@ class VsacFhirTerminologyControllerMvcTest {
         """
     		[{"oid":"test-value-set-id-1234","display_name":"test-value-set-display-name","version":"20240101","concepts":[{"code":"test-code-052","code_system_oid":null,"code_system_name":null,"code_system_version":null,"display_name":null}]}]
     		""";
-    assertEquals(content, valueSetExpansion.trim());
+    assertEquals(valueSetExpansion.trim(), content, JSONCompareMode.STRICT);
   }
 
   @Test
