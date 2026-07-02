@@ -28,7 +28,9 @@ public class UpdateCodeSystemTask {
 
   @Scheduled(cron = "${code-system-refresh-task.code-system-cron-date-time}")
   public void updateCodeSystems() {
-    startJob();
+    if (!startJob()) {
+      log.warn("Code system update already running. Skipping scheduled execution.");
+    }
   }
 
   public boolean isRunning() {
