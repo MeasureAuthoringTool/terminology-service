@@ -97,10 +97,8 @@ public class AdminController {
   @PostMapping(path = "/trigger-code-system-refresh")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<String> triggerCodeSystemRefresh() {
-    if (!updateCodeSystemTask.isRunning()) {
 
-      new Thread(() -> updateCodeSystemTask.updateCodeSystems()).start();
-
+    if (updateCodeSystemTask.startJob()) {
       return ResponseEntity.ok("Code system refresh has been started");
     }
 

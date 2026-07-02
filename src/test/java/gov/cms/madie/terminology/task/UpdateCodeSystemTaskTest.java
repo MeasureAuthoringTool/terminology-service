@@ -1,90 +1,51 @@
 package gov.cms.madie.terminology.task;
 
-import gov.cms.madie.terminology.models.CodeSystem;
-import gov.cms.madie.terminology.models.UmlsUser;
-import gov.cms.madie.terminology.service.FhirTerminologyService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class UpdateCodeSystemTaskTest {
-  @Mock private FhirTerminologyService fhirTerminologyService;
-  @InjectMocks UpdateCodeSystemTask updateCodeSystemTask;
-  String value = "abc" + "-test";
-  @BeforeEach
-  void setup() {
-    // set apiKey manually since @Value won't inject in unit test
-    ReflectionTestUtils.setField(updateCodeSystemTask, "apiKey", value);
+class UpdateCodeSystemTaskTest {
+
+  @Mock private CodeSystemAsyncWorker codeSystemAsyncWorker;
+
+  @InjectMocks private UpdateCodeSystemTask updateCodeSystemTask;
+
+  @Test
+  void testStartJobRunsSuccessfully() {
+    boolean result = updateCodeSystemTask.startJob();
+
+    assertTrue(result);
+
+    verify(codeSystemAsyncWorker, times(1)).runJobAsync(any());
   }
 
   @Test
-  void testUpdateCodeSystemsRunsSuccessfully() {
-    when(fhirTerminologyService.retrieveAllCodeSystems(any(UmlsUser.class)))
-            .thenReturn(List.of(new CodeSystem()));
-
+  void testUpdateCodeSystemsTriggersWorker() {
     updateCodeSystemTask.updateCodeSystems();
 
-    verify(fhirTerminologyService, times(1))
-            .retrieveAllCodeSystems(any(UmlsUser.class));
+    verify(codeSystemAsyncWorker, times(1)).runJobAsync(any());
   }
 
   @Test
-  void testUpdateCodeSystemsSkipsWhenAlreadyRunning() {
-    // running = true
-    when(fhirTerminologyService.retrieveAllCodeSystems(any()))
-            .thenAnswer(inv -> {
-              // still running
-              updateCodeSystemTask.updateCodeSystems();
-              return List.of();
-            });
+  void testStartJobReturnsFalseWhenAlreadyRunning() {
+    boolean firstResult = updateCodeSystemTask.startJob();
+    boolean secondResult = updateCodeSystemTask.startJob();
 
-    updateCodeSystemTask.updateCodeSystems();
+    assertTrue(firstResult);
+    assertFalse(secondResult);
 
-    verify(fhirTerminologyService, times(1))
-            .retrieveAllCodeSystems(any());
+    verify(codeSystemAsyncWorker, times(1)).runJobAsync(any());
   }
 
   @Test
-  void testRunJobAsyncHandlesExceptionAndResetsRunningFlag() {
-    when(fhirTerminologyService.retrieveAllCodeSystems(any()))
-            .thenThrow(new RuntimeException("failure"));
-
-    updateCodeSystemTask.updateCodeSystems();
-
-    updateCodeSystemTask.updateCodeSystems();
-
-    verify(fhirTerminologyService, times(2))
-            .retrieveAllCodeSystems(any());
-  }
-
-  @Test
-  void testRunJobAsyncCallsServiceWithApiKeySet() {
-    updateCodeSystemTask.updateCodeSystems();
-
-    verify(fhirTerminologyService).retrieveAllCodeSystems(argThat(user ->
-            user != null && value.equals(user.getApiKey())
-    ));
-  }
-
-  @Test
-  void testIsRunningReturnsCorrectState() {
-    // initially false
-    assertFalse(updateCodeSystemTask.isRunning());
-
-    // trigger task
-    updateCodeSystemTask.updateCodeSystems();
-
+  void testIsRunningReturnsCorrectInitialState() {
     assertFalse(updateCodeSystemTask.isRunning());
   }
-
 }

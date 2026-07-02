@@ -180,29 +180,27 @@ class AdminControllerTest {
 
   @Test
   void testTriggerCodeSystemRefreshStarted() {
-    when(updateCodeSystemTask.isRunning()).thenReturn(false);
+    when(updateCodeSystemTask.startJob()).thenReturn(true);
 
     ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals("Code system refresh has been started", response.getBody());
 
-    verify(updateCodeSystemTask, times(1)).isRunning();
+    verify(updateCodeSystemTask, times(1)).startJob();
   }
 
   @Test
   void testTriggerCodeSystemRefreshConflict() {
-    when(updateCodeSystemTask.isRunning()).thenReturn(true);
+    when(updateCodeSystemTask.startJob()).thenReturn(false);
 
     ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
 
     assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
     assertEquals(
-            "Update Code System is already running. We have NOT started the job again",
-            response.getBody()
-    );
+        "Update Code System is already running. We have NOT started the job again",
+        response.getBody());
 
-    verify(updateCodeSystemTask, times(1)).isRunning();
+    verify(updateCodeSystemTask, times(1)).startJob();
   }
-
 }
