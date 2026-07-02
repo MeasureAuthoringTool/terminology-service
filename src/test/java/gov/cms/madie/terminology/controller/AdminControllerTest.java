@@ -7,6 +7,7 @@ import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
+import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.*;
 class AdminControllerTest {
 
   @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock private UpdateCodeSystemTask updateCodeSystemTask;
   @Mock private VsacService vsacService;
   @Mock private CacheManager cacheManager;
   @Mock private Cache cache;
@@ -174,5 +176,31 @@ class AdminControllerTest {
     assertTrue(response.getBody().contains("manifest-list"));
     verify(cacheManager, times(1)).getCache(anyString());
     verify(cache, times(1)).clear();
+  }
+
+  @Test
+  void testTriggerCodeSystemRefreshStarted() {
+    when(updateCodeSystemTask.startJob()).thenReturn(true);
+
+    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals("Code system refresh has been started", response.getBody());
+
+    verify(updateCodeSystemTask, times(1)).startJob();
+  }
+
+  @Test
+  void testTriggerCodeSystemRefreshConflict() {
+    when(updateCodeSystemTask.startJob()).thenReturn(false);
+
+    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
+
+    assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+    assertEquals(
+        "Update Code System is already running. We have NOT started the job again",
+        response.getBody());
+
+    verify(updateCodeSystemTask, times(1)).startJob();
   }
 }
