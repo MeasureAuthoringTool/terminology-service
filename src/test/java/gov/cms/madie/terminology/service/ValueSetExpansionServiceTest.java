@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
@@ -22,8 +23,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatusCode;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -998,5 +1003,94 @@ class ValueSetExpansionServiceTest {
     assertTrue(exception.getMessage().contains(url));
 
     verify(csRepo, times(1)).findAllByFullUrl(url, Limit.unlimited());
+  }
+
+  @Test
+  void getValueSetsMapsMadieValueSetToDisplayDto() {
+    Instant lastUpdated = Instant.now();
+
+    MadieValueSet valueSet =
+        MadieValueSet.builder()
+            .id("vs-id")
+            .url(VS_URL)
+            .lastUpdated(lastUpdated)
+            .manuallyModified(true)
+            .build();
+
+    Page<MadieValueSet> page = new PageImpl<>(List.of(valueSet));
+    PageRequest pageable = PageRequest.of(0, 10);
+
+    when(vseRepo.findAll(pageable)).thenReturn(page);
+
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+
+    assertEquals(1, result.getTotalElements());
+
+    ValueSetDisplayForAdmin dto = result.getContent().get(0);
+
+    assertEquals("vs-id", dto.getId());
+    assertEquals(VS_URL, dto.getUrl());
+    assertEquals(lastUpdated, dto.getLastUpdated());
+    assertTrue(dto.isManuallyModified());
+
+    verify(vseRepo, times(1)).findAll(pageable);
+  }
+
+  @Test
+  void getValueSetsReturnsEmptyPageWhenRepositoryReturnsEmptyPage() {
+    PageRequest pageable = PageRequest.of(0, 10);
+    Page<MadieValueSet> emptyPage = new PageImpl<>(Collections.emptyList());
+
+    when(vseRepo.findAll(pageable)).thenReturn(emptyPage);
+
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+
+    assertNotNull(result);
+    assertTrue(result.getContent().isEmpty());
+    assertEquals(0, result.getTotalElements());
+
+    verify(vseRepo, times(1)).findAll(pageable);
+  }
+
+  @Test
+  void getValueSetsMapsMultipleValueSetsToDisplayDtos() {
+    Instant now = Instant.now();
+
+    MadieValueSet vs1 =
+        MadieValueSet.builder()
+            .id("id-1")
+            .url(VS_URL)
+            .lastUpdated(now)
+            .manuallyModified(true)
+            .build();
+
+    MadieValueSet vs2 =
+        MadieValueSet.builder()
+            .id("id-2")
+            .url("http://example.com/valueset")
+            .lastUpdated(now.minusSeconds(60))
+            .manuallyModified(false)
+            .build();
+
+    PageRequest pageable = PageRequest.of(0, 10);
+
+    when(vseRepo.findAll(pageable)).thenReturn(new PageImpl<>(List.of(vs1, vs2)));
+
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+
+    assertEquals(2, result.getTotalElements());
+
+    ValueSetDisplayForAdmin first = result.getContent().get(0);
+    ValueSetDisplayForAdmin second = result.getContent().get(1);
+
+    assertEquals("id-1", first.getId());
+    assertEquals(VS_URL, first.getUrl());
+    assertTrue(first.isManuallyModified());
+
+    assertEquals("id-2", second.getId());
+    assertEquals("http://example.com/valueset", second.getUrl());
+    assertFalse(second.isManuallyModified());
+
+    verify(vseRepo, times(1)).findAll(pageable);
   }
 }
