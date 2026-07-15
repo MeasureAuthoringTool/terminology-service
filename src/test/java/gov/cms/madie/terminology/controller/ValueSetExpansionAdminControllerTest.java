@@ -1,18 +1,24 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.security.Principal;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -90,5 +96,91 @@ class ValueSetExpansionAdminControllerTest {
 
     assertThrows(
         ValueSetNotFoundException.class, () -> controller.deleteValueSet(principal, "nonexistent"));
+  }
+
+  @Test
+  void testGetValueSetsWithDefaultSort() {
+    Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
+    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+
+    ResponseEntity<Page<ValueSetDisplayForAdmin>> response = controller.getValueSets(10, 0, null);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(vses).getValueSets(pageableCaptor.capture());
+
+    Pageable pageable = pageableCaptor.getValue();
+
+    assertEquals(0, pageable.getPageNumber());
+    assertEquals(10, pageable.getPageSize());
+    assertEquals("lastUpdated", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isDescending());
+  }
+
+  @Test
+  void testGetValueSetsWithAscendingUrlSort() {
+    Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
+    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+
+    controller.getValueSets(25, 1, "url,false");
+
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(vses).getValueSets(pageableCaptor.capture());
+
+    Pageable pageable = pageableCaptor.getValue();
+
+    assertEquals(1, pageable.getPageNumber());
+    assertEquals(25, pageable.getPageSize());
+    assertEquals("url", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isAscending());
+  }
+
+  @Test
+  void testGetValueSetsWithDescendingManuallyModifiedSort() {
+    Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
+    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+
+    controller.getValueSets(10, 0, "manuallyModified,true");
+
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(vses).getValueSets(pageableCaptor.capture());
+
+    Pageable pageable = pageableCaptor.getValue();
+
+    assertEquals("manuallyModified", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isDescending());
+  }
+
+  @Test
+  void testGetValueSetsWithInvalidSortFieldDefaultsToLastUpdated() {
+    Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
+    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+
+    controller.getValueSets(10, 0, "badField,false");
+
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(vses).getValueSets(pageableCaptor.capture());
+
+    Pageable pageable = pageableCaptor.getValue();
+
+    assertEquals("lastUpdated", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isAscending());
+  }
+
+  @Test
+  void testGetValueSetsWithMalformedSortInfoDefaultsToLastUpdatedDesc() {
+    Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
+    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+
+    controller.getValueSets(10, 0, "url");
+
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(vses).getValueSets(pageableCaptor.capture());
+
+    Pageable pageable = pageableCaptor.getValue();
+
+    assertEquals("lastUpdated", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isDescending());
   }
 }

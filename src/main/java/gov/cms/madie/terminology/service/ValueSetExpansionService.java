@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
+import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.exceptions.*;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
@@ -16,6 +17,8 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -131,6 +134,19 @@ public class ValueSetExpansionService {
       }
     }
     log.info("Saved {} value set expansions.", madieValueSets.size());
+  }
+
+  private ValueSetDisplayForAdmin convertToDisplayDto(MadieValueSet valueSet) {
+    return ValueSetDisplayForAdmin.builder()
+        .id(valueSet.getId())
+        .url(valueSet.getUrl())
+        .lastUpdated(valueSet.getLastUpdated())
+        .manuallyModified(valueSet.isManuallyModified())
+        .build();
+  }
+
+  public Page<ValueSetDisplayForAdmin> getValueSets(Pageable pageable) {
+    return vseRepo.findAll(pageable).map(this::convertToDisplayDto);
   }
 
   private void expandValueSets(List<MadieValueSet> madieValueSets) {
