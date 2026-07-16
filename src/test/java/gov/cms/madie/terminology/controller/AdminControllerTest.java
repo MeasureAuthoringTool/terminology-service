@@ -11,6 +11,8 @@ import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -20,6 +22,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -293,5 +296,37 @@ class AdminControllerTest {
 
     assertEquals("title", pageable.getSort().iterator().next().getProperty());
     assertTrue(pageable.getSort().iterator().next().isDescending());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "name,name,false,ASC",
+    "name,name,true,DESC",
+    "'FHIR Version',version.fhirVersion,false,ASC",
+    "'FHIR Version',version.fhirVersion,true,DESC",
+    "fullUrl,fullUrl,false,ASC",
+    "fullUrl,fullUrl,true,DESC",
+    "lastUpdated,lastUpdated,false,ASC",
+    "lastUpdated,lastUpdated,true,DESC",
+    "isLatestVersion,isLatestVersion,false,ASC",
+    "isLatestVersion,isLatestVersion,true,DESC"
+  })
+  void getCodeSystemsAppliesMappingAndDirectionForAllSortOptions(
+      String sortLabel, String expectedField, String descFlag, String expectedDirection) {
+    when(fhirTerminologyService.getCodeSystems(any()))
+        .thenReturn(Page.empty());
+    ArgumentCaptor<Pageable> captor =
+        ArgumentCaptor.forClass(Pageable.class);
+    int limit = 5;
+    int page = 1;
+    String sortInfo = sortLabel + "," + descFlag;
+    adminController.getCodeSystems(limit, page, sortInfo);
+    verify(fhirTerminologyService, times(1)).getCodeSystems(captor.capture());
+    Pageable pageReq = captor.getValue();
+    Sort.Order order = pageReq.getSort().getOrderFor(expectedField);
+    assertNotNull(order);
+    assertEquals(
+        Sort.Direction.valueOf(expectedDirection),
+        order.getDirection());
   }
 }
