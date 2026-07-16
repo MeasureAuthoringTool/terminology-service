@@ -208,89 +208,90 @@ class AdminControllerTest {
 
     verify(updateCodeSystemTask, times(1)).startJob();
   }
-    @Test
-    void testGetCodeSystemsWithDefaultSort() {
-        Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-        when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
 
-        ResponseEntity<Page<CodeSystem>> response = adminController.getCodeSystems(10, 0, null);
+  @Test
+  void testGetCodeSystemsWithDefaultSort() {
+    Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+    ResponseEntity<Page<CodeSystem>> response = adminController.getCodeSystems(10, 0, null);
 
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Pageable pageable = pageableCaptor.getValue();
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
 
-        assertEquals(0, pageable.getPageNumber());
-        assertEquals(10, pageable.getPageSize());
-        assertEquals("title", pageable.getSort().iterator().next().getProperty());
-        assertTrue(pageable.getSort().iterator().next().isDescending());
-    }
+    Pageable pageable = pageableCaptor.getValue();
 
-    @Test
-    void testGetCodeSystemsWithAscendingUrlSort() {
-        Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-        when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    assertEquals(0, pageable.getPageNumber());
+    assertEquals(10, pageable.getPageSize());
+    assertEquals("title", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isDescending());
+  }
 
-        adminController.getCodeSystems(25, 1, "fullUrl,false");
+  @Test
+  void testGetCodeSystemsWithAscendingUrlSort() {
+    Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
 
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    adminController.getCodeSystems(25, 1, "fullUrl,false");
 
-        Pageable pageable = pageableCaptor.getValue();
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
 
-        assertEquals(1, pageable.getPageNumber());
-        assertEquals(25, pageable.getPageSize());
-        assertEquals("fullUrl", pageable.getSort().iterator().next().getProperty());
-        assertTrue(pageable.getSort().iterator().next().isAscending());
-    }
+    Pageable pageable = pageableCaptor.getValue();
 
-    @Test
-    void testGetCodeSystemsWithDescendingNameSort() {
-        Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-        when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    assertEquals(1, pageable.getPageNumber());
+    assertEquals(25, pageable.getPageSize());
+    assertEquals("fullUrl", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isAscending());
+  }
 
-        adminController.getCodeSystems(10, 0, "name,true");
+  @Test
+  void testGetCodeSystemsWithDescendingNameSort() {
+    Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
 
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    adminController.getCodeSystems(10, 0, "name,true");
 
-        Pageable pageable = pageableCaptor.getValue();
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
 
-        assertEquals("name", pageable.getSort().iterator().next().getProperty());
-        assertTrue(pageable.getSort().iterator().next().isDescending());
-    }
+    Pageable pageable = pageableCaptor.getValue();
 
-    @Test
-    void testGetCodeSystemsWithInvalidSortFieldDefaultsToLastUpdated() {
-        Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-        when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    assertEquals("name", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isDescending());
+  }
 
-        adminController.getCodeSystems(10, 0, "badField,false");
+  @Test
+  void testGetCodeSystemsWithInvalidSortFieldDefaultsToLastUpdated() {
+    Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
 
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    adminController.getCodeSystems(10, 0, "badField,false");
 
-        Pageable pageable = pageableCaptor.getValue();
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
 
-        assertEquals("title", pageable.getSort().iterator().next().getProperty());
-        assertTrue(pageable.getSort().iterator().next().isAscending());
-    }
+    Pageable pageable = pageableCaptor.getValue();
 
-    @Test
-    void testGetCodeSystemsWithMalformedSortInfoDefaultsToLastUpdatedDesc() {
-        Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-        when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    assertEquals("title", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isAscending());
+  }
 
-        adminController.getCodeSystems(10, 0, "url");
+  @Test
+  void testGetCodeSystemsWithMalformedSortInfoDefaultsToLastUpdatedDesc() {
+    Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
 
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    adminController.getCodeSystems(10, 0, "url");
 
-        Pageable pageable = pageableCaptor.getValue();
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
 
-        assertEquals("title", pageable.getSort().iterator().next().getProperty());
-        assertTrue(pageable.getSort().iterator().next().isDescending());
-    }
+    Pageable pageable = pageableCaptor.getValue();
+
+    assertEquals("title", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isDescending());
+  }
 }
