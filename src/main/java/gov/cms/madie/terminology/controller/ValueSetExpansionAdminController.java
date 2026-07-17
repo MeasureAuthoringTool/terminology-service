@@ -3,14 +3,13 @@ package gov.cms.madie.terminology.controller;
 import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
+import gov.cms.madie.terminology.util.PagingUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -105,25 +104,8 @@ public class ValueSetExpansionAdminController {
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
       @RequestParam(required = false, name = "sortInfo") String sortInfo) {
 
-    Pageable pageReq;
-
-    if (StringUtils.isNotBlank(sortInfo)) {
-      String[] sortParts = sortInfo.split(",");
-
-      if (sortParts.length == 2) {
-        String sortBy = mapSortField(sortParts[0]);
-        boolean desc = Boolean.parseBoolean(sortParts[1]);
-
-        pageReq =
-            PageRequest.of(
-                page, limit, Sort.by(desc ? Sort.Order.desc(sortBy) : Sort.Order.asc(sortBy)));
-      } else {
-        pageReq = PageRequest.of(page, limit, Sort.by(Sort.Order.desc("lastUpdated")));
-      }
-    } else {
-      pageReq = PageRequest.of(page, limit, Sort.by(Sort.Order.desc("lastUpdated")));
-    }
-
+    Pageable pageReq =
+        PagingUtil.buildPageable(page, limit, sortInfo, "lastUpdated", this::mapSortField);
     return ResponseEntity.ok(vses.getValueSets(pageReq));
   }
 

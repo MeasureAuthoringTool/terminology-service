@@ -18,6 +18,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -341,6 +343,10 @@ public class FhirTerminologyService {
 
   public List<CodeSystem> getAllCodeSystems() {
     return codeSystemRepository.findAll().stream().filter(CodeSystem::isVsacSearchable).toList();
+  }
+
+  public Page<CodeSystem> getCodeSystems(Pageable pageable) {
+    return codeSystemRepository.findAll(pageable);
   }
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {

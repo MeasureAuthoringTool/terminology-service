@@ -5,10 +5,13 @@ import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
+import gov.cms.madie.terminology.util.PagingUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -104,5 +107,26 @@ public class AdminController {
 
     return ResponseEntity.status(HttpStatus.CONFLICT)
         .body("Update Code System is already running. We have NOT started the job again");
+  }
+
+  @GetMapping("/codesystems")
+  public ResponseEntity<Page<CodeSystem>> getCodeSystems(
+      @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
+      @RequestParam(required = false, defaultValue = "0", name = "page") int page,
+      @RequestParam(required = false, name = "sortInfo") String sortInfo) {
+
+    Pageable pageReq = PagingUtil.buildPageable(page, limit, sortInfo, "title", this::mapSortField);
+    return ResponseEntity.ok(fhirTerminologyService.getCodeSystems(pageReq));
+  }
+
+  private String mapSortField(String sortField) {
+    return switch (sortField) {
+      case "name" -> "name";
+      case "FHIR Version" -> "version.fhirVersion";
+      case "fullUrl" -> "fullUrl";
+      case "lastUpdated" -> "lastUpdated";
+      case "isLatestVersion" -> "isLatestVersion";
+      default -> "title";
+    };
   }
 }
