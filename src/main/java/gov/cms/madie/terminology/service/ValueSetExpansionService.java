@@ -142,6 +142,7 @@ public class ValueSetExpansionService {
         .url(valueSet.getUrl())
         .lastUpdated(valueSet.getLastUpdated())
         .manuallyModified(valueSet.isManuallyModified())
+            .valueSet(valueSet.getValueSet())
         .build();
   }
 
