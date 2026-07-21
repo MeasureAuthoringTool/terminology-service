@@ -12,4 +12,5 @@ public class ValueSetDisplayForAdmin {
   private String url;
   private Instant lastUpdated;
   private boolean manuallyModified;
+  private String valueSet;
 }
