@@ -97,16 +97,19 @@ public class ValueSetExpansionAdminController {
     vses.deleteValueSet(id);
     return ResponseEntity.noContent().build();
   }
-
   @GetMapping("/valuesets")
   public ResponseEntity<Page<ValueSetDisplayForAdmin>> getValueSets(
-      @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
-      @RequestParam(required = false, defaultValue = "0", name = "page") int page,
-      @RequestParam(required = false, name = "sortInfo") String sortInfo) {
+          @RequestParam(required = false, defaultValue = "10") int limit,
+          @RequestParam(required = false, defaultValue = "0") int page,
+          @RequestParam(required = false) String sortInfo,
+          @RequestParam(required = false) String searchTerm) {
 
     Pageable pageReq =
-        PagingUtil.buildPageable(page, limit, sortInfo, "lastUpdated", this::mapSortField);
-    return ResponseEntity.ok(vses.getValueSets(pageReq));
+            PagingUtil.buildPageable(
+                    page, limit, sortInfo, "lastUpdated", this::mapSortField);
+
+    return ResponseEntity.ok(
+            vses.getValueSets(pageReq, searchTerm));
   }
 
   private String mapSortField(String sortField) {
