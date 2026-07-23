@@ -11,9 +11,8 @@ import java.util.Optional;
 public interface ValueSetExpansionRepository extends MongoRepository<MadieValueSet, String> {
   MadieValueSet findByUrlAndVersionIsNull(String url);
 
-  Page<MadieValueSet> findByUrlContainingIgnoreCase(
-  String searchTerm,
-  Pageable pageable);
+  Page<MadieValueSet> findByUrlContainingIgnoreCase(String searchTerm, Pageable pageable);
+
   Optional<MadieValueSet> findByUrlAndVersion(String url, String version);
 
   default Optional<MadieValueSet> findByUrlAndVersionOrNull(String url, String version) {

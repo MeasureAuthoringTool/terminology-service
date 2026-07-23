@@ -101,14 +101,16 @@ class ValueSetExpansionAdminControllerTest {
   @Test
   void testGetValueSetsWithDefaultSort() {
     Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
-    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+    when(vses.getValueSets(any(Pageable.class), anyString())).thenReturn(page);
 
-    ResponseEntity<Page<ValueSetDisplayForAdmin>> response = controller.getValueSets(10, 0, null);
+    ResponseEntity<Page<ValueSetDisplayForAdmin>> response =
+        controller.getValueSets(10, 0, null, "test");
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(vses).getValueSets(pageableCaptor.capture());
+    ArgumentCaptor<String> searchTermCaptor = ArgumentCaptor.forClass(String.class);
+    verify(vses).getValueSets(pageableCaptor.capture(), searchTermCaptor.capture());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -121,12 +123,12 @@ class ValueSetExpansionAdminControllerTest {
   @Test
   void testGetValueSetsWithAscendingUrlSort() {
     Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
-    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+    when(vses.getValueSets(any(Pageable.class), any())).thenReturn(page);
 
-    controller.getValueSets(25, 1, "url,false");
-
+    controller.getValueSets(25, 1, "url,false", null);
+    ArgumentCaptor<String> searchTermCaptor = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(vses).getValueSets(pageableCaptor.capture());
+    verify(vses).getValueSets(pageableCaptor.capture(), searchTermCaptor.capture());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -139,12 +141,13 @@ class ValueSetExpansionAdminControllerTest {
   @Test
   void testGetValueSetsWithDescendingManuallyModifiedSort() {
     Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
-    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+    when(vses.getValueSets(any(Pageable.class), any())).thenReturn(page);
 
-    controller.getValueSets(10, 0, "manuallyModified,true");
+    controller.getValueSets(10, 0, "manuallyModified,true", null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(vses).getValueSets(pageableCaptor.capture());
+    ArgumentCaptor<String> searchTermCaptor = ArgumentCaptor.forClass(String.class);
+    verify(vses).getValueSets(pageableCaptor.capture(), searchTermCaptor.capture());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -155,12 +158,13 @@ class ValueSetExpansionAdminControllerTest {
   @Test
   void testGetValueSetsWithInvalidSortFieldDefaultsToLastUpdated() {
     Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
-    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+    when(vses.getValueSets(any(Pageable.class), any())).thenReturn(page);
 
-    controller.getValueSets(10, 0, "badField,false");
+    controller.getValueSets(10, 0, "badField,false", null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(vses).getValueSets(pageableCaptor.capture());
+    ArgumentCaptor<String> searchTermCaptor = ArgumentCaptor.forClass(String.class);
+    verify(vses).getValueSets(pageableCaptor.capture(), searchTermCaptor.capture());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -171,12 +175,13 @@ class ValueSetExpansionAdminControllerTest {
   @Test
   void testGetValueSetsWithMalformedSortInfoDefaultsToLastUpdatedDesc() {
     Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
-    when(vses.getValueSets(any(Pageable.class))).thenReturn(page);
+    when(vses.getValueSets(any(Pageable.class), any())).thenReturn(page);
 
-    controller.getValueSets(10, 0, "url");
+    controller.getValueSets(10, 0, "url", null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(vses).getValueSets(pageableCaptor.capture());
+    ArgumentCaptor<String> searchTermCaptor = ArgumentCaptor.forClass(String.class);
+    verify(vses).getValueSets(pageableCaptor.capture(), searchTermCaptor.capture());
 
     Pageable pageable = pageableCaptor.getValue();
 

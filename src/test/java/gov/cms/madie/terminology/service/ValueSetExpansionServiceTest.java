@@ -1022,7 +1022,7 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findAll(pageable)).thenReturn(page);
 
-    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable, any());
 
     assertEquals(1, result.getTotalElements());
 
@@ -1043,7 +1043,7 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findAll(pageable)).thenReturn(emptyPage);
 
-    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable, any());
 
     assertNotNull(result);
     assertTrue(result.getContent().isEmpty());
@@ -1076,7 +1076,7 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findAll(pageable)).thenReturn(new PageImpl<>(List.of(vs1, vs2)));
 
-    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable, any());
 
     assertEquals(2, result.getTotalElements());
 

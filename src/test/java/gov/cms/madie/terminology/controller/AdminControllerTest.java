@@ -313,10 +313,8 @@ class AdminControllerTest {
   })
   void getCodeSystemsAppliesMappingAndDirectionForAllSortOptions(
       String sortLabel, String expectedField, String descFlag, String expectedDirection) {
-    when(fhirTerminologyService.getCodeSystems(any()))
-        .thenReturn(Page.empty());
-    ArgumentCaptor<Pageable> captor =
-        ArgumentCaptor.forClass(Pageable.class);
+    when(fhirTerminologyService.getCodeSystems(any())).thenReturn(Page.empty());
+    ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
     int limit = 5;
     int page = 1;
     String sortInfo = sortLabel + "," + descFlag;
@@ -325,8 +323,6 @@ class AdminControllerTest {
     Pageable pageReq = captor.getValue();
     Sort.Order order = pageReq.getSort().getOrderFor(expectedField);
     assertNotNull(order);
-    assertEquals(
-        Sort.Direction.valueOf(expectedDirection),
-        order.getDirection());
+    assertEquals(Sort.Direction.valueOf(expectedDirection), order.getDirection());
   }
 }

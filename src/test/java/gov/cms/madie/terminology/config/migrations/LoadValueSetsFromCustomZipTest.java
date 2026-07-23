@@ -214,7 +214,7 @@ class LoadValueSetsFromCustomZipTest {
   void testLastUpdatedIsSetToCurrentTime() throws IOException {
     Instant beforeExecution = Instant.now();
     ArgumentCaptor<MadieValueSet> madieValueSetCaptor =
-      ArgumentCaptor.forClass(MadieValueSet.class);
+        ArgumentCaptor.forClass(MadieValueSet.class);
 
     when(valueSetExpansionRepositoryMock.findByUrlAndVersion(anyString(), anyString()))
         .thenReturn(Optional.empty());

@@ -598,40 +598,41 @@ class FhirTerminologyServiceTest {
     c1.setOid("fakeoid1");
     c1.setFullUrl("http://example.com/cs1");
     c1.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("1.0")
-                    .vsacVersion("1")
-                    .build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("1.0")
+            .vsacVersion("1")
+            .build());
     var c2 = new gov.cms.madie.terminology.models.CodeSystem();
     c2.setTitle("t2");
     c2.setOid("fakeoid2");
     c2.setFullUrl("http://example.com/cs2");
     c2.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.0")
-                    .vsacVersion("2")
-                    .build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("2.0")
+            .vsacVersion("2")
+            .build());
     var c3 = new gov.cms.madie.terminology.models.CodeSystem();
     c3.setTitle("t3");
     c3.setOid("fakeoid3");
     c3.setFullUrl("http://example.com/cs3");
     c3.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
     var c4 = new gov.cms.madie.terminology.models.CodeSystem();
     c4.setTitle("t4");
     c4.setOid("NOT.IN.VSAC");
     c4.setFullUrl("http://example.com/cs4");
     c4.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("fhirOnly")
-                    .build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("fhirOnly")
+            .build());
 
-    Page<gov.cms.madie.terminology.models.CodeSystem> codeSystems = new PageImpl<>(Arrays.asList(c1, c2, c3, c4));
+    Page<gov.cms.madie.terminology.models.CodeSystem> codeSystems =
+        new PageImpl<>(Arrays.asList(c1, c2, c3, c4));
     when(codeSystemRepository.findAll(any(Pageable.class))).thenReturn(codeSystems);
 
     PageRequest pageable = PageRequest.of(0, 10);
     Page<gov.cms.madie.terminology.models.CodeSystem> result =
-            fhirTerminologyService.getCodeSystems(pageable);
+        fhirTerminologyService.getCodeSystems(pageable);
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(4, result.getTotalElements());
