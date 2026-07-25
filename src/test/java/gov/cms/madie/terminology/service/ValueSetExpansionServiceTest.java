@@ -22,10 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Limit;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatusCode;
 
 import java.time.Instant;
@@ -1022,7 +1019,7 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findAll(pageable)).thenReturn(page);
 
-    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable, any());
 
     assertEquals(1, result.getTotalElements());
 
@@ -1043,7 +1040,7 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findAll(pageable)).thenReturn(emptyPage);
 
-    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable, any());
 
     assertNotNull(result);
     assertTrue(result.getContent().isEmpty());
@@ -1076,7 +1073,7 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findAll(pageable)).thenReturn(new PageImpl<>(List.of(vs1, vs2)));
 
-    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable);
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable, any());
 
     assertEquals(2, result.getTotalElements());
 
@@ -1092,5 +1089,32 @@ class ValueSetExpansionServiceTest {
     assertFalse(second.isManuallyModified());
 
     verify(vseRepo, times(1)).findAll(pageable);
+  }
+
+  @Test
+  void getValueSetsUsesUrlSearchWhenSearchTermProvided() {
+    Instant lastUpdated = Instant.now();
+
+    MadieValueSet valueSet =
+        MadieValueSet.builder()
+            .id("vs-id")
+            .url(VS_URL)
+            .lastUpdated(lastUpdated)
+            .manuallyModified(true)
+            .build();
+
+    PageRequest pageable = PageRequest.of(0, 10);
+    Page<MadieValueSet> page = new PageImpl<>(List.of(valueSet));
+
+    when(vseRepo.findByUrlContainingIgnoreCase("heart", pageable)).thenReturn(page);
+
+    Page<ValueSetDisplayForAdmin> result = valueSetExpansionService.getValueSets(pageable, "heart");
+
+    assertEquals(1, result.getTotalElements());
+    assertEquals(VS_URL, result.getContent().get(0).getUrl());
+
+    verify(vseRepo, times(1)).findByUrlContainingIgnoreCase("heart", pageable);
+
+    verify(vseRepo, never()).findAll(any(Pageable.class));
   }
 }

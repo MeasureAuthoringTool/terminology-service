@@ -1,6 +1,8 @@
 package gov.cms.madie.terminology.repositories;
 
 import gov.cms.madie.terminology.models.MadieValueSet;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
@@ -8,6 +10,8 @@ import java.util.Optional;
 
 public interface ValueSetExpansionRepository extends MongoRepository<MadieValueSet, String> {
   MadieValueSet findByUrlAndVersionIsNull(String url);
+
+  Page<MadieValueSet> findByUrlContainingIgnoreCase(String searchTerm, Pageable pageable);
 
   Optional<MadieValueSet> findByUrlAndVersion(String url, String version);
 

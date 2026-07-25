@@ -142,12 +142,21 @@ public class ValueSetExpansionService {
         .url(valueSet.getUrl())
         .lastUpdated(valueSet.getLastUpdated())
         .manuallyModified(valueSet.isManuallyModified())
-            .valueSet(valueSet.getValueSet())
+        .valueSet(valueSet.getValueSet())
         .build();
   }
 
-  public Page<ValueSetDisplayForAdmin> getValueSets(Pageable pageable) {
-    return vseRepo.findAll(pageable).map(this::convertToDisplayDto);
+  public Page<ValueSetDisplayForAdmin> getValueSets(Pageable pageable, String searchTerm) {
+
+    Page<MadieValueSet> page;
+
+    if (StringUtils.isBlank(searchTerm)) {
+      page = vseRepo.findAll(pageable);
+    } else {
+      page = vseRepo.findByUrlContainingIgnoreCase(searchTerm, pageable);
+    }
+
+    return page.map(this::convertToDisplayDto);
   }
 
   private void expandValueSets(List<MadieValueSet> madieValueSets) {
