@@ -598,40 +598,41 @@ class FhirTerminologyServiceTest {
     c1.setOid("fakeoid1");
     c1.setFullUrl("http://example.com/cs1");
     c1.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("1.0")
-                    .vsacVersion("1")
-                    .build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("1.0")
+            .vsacVersion("1")
+            .build());
     var c2 = new gov.cms.madie.terminology.models.CodeSystem();
     c2.setTitle("t2");
     c2.setOid("fakeoid2");
     c2.setFullUrl("http://example.com/cs2");
     c2.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.0")
-                    .vsacVersion("2")
-                    .build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("2.0")
+            .vsacVersion("2")
+            .build());
     var c3 = new gov.cms.madie.terminology.models.CodeSystem();
     c3.setTitle("t3");
     c3.setOid("fakeoid3");
     c3.setFullUrl("http://example.com/cs3");
     c3.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
     var c4 = new gov.cms.madie.terminology.models.CodeSystem();
     c4.setTitle("t4");
     c4.setOid("NOT.IN.VSAC");
     c4.setFullUrl("http://example.com/cs4");
     c4.setVersion(
-            gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("fhirOnly")
-                    .build());
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("fhirOnly")
+            .build());
 
-    Page<gov.cms.madie.terminology.models.CodeSystem> codeSystems = new PageImpl<>(Arrays.asList(c1, c2, c3, c4));
+    Page<gov.cms.madie.terminology.models.CodeSystem> codeSystems =
+        new PageImpl<>(Arrays.asList(c1, c2, c3, c4));
     when(codeSystemRepository.findAll(any(Pageable.class))).thenReturn(codeSystems);
 
     PageRequest pageable = PageRequest.of(0, 10);
     Page<gov.cms.madie.terminology.models.CodeSystem> result =
-            fhirTerminologyService.getCodeSystems(pageable);
+        fhirTerminologyService.getCodeSystems(pageable, null, null);
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(4, result.getTotalElements());
@@ -2204,5 +2205,161 @@ class FhirTerminologyServiceTest {
     assertThrows(
         CodeSystemNotFoundException.class, () -> fhirTerminologyService.deleteCodeSystem(id));
     verify(codeSystemRepository, never()).deleteById(anyString());
+  }
+
+  @Test
+  void testGetCodeSystemsWithBlankFilterAndSearchText() {
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "", "");
+
+    verify(codeSystemRepository).findAll(pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsFilterByTitle() {
+    String searchText = "LOINC";
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAllByTitleContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "title", searchText);
+
+    verify(codeSystemRepository).findAllByTitleContainingIgnoreCase(searchText, pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsFilterByName() {
+    String searchText = "LOINC";
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAllByNameContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "name", searchText);
+
+    verify(codeSystemRepository).findAllByNameContainingIgnoreCase(searchText, pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsFilterByVersion() {
+    String searchText = "2.74";
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAllByVersionFhirVersionContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "version", searchText);
+
+    verify(codeSystemRepository)
+        .findAllByVersionFhirVersionContainingIgnoreCase(searchText, pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsFilterByFullUrl() {
+    String searchText = "http://loinc.org";
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "fullurl", searchText);
+
+    verify(codeSystemRepository).findAllByFullUrlContainingIgnoreCase(searchText, pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsFilterByFullUrlCaseInsensitive() {
+    String searchText = "http://loinc.org";
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "FULLURL", searchText);
+
+    verify(codeSystemRepository).findAllByFullUrlContainingIgnoreCase(searchText, pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsFilterByDefaultAnyField() {
+    String searchText = "SNOMEDCTcoding";
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "unknownField", searchText);
+
+    verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsWithNullFilterField() {
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, null, "search");
+
+    verify(codeSystemRepository).findAll(pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsWithNullSearchText() {
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "title", null);
+
+    verify(codeSystemRepository).findAll(pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsWithWhitespaceFilterField() {
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "   ", "search");
+
+    verify(codeSystemRepository).findAll(pageable);
+    assertEquals(mockPage, result);
+  }
+
+  @Test
+  void testGetCodeSystemsWithWhitespaceSearchText() {
+    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.getCodeSystems(pageable, "title", "   ");
+
+    verify(codeSystemRepository).findAll(pageable);
+    assertEquals(mockPage, result);
   }
 }
