@@ -215,14 +215,15 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithDefaultSort() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
-    ResponseEntity<Page<CodeSystem>> response = adminController.getCodeSystems(10, 0, null);
+    ResponseEntity<Page<CodeSystem>> response =
+        adminController.getCodeSystems(10, 0, null, null, null);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -235,12 +236,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithAscendingUrlSort() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
-    adminController.getCodeSystems(25, 1, "fullUrl,false");
+    adminController.getCodeSystems(25, 1, "fullUrl,false", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -253,12 +254,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithDescendingNameSort() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
-    adminController.getCodeSystems(10, 0, "name,true");
+    adminController.getCodeSystems(10, 0, "name,true", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -269,12 +270,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithInvalidSortFieldDefaultsToLastUpdated() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
-    adminController.getCodeSystems(10, 0, "badField,false");
+    adminController.getCodeSystems(10, 0, "badField,false", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -285,12 +286,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithMalformedSortInfoDefaultsToLastUpdatedDesc() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class))).thenReturn(page);
+    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
-    adminController.getCodeSystems(10, 0, "url");
+    adminController.getCodeSystems(10, 0, "url", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture());
+    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -313,13 +314,13 @@ class AdminControllerTest {
   })
   void getCodeSystemsAppliesMappingAndDirectionForAllSortOptions(
       String sortLabel, String expectedField, String descFlag, String expectedDirection) {
-    when(fhirTerminologyService.getCodeSystems(any())).thenReturn(Page.empty());
+    when(fhirTerminologyService.getCodeSystems(any(), any(), any())).thenReturn(Page.empty());
     ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
     int limit = 5;
     int page = 1;
     String sortInfo = sortLabel + "," + descFlag;
-    adminController.getCodeSystems(limit, page, sortInfo);
-    verify(fhirTerminologyService, times(1)).getCodeSystems(captor.capture());
+    adminController.getCodeSystems(limit, page, sortInfo, null, null);
+    verify(fhirTerminologyService, times(1)).getCodeSystems(captor.capture(), any(), any());
     Pageable pageReq = captor.getValue();
     Sort.Order order = pageReq.getSort().getOrderFor(expectedField);
     assertNotNull(order);

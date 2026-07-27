@@ -345,8 +345,21 @@ public class FhirTerminologyService {
     return codeSystemRepository.findAll().stream().filter(CodeSystem::isVsacSearchable).toList();
   }
 
-  public Page<CodeSystem> getCodeSystems(Pageable pageable) {
-    return codeSystemRepository.findAll(pageable);
+  public Page<CodeSystem> getCodeSystems(Pageable pageable, String filterField, String searchText) {
+    if (StringUtils.isBlank(filterField) || StringUtils.isBlank(searchText)) {
+      return codeSystemRepository.findAll(pageable);
+    }
+
+    return switch (filterField.toLowerCase()) {
+      case "title" -> codeSystemRepository.findAllByTitleContainingIgnoreCase(searchText, pageable);
+      case "name" -> codeSystemRepository.findAllByNameContainingIgnoreCase(searchText, pageable);
+      case "version" ->
+          codeSystemRepository.findAllByVersionFhirVersionContainingIgnoreCase(
+              searchText, pageable);
+      case "fullurl" ->
+          codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable);
+      default -> codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
+    };
   }
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {

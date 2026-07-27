@@ -113,10 +113,13 @@ public class AdminController {
   public ResponseEntity<Page<CodeSystem>> getCodeSystems(
       @RequestParam(required = false, defaultValue = "10", name = "limit") int limit,
       @RequestParam(required = false, defaultValue = "0", name = "page") int page,
-      @RequestParam(required = false, name = "sortInfo") String sortInfo) {
+      @RequestParam(required = false, name = "sortInfo") String sortInfo,
+      @RequestParam(required = false, name = "filterField") String filterField,
+      @RequestParam(required = false, name = "searchText") String searchText) {
 
     Pageable pageReq = PagingUtil.buildPageable(page, limit, sortInfo, "title", this::mapSortField);
-    return ResponseEntity.ok(fhirTerminologyService.getCodeSystems(pageReq));
+    return ResponseEntity.ok(
+        fhirTerminologyService.getCodeSystems(pageReq, filterField, searchText));
   }
 
   private String mapSortField(String sortField) {
