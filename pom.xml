@@ -5,7 +5,7 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>4.0.7</version>
-    <relativePath></relativePath>
+    <relativePath/>
     <!-- lookup parent from repository -->
   </parent>
   <groupId>gov.cms.madie.terminologyservice</groupId>
@@ -14,7 +14,7 @@
   <name>Terminology Service</name>
   <description>Terminology Service for MADiE</description>
   <properties>
-    <hapifhir.version>8.10.0</hapifhir.version>
+    <hapifhir.version>8.10.1</hapifhir.version>
     <java.version>17</java.version>
     <jxbmavenplugin.version>3.2.0</jxbmavenplugin.version>
     <maven.compiler.source>17</maven.compiler.source>
@@ -248,7 +248,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
