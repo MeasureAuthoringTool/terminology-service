@@ -346,11 +346,15 @@ public class FhirTerminologyService {
   }
 
   public Page<CodeSystem> getCodeSystems(Pageable pageable, String filterField, String searchText) {
-    if (StringUtils.isBlank(filterField) || StringUtils.isBlank(searchText)) {
+    if (StringUtils.isBlank(searchText)) {
       return codeSystemRepository.findAll(pageable);
     }
 
-    return switch (filterField.toLowerCase()) {
+    if (filterField == null) {
+      return codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
+    }
+
+    return switch (StringUtils.lowerCase(filterField)) {
       case "title" -> codeSystemRepository.findAllByTitleContainingIgnoreCase(searchText, pageable);
       case "name" -> codeSystemRepository.findAllByNameContainingIgnoreCase(searchText, pageable);
       case "version" ->

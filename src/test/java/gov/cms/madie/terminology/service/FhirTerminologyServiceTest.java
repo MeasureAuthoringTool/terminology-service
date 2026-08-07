@@ -2313,14 +2313,16 @@ class FhirTerminologyServiceTest {
 
   @Test
   void testGetCodeSystemsWithNullFilterField() {
+    String searchText = "search";
     Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
     PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
+    when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
 
     Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, null, "search");
+        fhirTerminologyService.getCodeSystems(pageable, null, searchText);
 
-    verify(codeSystemRepository).findAll(pageable);
+    verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
   }
 
@@ -2339,14 +2341,16 @@ class FhirTerminologyServiceTest {
 
   @Test
   void testGetCodeSystemsWithWhitespaceFilterField() {
+    String searchText = "search";
     Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
     PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
+    when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
+        .thenReturn(mockPage);
 
     Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "   ", "search");
+        fhirTerminologyService.getCodeSystems(pageable, "   ", searchText);
 
-    verify(codeSystemRepository).findAll(pageable);
+    verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
   }
 
