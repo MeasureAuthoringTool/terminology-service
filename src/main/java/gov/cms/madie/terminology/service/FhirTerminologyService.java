@@ -354,7 +354,7 @@ public class FhirTerminologyService {
       return codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
     }
 
-    return switch (StringUtils.lowerCase(filterField)) {
+    return switch (StringUtils.deleteWhitespace(StringUtils.lowerCase(filterField))) {
       case "title" -> codeSystemRepository.findAllByTitleContainingIgnoreCase(searchText, pageable);
       case "name" -> codeSystemRepository.findAllByNameContainingIgnoreCase(searchText, pageable);
       case "version" ->
