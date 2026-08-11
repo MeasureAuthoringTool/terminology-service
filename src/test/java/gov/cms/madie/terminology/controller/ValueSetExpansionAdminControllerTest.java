@@ -1,6 +1,8 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
+import gov.cms.madie.terminology.exceptions.DuplicateValueSetException;
+import gov.cms.madie.terminology.exceptions.InvalidValueSetException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
@@ -74,6 +76,52 @@ class ValueSetExpansionAdminControllerTest {
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(madieValueSet, response.getBody());
     verify(vses, times(1)).upsertValueSet(any(MadieValueSet.class));
+  }
+
+  @Test
+  void testAddValueSetSuccessfully() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    ValueSetDisplayForAdmin request =
+        ValueSetDisplayForAdmin.builder()
+            .url(madieValueSet.getUrl())
+            .version(madieValueSet.getVersion())
+            .valueSet(MOCK_VALUE_SET_JSON)
+            .build();
+    when(vses.addValueSet(any(ValueSetDisplayForAdmin.class))).thenReturn(madieValueSet);
+
+    ResponseEntity<MadieValueSet> response = controller.addValueSet(principal, request);
+
+    assertEquals(HttpStatus.CREATED, response.getStatusCode());
+    assertEquals(madieValueSet, response.getBody());
+    verify(vses, times(1)).addValueSet(request);
+  }
+
+  @Test
+  void testAddValueSetPropagatesInvalidValueSetException() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    ValueSetDisplayForAdmin request =
+        ValueSetDisplayForAdmin.builder()
+            .url(madieValueSet.getUrl())
+            .valueSet(MOCK_VALUE_SET_JSON)
+            .build();
+    doThrow(new InvalidValueSetException("bad json")).when(vses).addValueSet(request);
+
+    assertThrows(InvalidValueSetException.class, () -> controller.addValueSet(principal, request));
+  }
+
+  @Test
+  void testAddValueSetPropagatesDuplicateValueSetException() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    ValueSetDisplayForAdmin request =
+        ValueSetDisplayForAdmin.builder()
+            .url(madieValueSet.getUrl())
+            .version(madieValueSet.getVersion())
+            .valueSet(MOCK_VALUE_SET_JSON)
+            .build();
+    doThrow(new DuplicateValueSetException("duplicate")).when(vses).addValueSet(request);
+
+    assertThrows(
+        DuplicateValueSetException.class, () -> controller.addValueSet(principal, request));
   }
 
   @Test

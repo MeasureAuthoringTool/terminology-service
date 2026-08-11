@@ -90,6 +90,21 @@ public class ValueSetExpansionAdminController {
     return ResponseEntity.ok().body(vses.upsertValueSet(valueSet));
   }
 
+  @PostMapping(
+      value = "/value-set",
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<MadieValueSet> addValueSet(
+      Principal principal, @Valid @RequestBody ValueSetDisplayForAdmin valueSet) {
+    log.info(
+        "Admin user [{}] is adding a new value set with url: [{}] version: [{}]",
+        principal.getName(),
+        valueSet.getUrl(),
+        valueSet.getVersion());
+    return ResponseEntity.status(HttpStatus.CREATED).body(vses.addValueSet(valueSet));
+  }
+
   @DeleteMapping(value = "/value-set/{id}")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<Void> deleteValueSet(Principal principal, @PathVariable String id) {
