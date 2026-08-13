@@ -348,11 +348,12 @@ public class ValueSetExpansionService {
       parsedValueSet = (ValueSet) resource;
     } catch (DataFormatException e) {
       throw new InvalidValueSetException(
-          "The provided expansion could not be read as valid JSON. Please check the formatting and try again.");
+          "The provided expansion could not be read as valid JSON. "
+              + "Please check the formatting and try again.");
     }
 
     if (!url.equals(parsedValueSet.getUrl())
-        || (StringUtils.isNotBlank(version) && !version.equals(parsedValueSet.getVersion()))) {
+        || StringUtils.isNotBlank(version) && !version.equals(parsedValueSet.getVersion())) {
       throw new InvalidValueSetException(
           "Expansion JSON URL and/or version do not match the provided values.");
     }
