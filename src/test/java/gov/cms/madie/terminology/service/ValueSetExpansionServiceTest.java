@@ -1002,7 +1002,9 @@ class ValueSetExpansionServiceTest {
     InvalidValueSetException ex =
         assertThrows(
             InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
-    assertTrue(ex.getMessage().contains("does not match the provided URL"));
+    assertTrue(
+        ex.getMessage()
+            .contains("Expansion JSON URL and/or version do not match the provided values"));
     verify(vseRepo, never()).save(any());
   }
 
@@ -1014,7 +1016,9 @@ class ValueSetExpansionServiceTest {
     InvalidValueSetException ex =
         assertThrows(
             InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
-    assertTrue(ex.getMessage().contains("does not match the provided version"));
+    assertTrue(
+        ex.getMessage()
+            .contains("Expansion JSON URL and/or version do not match the provided values"));
     verify(vseRepo, never()).save(any());
   }
 

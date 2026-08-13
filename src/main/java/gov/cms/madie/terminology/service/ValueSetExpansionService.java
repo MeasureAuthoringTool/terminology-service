@@ -342,26 +342,17 @@ public class ValueSetExpansionService {
       IBaseResource resource = fhirContext.newJsonParser().parseResource(valueSetJson);
       if (!(resource instanceof ValueSet)) {
         throw new InvalidValueSetException(
-            "The provided expansion JSON is not a FHIR ValueSet resource.");
+            "The provided expansion is not a valid FHIR ValueSet resource.");
       }
       parsedValueSet = (ValueSet) resource;
     } catch (DataFormatException e) {
-      throw new InvalidValueSetException(
-          "The provided expansion JSON is not valid: " + e.getMessage());
+      throw new InvalidValueSetException("The provided expansion could not be read as valid JSON. Please check the formatting and try again.");
     }
 
-    if (!url.equals(parsedValueSet.getUrl())) {
+    if (!url.equals(parsedValueSet.getUrl())
+        || (StringUtils.isNotBlank(version) && !version.equals(parsedValueSet.getVersion()))) {
       throw new InvalidValueSetException(
-          String.format(
-              "The URL in the expansion JSON [%s] does not match the provided URL [%s].",
-              parsedValueSet.getUrl(), url));
-    }
-
-    if (StringUtils.isNotBlank(version) && !version.equals(parsedValueSet.getVersion())) {
-      throw new InvalidValueSetException(
-          String.format(
-              "The version in the expansion JSON [%s] does not match the provided version [%s].",
-              parsedValueSet.getVersion(), version));
+          "Expansion JSON URL and/or version do not match the provided values.");
     }
   }
 
