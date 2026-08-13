@@ -276,10 +276,10 @@ public class ValueSetExpansionService {
   }
 
   /**
-   * Adds a new, manually-created value set (and its expansion) to the database.
-   * Validation: The combination of URL and version is unique in the database
+   * Adds a new, manually-created value set (and its expansion) to the database. Validation: The
+   * combination of URL and version is unique in the database
    *
-   * The saved value set has {@code manuallyModified} set to {@code true} and {@code lastUpdated}
+   * <p>The saved value set has {@code manuallyModified} set to {@code true} and {@code lastUpdated}
    * set to the current time.
    *
    * @param request the admin-supplied value set details
@@ -318,7 +318,8 @@ public class ValueSetExpansionService {
   }
 
   /**
-   * <p>Performs the following validations before saving:
+   * Performs the following validations before saving:
+   *
    * <ul>
    *   <li>URL and value set expansion JSON are provided
    *   <li>The expansion JSON is syntactically valid JSON
@@ -346,7 +347,8 @@ public class ValueSetExpansionService {
       }
       parsedValueSet = (ValueSet) resource;
     } catch (DataFormatException e) {
-      throw new InvalidValueSetException("The provided expansion could not be read as valid JSON. Please check the formatting and try again.");
+      throw new InvalidValueSetException(
+          "The provided expansion could not be read as valid JSON. Please check the formatting and try again.");
     }
 
     if (!url.equals(parsedValueSet.getUrl())

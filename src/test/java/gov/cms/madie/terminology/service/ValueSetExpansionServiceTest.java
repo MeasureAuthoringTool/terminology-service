@@ -973,7 +973,7 @@ class ValueSetExpansionServiceTest {
     InvalidValueSetException ex =
         assertThrows(
             InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
-    assertTrue(ex.getMessage().contains("not valid"));
+    assertTrue(ex.getMessage().contains("could not be read as valid JSON"));
     verify(vseRepo, never()).save(any());
   }
 
@@ -989,7 +989,7 @@ class ValueSetExpansionServiceTest {
     InvalidValueSetException ex =
         assertThrows(
             InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
-    assertTrue(ex.getMessage().contains("not a FHIR ValueSet"));
+    assertTrue(ex.getMessage().contains("not a valid FHIR ValueSet"));
     verify(vseRepo, never()).save(any());
   }
 
