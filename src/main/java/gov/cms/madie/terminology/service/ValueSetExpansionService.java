@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.DataFormatException;
 import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.exceptions.*;
 import gov.cms.madie.terminology.models.CodeSystem;
@@ -13,6 +14,7 @@ import gov.cms.madie.terminology.webclient.TxTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Value;
@@ -140,6 +142,7 @@ public class ValueSetExpansionService {
     return ValueSetDisplayForAdmin.builder()
         .id(valueSet.getId())
         .url(valueSet.getUrl())
+        .version(valueSet.getVersion())
         .lastUpdated(valueSet.getLastUpdated())
         .manuallyModified(valueSet.isManuallyModified())
         .valueSet(valueSet.getValueSet())
@@ -240,6 +243,8 @@ public class ValueSetExpansionService {
   }
 
   public MadieValueSet upsertValueSet(MadieValueSet valueSet) {
+    validateValueSetPayload(valueSet.getUrl(), valueSet.getVersion(), valueSet.getValueSet());
+
     valueSet.setLastUpdated(Instant.now());
     valueSet.setManuallyModified(true);
 
@@ -268,6 +273,83 @@ public class ValueSetExpansionService {
         saved.getUrl(),
         saved.getVersion());
     return saved;
+  }
+
+  /**
+   * Adds a new, manually-created value set (and its expansion) to the database. Validation: The
+   * combination of URL and version is unique in the database
+   *
+   * <p>The saved value set has {@code manuallyModified} set to {@code true} and {@code lastUpdated}
+   * set to the current time.
+   *
+   * @param request the admin-supplied value set details
+   * @return the persisted {@link MadieValueSet}
+   */
+  public MadieValueSet addValueSet(ValueSetDisplayForAdmin request) {
+    String url = request.getUrl();
+    String version = request.getVersion();
+    String valueSetJson = request.getValueSet();
+
+    validateValueSetPayload(url, version, valueSetJson);
+
+    if (vseRepo.findByUrlAndVersion(url, version).isPresent()) {
+      throw new DuplicateValueSetException(
+          String.format(
+              "A value set already exists for url: [%s] version: [%s]",
+              url, StringUtils.defaultString(version)));
+    }
+
+    MadieValueSet valueSet =
+        MadieValueSet.builder()
+            .url(url)
+            .version(version)
+            .valueSet(valueSetJson)
+            .manuallyModified(true)
+            .lastUpdated(Instant.now())
+            .build();
+
+    MadieValueSet saved = vseRepo.save(valueSet);
+    log.info(
+        "Successfully added new value set with id: [{}] url: [{}] version: [{}]",
+        saved.getId(),
+        saved.getUrl(),
+        saved.getVersion());
+    return saved;
+  }
+
+  /**
+   * Performs the following validations before saving:
+   *
+   * <ul>
+   *   <li>URL and value set expansion JSON are provided
+   *   <li>The expansion JSON is syntactically valid JSON
+   *   <li>The JSON represents a FHIR ValueSet resource
+   *   <li>The URL inside the JSON matches the provided URL
+   *   <li>When a version is provided, the version inside the JSON matches it
+   * </ul>
+   *
+   * @throws InvalidValueSetException when any validation fails
+   */
+  private void validateValueSetPayload(String url, String version, String valueSetJson) {
+    ValueSet parsedValueSet;
+    try {
+      IBaseResource resource = fhirContext.newJsonParser().parseResource(valueSetJson);
+      if (!(resource instanceof ValueSet)) {
+        throw new InvalidValueSetException(
+            "The provided expansion is not a valid FHIR ValueSet resource.");
+      }
+      parsedValueSet = (ValueSet) resource;
+    } catch (DataFormatException e) {
+      throw new InvalidValueSetException(
+          "The provided expansion could not be read as valid JSON. "
+              + "Please check the formatting and try again.");
+    }
+
+    if (!url.equals(parsedValueSet.getUrl())
+        || StringUtils.isNotBlank(version) && !version.equals(parsedValueSet.getVersion())) {
+      throw new InvalidValueSetException(
+          "Expansion JSON URL and/or version do not match the provided values.");
+    }
   }
 
   public void deleteValueSet(String id) {

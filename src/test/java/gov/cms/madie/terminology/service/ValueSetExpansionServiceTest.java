@@ -4,6 +4,8 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
+import gov.cms.madie.terminology.exceptions.DuplicateValueSetException;
+import gov.cms.madie.terminology.exceptions.InvalidValueSetException;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
@@ -854,6 +856,7 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
     when(vseRepo.save(any(MadieValueSet.class))).thenReturn(incoming);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
 
     MadieValueSet result = valueSetExpansionService.upsertValueSet(incoming);
 
@@ -881,6 +884,7 @@ class ValueSetExpansionServiceTest {
     when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
     when(vseRepo.save(any(MadieValueSet.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
 
     MadieValueSet result = valueSetExpansionService.upsertValueSet(incoming);
 
@@ -888,6 +892,126 @@ class ValueSetExpansionServiceTest {
     assertTrue(result.isManuallyModified());
     assertNotNull(result.getLastUpdated());
     verify(vseRepo, times(1)).save(incoming);
+  }
+
+  // ---------------------------------------------------------------------------
+  // addValueSet()
+  // ---------------------------------------------------------------------------
+
+  private ValueSetDisplayForAdmin addRequest(String url, String version, String valueSetJson) {
+    return ValueSetDisplayForAdmin.builder()
+        .url(url)
+        .version(version)
+        .valueSet(valueSetJson)
+        .build();
+  }
+
+  @Test
+  void addValueSetSavesNewValueSetWithManuallyModifiedAndLastUpdated() {
+    ValueSetDisplayForAdmin request = addRequest(VS_URL, VS_VERSION, MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+    when(vseRepo.save(any(MadieValueSet.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    MadieValueSet result = valueSetExpansionService.addValueSet(request);
+
+    assertEquals(VS_URL, result.getUrl());
+    assertEquals(VS_VERSION, result.getVersion());
+    assertEquals(MOCK_VALUE_SET_JSON, result.getValueSet());
+    assertTrue(result.isManuallyModified());
+    assertNotNull(result.getLastUpdated());
+
+    ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
+    verify(vseRepo, times(1)).save(captor.capture());
+    assertTrue(captor.getValue().isManuallyModified());
+    assertNotNull(captor.getValue().getLastUpdated());
+  }
+
+  @Test
+  void addValueSetSavesWhenVersionIsBlankAndSkipsVersionValidation() {
+    // JSON has a version, but the user left version blank — version check must be skipped
+    ValueSetDisplayForAdmin request = addRequest(VS_URL, "", MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, "")).thenReturn(Optional.empty());
+    when(vseRepo.save(any(MadieValueSet.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    MadieValueSet result = valueSetExpansionService.addValueSet(request);
+
+    assertTrue(result.isManuallyModified());
+    verify(vseRepo, times(1)).save(any(MadieValueSet.class));
+  }
+
+  @Test
+  void addValueSetThrowsWhenJsonIsSyntacticallyInvalid() {
+    ValueSetDisplayForAdmin request = addRequest(VS_URL, VS_VERSION, "{ not valid json");
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+
+    InvalidValueSetException ex =
+        assertThrows(
+            InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
+    assertTrue(ex.getMessage().contains("could not be read as valid JSON"));
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void addValueSetThrowsWhenJsonIsNotAValueSetResource() {
+    String patientJson =
+        """
+        { "resourceType": "Patient", "id": "p1" }
+        """;
+    ValueSetDisplayForAdmin request = addRequest(VS_URL, VS_VERSION, patientJson);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+
+    InvalidValueSetException ex =
+        assertThrows(
+            InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
+    assertTrue(ex.getMessage().contains("not a valid FHIR ValueSet"));
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void addValueSetThrowsWhenJsonUrlDoesNotMatchProvidedUrl() {
+    ValueSetDisplayForAdmin request =
+        addRequest("http://cts.nlm.nih.gov/fhir/ValueSet/9.9.9", VS_VERSION, MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+
+    InvalidValueSetException ex =
+        assertThrows(
+            InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
+    assertTrue(
+        ex.getMessage()
+            .contains("Expansion JSON URL and/or version do not match the provided values"));
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void addValueSetThrowsWhenJsonVersionDoesNotMatchProvidedVersion() {
+    ValueSetDisplayForAdmin request = addRequest(VS_URL, "99999999", MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+
+    InvalidValueSetException ex =
+        assertThrows(
+            InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
+    assertTrue(
+        ex.getMessage()
+            .contains("Expansion JSON URL and/or version do not match the provided values"));
+    verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void addValueSetThrowsDuplicateWhenUrlAndVersionAlreadyExist() {
+    ValueSetDisplayForAdmin request = addRequest(VS_URL, VS_VERSION, MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION))
+        .thenReturn(Optional.of(MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build()));
+
+    DuplicateValueSetException ex =
+        assertThrows(
+            DuplicateValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
+    assertTrue(ex.getMessage().contains(VS_URL));
+    verify(vseRepo, never()).save(any());
   }
 
   // ---------------------------------------------------------------------------

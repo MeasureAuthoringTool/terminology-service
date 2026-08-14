@@ -24,6 +24,8 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
+import gov.cms.madie.terminology.exceptions.DuplicateValueSetException;
+import gov.cms.madie.terminology.exceptions.InvalidValueSetException;
 import gov.cms.madie.terminology.exceptions.ResourceNotFoundException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
@@ -164,6 +166,31 @@ public class VsacControllerAdvice {
   Map<String, Object> onDuplicateCodeSystemException(
       DuplicateCodeSystemException ex, WebRequest request) {
     log.warn("Duplicate CodeSystem exception: {}", ex.getMessage());
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(DuplicateValueSetException.class)
+  @ResponseStatus(HttpStatus.CONFLICT)
+  @ResponseBody
+  Map<String, Object> onDuplicateValueSetException(
+      DuplicateValueSetException ex, WebRequest request) {
+    log.warn("Duplicate ValueSet exception: {}", ex.getMessage());
+    Map<String, String> validationErrors = new HashMap<>();
+    validationErrors.put(request.getContextPath(), ex.getMessage());
+    Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.CONFLICT);
+    errorAttributes.put("validationErrors", validationErrors);
+    return errorAttributes;
+  }
+
+  @ExceptionHandler(InvalidValueSetException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  @ResponseBody
+  Map<String, Object> onInvalidValueSetException(InvalidValueSetException ex, WebRequest request) {
+    log.warn("Invalid ValueSet exception: {}", ex.getMessage());
     Map<String, String> validationErrors = new HashMap<>();
     validationErrors.put(request.getContextPath(), ex.getMessage());
     Map<String, Object> errorAttributes = getErrorAttributes(request, HttpStatus.BAD_REQUEST);
