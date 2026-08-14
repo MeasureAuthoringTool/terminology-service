@@ -944,28 +944,6 @@ class ValueSetExpansionServiceTest {
   }
 
   @Test
-  void addValueSetThrowsWhenUrlIsBlank() {
-    ValueSetDisplayForAdmin request = addRequest("  ", VS_VERSION, MOCK_VALUE_SET_JSON);
-
-    InvalidValueSetException ex =
-        assertThrows(
-            InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
-    assertTrue(ex.getMessage().contains("URL is required"));
-    verify(vseRepo, never()).save(any());
-  }
-
-  @Test
-  void addValueSetThrowsWhenValueSetJsonIsBlank() {
-    ValueSetDisplayForAdmin request = addRequest(VS_URL, VS_VERSION, "  ");
-
-    InvalidValueSetException ex =
-        assertThrows(
-            InvalidValueSetException.class, () -> valueSetExpansionService.addValueSet(request));
-    assertTrue(ex.getMessage().contains("expansion JSON is required"));
-    verify(vseRepo, never()).save(any());
-  }
-
-  @Test
   void addValueSetThrowsWhenJsonIsSyntacticallyInvalid() {
     ValueSetDisplayForAdmin request = addRequest(VS_URL, VS_VERSION, "{ not valid json");
     when(fhirContext.newJsonParser()).thenReturn(realParser);

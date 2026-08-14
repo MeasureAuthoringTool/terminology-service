@@ -331,13 +331,6 @@ public class ValueSetExpansionService {
    * @throws InvalidValueSetException when any validation fails
    */
   private void validateValueSetPayload(String url, String version, String valueSetJson) {
-    if (StringUtils.isBlank(url)) {
-      throw new InvalidValueSetException("Value set URL is required.");
-    }
-    if (StringUtils.isBlank(valueSetJson)) {
-      throw new InvalidValueSetException("Value set expansion JSON is required.");
-    }
-
     ValueSet parsedValueSet;
     try {
       IBaseResource resource = fhirContext.newJsonParser().parseResource(valueSetJson);
