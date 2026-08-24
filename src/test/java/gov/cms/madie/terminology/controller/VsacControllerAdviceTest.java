@@ -170,6 +170,22 @@ class VsacControllerAdviceTest {
   }
 
   @Test
+  void onDuplicateValueSetException() {
+    DuplicateValueSetException ex = new DuplicateValueSetException("duplicate value set");
+    var resp = advice.onDuplicateValueSetException(ex, webRequest);
+    assertTrue(resp.containsKey("validationErrors"));
+    assertEquals(HttpStatus.CONFLICT.value(), resp.get("status"));
+  }
+
+  @Test
+  void onInvalidValueSetException() {
+    InvalidValueSetException ex = new InvalidValueSetException("invalid value set");
+    var resp = advice.onInvalidValueSetException(ex, webRequest);
+    assertTrue(resp.containsKey("validationErrors"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), resp.get("status"));
+  }
+
+  @Test
   void onVsacParseBatchValueSetExpansionException_coversBranch() {
     OperationOutcome outcome = new OperationOutcome();
     outcome.addIssue().setDiagnostics("diag");
