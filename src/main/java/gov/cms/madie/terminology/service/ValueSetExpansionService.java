@@ -248,27 +248,25 @@ public class ValueSetExpansionService {
     valueSet.setLastUpdated(Instant.now());
     valueSet.setManuallyModified(true);
 
-    Optional<MadieValueSet> existing =
-        vseRepo.findByUrlAndVersion(valueSet.getUrl(), valueSet.getVersion());
-    boolean isUpdate = existing.isPresent();
+    MadieValueSet existingValueSet =
+        vseRepo
+            .findByUrlAndVersion(valueSet.getUrl(), valueSet.getVersion())
+            .orElseThrow(
+                () ->
+                    new ValueSetNotFoundException(
+                        String.format(
+                            "ValueSet not found for url: %s version: %s",
+                            valueSet.getUrl(), valueSet.getVersion())));
 
-    if (isUpdate) {
-      valueSet.setId(existing.get().getId());
-      log.info(
-          "Updating existing value set with url: [{}] version: [{}]",
-          valueSet.getUrl(),
-          valueSet.getVersion());
-    } else {
-      log.info(
-          "Creating new value set with url: [{}] version: [{}]",
-          valueSet.getUrl(),
-          valueSet.getVersion());
-    }
+    valueSet.setId(existingValueSet.getId());
+    log.info(
+        "Updating existing value set with url: [{}] version: [{}]",
+        valueSet.getUrl(),
+        valueSet.getVersion());
 
     MadieValueSet saved = vseRepo.save(valueSet);
     log.info(
-        "Successfully {} value set with id: [{}] url: [{}] version: [{}]",
-        isUpdate ? "updated" : "created",
+        "Successfully updated value set with id: [{}] url: [{}] version: [{}]",
         saved.getId(),
         saved.getUrl(),
         saved.getVersion());
