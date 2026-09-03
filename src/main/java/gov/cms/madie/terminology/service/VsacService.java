@@ -115,7 +115,8 @@ public class VsacService {
 
     // Verify oid/url is provided in cql, else the code system is considered invalid.
     String cqlCodeSystemOid = sanitizeInput(cqlCode.getCodeSystem().getOid());
-    log.info("Sanitized code system oid/url {}", cqlCode.getCodeSystem().getOid());
+    log.info("Un-sanitized code system oid/url {}", cqlCode.getCodeSystem().getOid());
+    log.info("Sanitized code system oid/url {}", cqlCodeSystemOid);
     if (StringUtils.isBlank(cqlCodeSystemOid)) {
       log.info("CodeSystem {} does not contain any OID/URL", cqlCode.getCodeSystem().getName());
       cqlCode.getCodeSystem().setValid(false);
