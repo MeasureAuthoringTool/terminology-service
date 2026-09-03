@@ -129,8 +129,20 @@ public class VsacService {
     if (model.contains("QDM")) {
       targetCodeSystemVersions = codeSystemRepository.findAllByOid(cqlCodeSystemOid);
     } else {
-      targetCodeSystemVersions = codeSystemRepository.findAllByFullUrl(cqlCodeSystemOid);
+      targetCodeSystemVersions = codeSystemRepository.findAll();
     }
+    log.info(
+        "Target code system versions {}",
+        targetCodeSystemVersions.stream()
+            .filter(cs -> cs.getFullUrl().equals(cqlCodeSystemOid))
+            .map(
+                cs ->
+                    cs.getName()
+                        + ":"
+                        + cs.getFullUrl()
+                        + ":"
+                        + (cs.getVersion() != null ? cs.getVersion().getVsacVersion() : ""))
+            .collect(Collectors.joining(", ")));
     if (CollectionUtils.isEmpty(targetCodeSystemVersions)) {
       log.info("No Code system versions found for {}", cqlCode.getCodeSystem().getOid());
       cqlCode.getCodeSystem().setValid(false);
