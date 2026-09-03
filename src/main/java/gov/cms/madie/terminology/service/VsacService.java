@@ -237,12 +237,12 @@ public class VsacService {
     if (StringUtils.isBlank(cqlCode.getCodeSystem().getVersion())) {
       Optional<CodeSystem> latestCodeSystemVersion =
           codeSystems.stream().filter(CodeSystem::isLatestVersion).findFirst();
-      log.info("latestCodeSystemVersion is {}", latestCodeSystemVersion);
+      log.info("latestCodeSystemVersion is {}", latestCodeSystemVersion.isPresent());
       if (latestCodeSystemVersion.isPresent()
           && StringUtils.isNotBlank(latestCodeSystemVersion.get().getVersion().getVsacVersion())) {
         return latestCodeSystemVersion.get().getVersion().getVsacVersion();
       } else {
-        log.error("did not find latest version");
+        log.info("did not find latest version");
         cqlCode.getCodeSystem().setValid(false);
         cqlCode.getCodeSystem().setErrorMessage("Unable to find a code system version");
         return "";
