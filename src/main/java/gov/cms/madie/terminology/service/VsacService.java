@@ -129,7 +129,7 @@ public class VsacService {
     if (model.contains("QDM")) {
       targetCodeSystemVersions = codeSystemRepository.findAllByOid(cqlCodeSystemOid);
     } else {
-      targetCodeSystemVersions = codeSystemRepository.findAll();
+      targetCodeSystemVersions = codeSystemRepository.findAllByFullUrl(cqlCodeSystemOid);
     }
     log.info(
         "Target code system versions {}",
