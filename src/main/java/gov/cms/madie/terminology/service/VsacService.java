@@ -143,6 +143,8 @@ public class VsacService {
                         + ":"
                         + (cs.getVersion() != null ? cs.getVersion().getVsacVersion() : ""))
             .collect(Collectors.joining(", ")));
+    log.info("isEmpty: ", CollectionUtils.isEmpty(targetCodeSystemVersions));
+
     if (CollectionUtils.isEmpty(targetCodeSystemVersions)) {
       log.info("No Code system versions found for {}", cqlCode.getCodeSystem().getOid());
       cqlCode.getCodeSystem().setValid(false);
