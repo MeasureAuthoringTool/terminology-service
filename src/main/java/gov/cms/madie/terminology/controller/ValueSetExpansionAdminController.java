@@ -129,6 +129,7 @@ public class ValueSetExpansionAdminController {
   private String mapSortField(String sortField) {
     return switch (sortField) {
       case "url" -> "url";
+      case "version" -> "version";
       case "lastUpdated" -> "lastUpdated";
       case "manuallyModified" -> "manuallyModified";
       default -> "lastUpdated";
