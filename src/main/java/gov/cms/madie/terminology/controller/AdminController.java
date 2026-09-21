@@ -126,7 +126,9 @@ public class AdminController {
     return switch (sortField) {
       case "name" -> "name";
       case "FHIR Version" -> "version.fhirVersion";
+      case "vsacVersion" -> "version.vsacVersion";
       case "fullUrl" -> "fullUrl";
+      case "oid" -> "oid";
       case "lastUpdated" -> "lastUpdated";
       case "isLatestVersion" -> "isLatestVersion";
       default -> "title";
