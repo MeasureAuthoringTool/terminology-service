@@ -846,7 +846,7 @@ class ValueSetExpansionServiceTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void upsertValueSetCreatesNewWhenNoExistingUrlVersionMatch() {
+  void upsertValueSetThrowsWhenNoExistingUrlVersionMatch() {
     MadieValueSet incoming =
         MadieValueSet.builder()
             .url(VS_URL)
@@ -855,14 +855,16 @@ class ValueSetExpansionServiceTest {
             .build();
 
     when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
-    when(vseRepo.save(any(MadieValueSet.class))).thenReturn(incoming);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
 
-    MadieValueSet result = valueSetExpansionService.upsertValueSet(incoming);
+    ValueSetNotFoundException ex =
+        assertThrows(
+            ValueSetNotFoundException.class,
+            () -> valueSetExpansionService.upsertValueSet(incoming));
 
-    assertTrue(result.isManuallyModified());
-    assertNotNull(result.getLastUpdated());
-    verify(vseRepo, times(1)).save(incoming);
+    assertTrue(ex.getMessage().contains(VS_URL));
+    assertTrue(ex.getMessage().contains(VS_VERSION));
+    verify(vseRepo, never()).save(any(MadieValueSet.class));
   }
 
   @Test
