@@ -187,6 +187,23 @@ class ValueSetExpansionAdminControllerTest {
   }
 
   @Test
+  void testGetValueSetsWithDescendingVersionSort() {
+    Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
+    when(vses.getValueSets(any(Pageable.class), any())).thenReturn(page);
+
+    controller.getValueSets(10, 0, "version,true", null);
+
+    ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+    ArgumentCaptor<String> searchTermCaptor = ArgumentCaptor.forClass(String.class);
+    verify(vses).getValueSets(pageableCaptor.capture(), searchTermCaptor.capture());
+
+    Pageable pageable = pageableCaptor.getValue();
+
+    assertEquals("version", pageable.getSort().iterator().next().getProperty());
+    assertTrue(pageable.getSort().iterator().next().isDescending());
+  }
+
+  @Test
   void testGetValueSetsWithDescendingManuallyModifiedSort() {
     Page<ValueSetDisplayForAdmin> page = new PageImpl<>(Collections.emptyList());
     when(vses.getValueSets(any(Pageable.class), any())).thenReturn(page);
