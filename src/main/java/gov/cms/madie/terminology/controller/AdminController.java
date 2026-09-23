@@ -2,6 +2,7 @@ package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
+import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,10 +32,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminController {
 
+  private static final DateTimeFormatter FILENAME_TIMESTAMP =
+      DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+
   private final UpdateCodeSystemTask updateCodeSystemTask;
   private final FhirTerminologyService fhirTerminologyService;
   private final VsacService vsacService;
   private final CacheManager cacheManager;
+  private final CodeSystemExportService codeSystemExportService;
 
   @PostMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("hasRole('MADIE-ADMIN')")
@@ -120,6 +128,26 @@ public class AdminController {
     Pageable pageReq = PagingUtil.buildPageable(page, limit, sortInfo, "title", this::mapSortField);
     return ResponseEntity.ok(
         fhirTerminologyService.getCodeSystems(pageReq, filterField, searchText));
+  }
+
+  @PutMapping(value = "/codesystems/export", produces = CodeSystemExportService.XLSX_MEDIA_TYPE)
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<byte[]> exportCodeSystems(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+      Principal principal) {
+    log.info(
+        "Admin user [{}] is generating a Code System Export (all code systems)",
+        principal.getName());
+
+    byte[] workbook = codeSystemExportService.generateCodeSystemExport(authorization);
+
+    String filename =
+        "CodeSystemExport_" + LocalDateTime.now().format(FILENAME_TIMESTAMP) + ".xlsx";
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(CodeSystemExportService.XLSX_MEDIA_TYPE))
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .body(workbook);
   }
 
   private String mapSortField(String sortField) {
