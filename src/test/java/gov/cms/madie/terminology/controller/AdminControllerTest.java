@@ -5,6 +5,7 @@ import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
+import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
@@ -23,9 +24,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Collections;
@@ -46,6 +50,7 @@ class AdminControllerTest {
   @Mock private VsacService vsacService;
   @Mock private CacheManager cacheManager;
   @Mock private Cache cache;
+  @Mock private CodeSystemExportService codeSystemExportService;
   @InjectMocks private AdminController adminController;
 
   private static final String TEST_USER = "test.admin.user";
@@ -329,5 +334,39 @@ class AdminControllerTest {
     Sort.Order order = pageReq.getSort().getOrderFor(expectedField);
     assertNotNull(order);
     assertEquals(Sort.Direction.valueOf(expectedDirection), order.getDirection());
+  }
+
+  @Test
+  void testExportCodeSystemsReturnsWorkbook() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    byte[] workbook = "fake-xlsx-bytes".getBytes(StandardCharsets.UTF_8);
+    when(codeSystemExportService.generateCodeSystemExport("Bearer token")).thenReturn(workbook);
+
+    ResponseEntity<byte[]> response = adminController.exportCodeSystems("Bearer token", principal);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertArrayEquals(workbook, response.getBody());
+    assertEquals(
+        MediaType.parseMediaType(CodeSystemExportService.XLSX_MEDIA_TYPE),
+        response.getHeaders().getContentType());
+    String contentDisposition = response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+    assertNotNull(contentDisposition);
+    assertTrue(contentDisposition.contains("attachment"));
+    assertTrue(contentDisposition.contains("CodeSystemExport_"));
+    assertTrue(contentDisposition.endsWith(".xlsx\""));
+    verify(codeSystemExportService, times(1)).generateCodeSystemExport("Bearer token");
+  }
+
+  @Test
+  void testExportCodeSystemsForwardsNullAuthorizationHeader() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    byte[] workbook = "bytes".getBytes(StandardCharsets.UTF_8);
+    when(codeSystemExportService.generateCodeSystemExport(null)).thenReturn(workbook);
+
+    ResponseEntity<byte[]> response = adminController.exportCodeSystems(null, principal);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertArrayEquals(workbook, response.getBody());
+    verify(codeSystemExportService, times(1)).generateCodeSystemExport(null);
   }
 }

@@ -1,6 +1,7 @@
 package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
+import gov.cms.madie.terminology.service.CodeSystemExportService;
 import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.config.SecurityConfig;
@@ -49,6 +50,7 @@ class AdminControllerMvcTest {
   @MockitoBean private FhirContext fhirContext;
   @MockitoBean private UpdateCodeSystemTask updateCodeSystemTask;
   @MockitoBean private UserServiceClient userServiceClient;
+  @MockitoBean private CodeSystemExportService codeSystemExportService;
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
 

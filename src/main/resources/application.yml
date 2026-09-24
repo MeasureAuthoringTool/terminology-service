@@ -12,6 +12,9 @@ madie:
   api-key-header: ${API_KEY_HEADER:api-key}
   allowed-hosts: ${ALLOWED_HOSTS:.gov, .info, .org}
 
+excel-export-service:
+  base-url: ${EXCEL_EXPORT_SERVICE:http://localhost:3000/api}
+
 management:
   endpoints:
     enabled-by-default: false
