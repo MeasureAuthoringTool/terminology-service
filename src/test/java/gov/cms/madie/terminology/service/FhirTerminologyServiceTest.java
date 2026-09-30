@@ -123,6 +123,8 @@ class FhirTerminologyServiceTest {
   private final String mockCodeSystemsResource =
       "{\"resourceType\":\"Bundle\",\"id\":\"codesystem-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},\"type\":\"searchset\",\"total\":831,\"link\":[{\"relation\":\"self\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=500&_count=2\"},{\"relation\":\"first\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=2\"},{\"relation\":\"previous\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=498&_count=2\"},{\"relation\":\"last\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=829&_count=2\"}],\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-04-15T00:00:00-04:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}},{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1305437570\",\"lastUpdated\":\"2020-01-16T00:00:00.000-05:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-12-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-12-27T00:00:00-05:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}}]}";
 
+  private static final String EMPTY_HISTORY_BUNDLE =
+      "{\"resourceType\":\"Bundle\",\"type\":\"history\",\"entry\":[]}";
   private String mockValueSetResourceWithCodes;
   private String mockValueSetResourceWithNoCodes;
   private String mockValueSetWithNoResource;
@@ -150,6 +152,11 @@ class FhirTerminologyServiceTest {
     mockValueSetWithNoResource =
         FileUtils.readFileToString(
             Objects.requireNonNull(fileWithNoResource), Charset.defaultCharset());
+    lenient()
+        .when(
+            fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+                anyString(), anyInt(), anyInt(), anyString()))
+        .thenReturn(EMPTY_HISTORY_BUNDLE);
   }
 
   @Test
@@ -533,6 +540,125 @@ class FhirTerminologyServiceTest {
     verify(codeSystemRepository, never())
         .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
     verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
+  }
+
+  @Test
+  void retrieveAllCodeSystemsUsesLogicalIdAndSkipsDeletedHistoryEntries() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    String currentBundle =
+        """
+        {
+          "resourceType": "Bundle",
+          "type": "searchset",
+          "entry": [{
+            "resource": {
+              "resourceType": "CodeSystem",
+              "id": "logical-id",
+              "url": "http://example.com/system",
+              "identifier": [{"value": "urn:oid:1.2.3"}],
+              "version": "2",
+              "name": "DifferentFriendlyName",
+              "title": "Example"
+            }
+          }]
+        }
+        """;
+    String historyBundle =
+        """
+        {
+          "resourceType": "Bundle",
+          "type": "history",
+          "entry": [
+            {
+              "resource": {
+                "resourceType": "CodeSystem",
+                "id": "logical-id",
+                "url": "http://example.com/system",
+                "identifier": [{"value": "urn:oid:1.2.3"}],
+                "version": "1",
+                "name": "DifferentFriendlyName",
+                "title": "Example"
+              },
+              "request": {"method": "PUT", "url": "CodeSystem/logical-id"}
+            },
+            {
+              "resource": {
+                "resourceType": "CodeSystem",
+                "id": "logical-id",
+                "url": "http://example.com/system",
+                "identifier": [{"value": "urn:oid:1.2.3"}],
+                "version": "deleted",
+                "name": "DifferentFriendlyName",
+                "title": "Example"
+              },
+              "request": {"method": "DELETE", "url": "CodeSystem/logical-id"}
+            },
+            {
+              "request": {"method": "DELETE", "url": "CodeSystem/logical-id"}
+            }
+          ]
+        }
+        """;
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, TEST_API_KEY))
+        .thenReturn(currentBundle);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            "logical-id", 0, 50, TEST_API_KEY))
+        .thenReturn(historyBundle);
+    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.empty());
+
+    List<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
+
+    assertEquals(
+        List.of("2", "1"), result.stream().map(cs -> cs.getVersion().getFhirVersion()).toList());
+    verify(fhirTerminologyServiceWebClient)
+        .getCodeSystemHistoryPage("logical-id", 0, 50, TEST_API_KEY);
+    verify(fhirTerminologyServiceWebClient, never())
+        .getCodeSystemHistoryPage(eq("DifferentFriendlyName"), anyInt(), anyInt(), anyString());
+    verify(codeSystemRepository, times(2))
+        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
+  }
+
+  @Test
+  void retrieveAllCodeSystemsPagesThroughCodeSystemHistory() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+    CodeSystem current = buildFhirCodeSystem("logical-id", "3");
+    CodeSystem historicalVersion2 = buildFhirCodeSystem("logical-id", "2");
+    CodeSystem historicalVersion1 = buildFhirCodeSystem("logical-id", "1");
+
+    Bundle currentBundle = new Bundle().setType(Bundle.BundleType.SEARCHSET);
+    currentBundle.addEntry().setResource(current);
+    Bundle firstHistoryPage = new Bundle().setType(Bundle.BundleType.HISTORY);
+    firstHistoryPage.addEntry().setResource(historicalVersion2);
+    firstHistoryPage.addLink(
+        new Bundle.BundleLinkComponent()
+            .setRelation("next")
+            .setUrl(
+                "https://cts.nlm.nih.gov/fhir/CodeSystem/logical-id/_history?_offset=50&_count=50"));
+    Bundle secondHistoryPage = new Bundle().setType(Bundle.BundleType.HISTORY);
+    secondHistoryPage.addEntry().setResource(historicalVersion1);
+
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, TEST_API_KEY))
+        .thenReturn(parser.encodeResourceToString(currentBundle));
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            "logical-id", 0, 50, TEST_API_KEY))
+        .thenReturn(parser.encodeResourceToString(firstHistoryPage));
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            "logical-id", 50, 50, TEST_API_KEY))
+        .thenReturn(parser.encodeResourceToString(secondHistoryPage));
+    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.empty());
+
+    List<gov.cms.madie.terminology.models.CodeSystem> result =
+        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
+
+    assertEquals(
+        List.of("3", "2", "1"),
+        result.stream().map(cs -> cs.getVersion().getFhirVersion()).toList());
+    verify(fhirTerminologyServiceWebClient)
+        .getCodeSystemHistoryPage("logical-id", 50, 50, TEST_API_KEY);
   }
 
   @Test
@@ -2365,5 +2491,16 @@ class FhirTerminologyServiceTest {
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(mockPage, result);
+  }
+
+  private CodeSystem buildFhirCodeSystem(String id, String version) {
+    CodeSystem codeSystem = new CodeSystem();
+    codeSystem.setId(id);
+    codeSystem.setUrl("http://example.com/system");
+    codeSystem.setIdentifier(List.of(new Identifier().setValue("urn:oid:1.2.3")));
+    codeSystem.setVersion(version);
+    codeSystem.setName("DifferentFriendlyName");
+    codeSystem.setTitle("Example");
+    return codeSystem;
   }
 }

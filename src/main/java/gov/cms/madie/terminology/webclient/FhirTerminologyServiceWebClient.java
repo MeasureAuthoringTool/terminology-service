@@ -89,6 +89,15 @@ public class FhirTerminologyServiceWebClient {
     return fetchResourceFromVsac(codeUri.toString(), apiKey, "CodeSystem");
   }
 
+  public String getCodeSystemHistoryPage(
+      String codeSystemId, Integer offset, Integer count, String apiKey) {
+    URI codeHistoryUri =
+        TerminologyServiceUtil.buildRetrieveCodeSystemsHistoryUri(
+            codeSystemPath, codeSystemId, offset, count);
+    log.debug("Retrieving CodeSystem {} history, offset {}, count {}", codeSystemId, offset, count);
+    return fetchResourceFromVsac(codeHistoryUri.toString(), apiKey, "CodeSystem");
+  }
+
   public String searchValueSets(String apiKey, Map<String, String> queryParams) {
     if (queryParams.containsKey("url")) {
       String urlValue = queryParams.get("url");

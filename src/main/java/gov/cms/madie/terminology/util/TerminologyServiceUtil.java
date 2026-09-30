@@ -71,6 +71,17 @@ public class TerminologyServiceUtil {
         .toUri();
   }
 
+  public static URI buildRetrieveCodeSystemsHistoryUri(
+      String baseUrl, String codeSystemId, Integer offset, Integer count) {
+    return UriComponentsBuilder.fromUriString(baseUrl)
+        .pathSegment(codeSystemId, "_history")
+        .queryParam("_offset", Integer.toString(offset))
+        .queryParam("_count", Integer.toString(count))
+        .buildAndExpand()
+        .encode()
+        .toUri();
+  }
+
   public static String buildCodePath(
       String codeSystemName, String codeSystemVersion, String codeId) {
     // "/CodeSystem/LOINC22/Version/2.67/Code/21112-8/Info";

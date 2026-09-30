@@ -368,8 +368,11 @@ public class FhirTerminologyService {
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
     List<CodeSystem> allCodeSystems = new ArrayList<>();
+    Set<String> codeSystemIds = new LinkedHashSet<>();
 
-    recursiveRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems);
+    recursiveRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems, codeSystemIds);
+    codeSystemIds.forEach(
+        codeSystemId -> retrieveCodeSystemHistory(umlsUser, codeSystemId, 0, 50, allCodeSystems));
     // Once we have all codeSystems, update DB using mongo
     updateOrInsertAllCodeSystems(allCodeSystems);
     return allCodeSystems;
@@ -396,7 +399,11 @@ public class FhirTerminologyService {
   }
 
   private void recursiveRetrieveCodeSystems(
-      UmlsUser umlsUser, Integer offset, Integer count, List<CodeSystem> allCodeSystems) {
+      UmlsUser umlsUser,
+      Integer offset,
+      Integer count,
+      List<CodeSystem> allCodeSystems,
+      Set<String> codeSystemIds) {
     log.info("requesting page offset: {} count: {}", offset, count);
     Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, offset, count);
     List<CodeSystem> codeSystemsPage = new ArrayList<>(); // build small list
@@ -405,19 +412,14 @@ public class FhirTerminologyService {
         .forEach(
             entry -> {
               var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
+              String codeSystemId = codeSystem.getIdElement().getIdPart();
+              if (StringUtils.isNotBlank(codeSystemId)) {
+                codeSystemIds.add(codeSystemId);
+              } else {
+                log.warn("Skipping history retrieval for CodeSystem with no logical id");
+              }
               // Also update isLatest flag if any new version is found.
-              codeSystemsPage.add(
-                  CodeSystem.builder()
-                      .fullUrl(codeSystem.getUrl())
-                      .title(codeSystem.getTitle())
-                      .name(codeSystem.getName())
-                      .version(
-                          CodeSystem.Version.builder().fhirVersion(codeSystem.getVersion()).build())
-                      .versionId(codeSystem.getMeta().getVersionId())
-                      .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
-                      .lastUpdated(Instant.now())
-                      .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
-                      .build());
+              codeSystemsPage.add(toCodeSystem(codeSystem));
             });
     allCodeSystems.addAll(codeSystemsPage); // update big list
     var links = codeSystemBundle.getLink();
@@ -431,9 +433,74 @@ public class FhirTerminologyService {
             assert newOffset != null;
             assert newCount != null;
             recursiveRetrieveCodeSystems(
-                umlsUser, Integer.parseInt(newOffset), Integer.parseInt(newCount), allCodeSystems);
+                umlsUser,
+                Integer.parseInt(newOffset),
+                Integer.parseInt(newCount),
+                allCodeSystems,
+                codeSystemIds);
           }
         });
+  }
+
+  private void retrieveCodeSystemHistory(
+      UmlsUser umlsUser,
+      String codeSystemId,
+      Integer initialOffset,
+      Integer initialCount,
+      List<CodeSystem> allCodeSystems) {
+    Integer offset = initialOffset;
+    Integer count = initialCount;
+    boolean hasNextPage;
+
+    do {
+      log.info(
+          "requesting CodeSystem {} history page offset: {} count: {}",
+          codeSystemId,
+          offset,
+          count);
+      Bundle historyBundle = retrieveCodeSystemHistoryPage(umlsUser, codeSystemId, offset, count);
+      historyBundle.getEntry().stream()
+          .filter(this::isActiveCodeSystemHistoryEntry)
+          .map(entry -> (org.hl7.fhir.r4.model.CodeSystem) entry.getResource())
+          .map(this::toCodeSystem)
+          .forEach(allCodeSystems::add);
+
+      Optional<Bundle.BundleLinkComponent> nextLink =
+          historyBundle.getLink().stream()
+              .filter(link -> "next".equals(link.getRelation()))
+              .findFirst();
+      hasNextPage = nextLink.isPresent();
+      if (hasNextPage) {
+        String nextUrl = nextLink.orElseThrow().getUrl();
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(nextUrl);
+        String newOffset = builder.build().getQueryParams().getFirst("_offset");
+        String newCount = builder.build().getQueryParams().getFirst("_count");
+        if (newOffset == null || newCount == null) {
+          throw new IllegalStateException(
+              "CodeSystem history next link is missing _offset or _count: " + nextUrl);
+        }
+        offset = Integer.parseInt(newOffset);
+        count = Integer.parseInt(newCount);
+      }
+    } while (hasNextPage);
+  }
+
+  private boolean isActiveCodeSystemHistoryEntry(Bundle.BundleEntryComponent entry) {
+    return entry.getResource() instanceof org.hl7.fhir.r4.model.CodeSystem
+        && (!entry.hasRequest() || entry.getRequest().getMethod() != Bundle.HTTPVerb.DELETE);
+  }
+
+  private CodeSystem toCodeSystem(org.hl7.fhir.r4.model.CodeSystem codeSystem) {
+    return CodeSystem.builder()
+        .fullUrl(codeSystem.getUrl())
+        .title(codeSystem.getTitle())
+        .name(codeSystem.getName())
+        .version(CodeSystem.Version.builder().fhirVersion(codeSystem.getVersion()).build())
+        .versionId(codeSystem.getMeta().getVersionId())
+        .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
+        .lastUpdated(Instant.now())
+        .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
+        .build();
   }
 
   private String parseOidFromIdentifier(List<Identifier> identifiers) {
@@ -459,6 +526,15 @@ public class FhirTerminologyService {
     IParser parser = fhirContext.newJsonParser();
     String responseString =
         fhirTerminologyServiceWebClient.getCodeSystemsPage(offset, count, umlsUser.getApiKey());
+    return parser.parseResource(Bundle.class, responseString);
+  }
+
+  private Bundle retrieveCodeSystemHistoryPage(
+      UmlsUser umlsUser, String codeSystemId, Integer offset, Integer count) {
+    IParser parser = fhirContext.newJsonParser();
+    String responseString =
+        fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            codeSystemId, offset, count, umlsUser.getApiKey());
     return parser.parseResource(Bundle.class, responseString);
   }
 
