@@ -1,10 +1,8 @@
 package gov.cms.madie.terminology.controller;
 
 import gov.cms.madie.terminology.models.CodeSystem;
-import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
-import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import gov.cms.madie.terminology.util.PagingUtil;
 import jakarta.validation.Valid;
@@ -37,18 +35,8 @@ public class AdminController {
 
   private final UpdateCodeSystemTask updateCodeSystemTask;
   private final FhirTerminologyService fhirTerminologyService;
-  private final VsacService vsacService;
   private final CacheManager cacheManager;
   private final CodeSystemExportService codeSystemExportService;
-
-  @PostMapping(path = "/update-code-systems", produces = MediaType.APPLICATION_JSON_VALUE)
-  @PreAuthorize("hasRole('MADIE-ADMIN')")
-  public ResponseEntity<List<CodeSystem>> retrieveAndUpdateCodeSystems(Principal principal) {
-    final String username = principal.getName();
-    log.info("Admin user [{}] is triggering a manual code system refresh", username);
-    UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
-    return ResponseEntity.ok().body(fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
-  }
 
   @PostMapping(
       path = "/code-system",
