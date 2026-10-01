@@ -10,6 +10,7 @@ import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionExcep
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
+import gov.cms.madie.terminology.util.PageCursor;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
@@ -368,11 +369,11 @@ public class FhirTerminologyService {
 
   public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
     List<CodeSystem> allCodeSystems = new ArrayList<>();
-    Set<String> codeSystemIds = new LinkedHashSet<>();
-
-    recursiveRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems, codeSystemIds);
+    // The CodeSystem search only returns the latest version of each code system, so it is used
+    // solely to discover code system ids. All versions (including the latest) come from history.
+    Set<String> codeSystemIds = retrieveCodeSystemIds(umlsUser);
     codeSystemIds.forEach(
-        codeSystemId -> retrieveCodeSystemHistory(umlsUser, codeSystemId, 0, 50, allCodeSystems));
+        codeSystemId -> retrieveCodeSystemHistory(umlsUser, codeSystemId, allCodeSystems));
     // Once we have all codeSystems, update DB using mongo
     updateOrInsertAllCodeSystems(allCodeSystems);
     return allCodeSystems;
@@ -398,91 +399,65 @@ public class FhirTerminologyService {
     return retrieveCodes(codeName, codeSystemName, codeSystem, apiKey);
   }
 
-  private void recursiveRetrieveCodeSystems(
-      UmlsUser umlsUser,
-      Integer offset,
-      Integer count,
-      List<CodeSystem> allCodeSystems,
-      Set<String> codeSystemIds) {
-    log.info("requesting page offset: {} count: {}", offset, count);
-    Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, offset, count);
-    List<CodeSystem> codeSystemsPage = new ArrayList<>(); // build small list
-    codeSystemBundle
-        .getEntry()
-        .forEach(
-            entry -> {
-              var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
-              String codeSystemId = codeSystem.getIdElement().getIdPart();
-              if (StringUtils.isNotBlank(codeSystemId)) {
-                codeSystemIds.add(codeSystemId);
-              } else {
-                log.warn("Skipping history retrieval for CodeSystem with no logical id");
-              }
-              // Also update isLatest flag if any new version is found.
-              codeSystemsPage.add(toCodeSystem(codeSystem));
-            });
-    allCodeSystems.addAll(codeSystemsPage); // update big list
-    var links = codeSystemBundle.getLink();
-    links.forEach(
-        (l) -> {
-          if (l.getRelation().equals("next")) {
-            // if next, call self and continue until fail.
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(l.getUrl());
-            String newOffset = builder.build().getQueryParams().getFirst("_offset");
-            String newCount = builder.build().getQueryParams().getFirst("_count");
-            assert newOffset != null;
-            assert newCount != null;
-            recursiveRetrieveCodeSystems(
-                umlsUser,
-                Integer.parseInt(newOffset),
-                Integer.parseInt(newCount),
-                allCodeSystems,
-                codeSystemIds);
-          }
-        });
+  private Set<String> retrieveCodeSystemIds(UmlsUser umlsUser) {
+    Set<String> codeSystemIds = new LinkedHashSet<>();
+    PageCursor page = new PageCursor(0, 50);
+    do {
+      log.info("requesting page offset: {} count: {}", page.offset(), page.count());
+      Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, page.offset(), page.count());
+      codeSystemBundle.getEntry().stream()
+          .map(entry -> (org.hl7.fhir.r4.model.CodeSystem) entry.getResource())
+          .forEach(
+              codeSystem -> {
+                String codeSystemId = codeSystem.getIdElement().getIdPart();
+                if (StringUtils.isNotBlank(codeSystemId)) {
+                  codeSystemIds.add(codeSystemId);
+                } else {
+                  log.warn("Skipping history retrieval for CodeSystem with no logical id");
+                }
+              });
+      page = nextPageCursor(codeSystemBundle);
+    } while (page != null);
+    return codeSystemIds;
   }
 
   private void retrieveCodeSystemHistory(
-      UmlsUser umlsUser,
-      String codeSystemId,
-      Integer initialOffset,
-      Integer initialCount,
-      List<CodeSystem> allCodeSystems) {
-    Integer offset = initialOffset;
-    Integer count = initialCount;
-    boolean hasNextPage;
-
+      UmlsUser umlsUser, String codeSystemId, List<CodeSystem> allCodeSystems) {
+    PageCursor page = new PageCursor(0, 50);
     do {
       log.info(
           "requesting CodeSystem {} history page offset: {} count: {}",
           codeSystemId,
-          offset,
-          count);
-      Bundle historyBundle = retrieveCodeSystemHistoryPage(umlsUser, codeSystemId, offset, count);
+          page.offset(),
+          page.count());
+      Bundle historyBundle =
+          retrieveCodeSystemHistoryPage(umlsUser, codeSystemId, page.offset(), page.count());
       historyBundle.getEntry().stream()
           .filter(this::isActiveCodeSystemHistoryEntry)
           .map(entry -> (org.hl7.fhir.r4.model.CodeSystem) entry.getResource())
           .map(this::toCodeSystem)
           .forEach(allCodeSystems::add);
+      page = nextPageCursor(historyBundle);
+    } while (page != null);
+  }
 
-      Optional<Bundle.BundleLinkComponent> nextLink =
-          historyBundle.getLink().stream()
-              .filter(link -> "next".equals(link.getRelation()))
-              .findFirst();
-      hasNextPage = nextLink.isPresent();
-      if (hasNextPage) {
-        String nextUrl = nextLink.orElseThrow().getUrl();
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(nextUrl);
-        String newOffset = builder.build().getQueryParams().getFirst("_offset");
-        String newCount = builder.build().getQueryParams().getFirst("_count");
-        if (newOffset == null || newCount == null) {
-          throw new IllegalStateException(
-              "CodeSystem history next link is missing _offset or _count: " + nextUrl);
-        }
-        offset = Integer.parseInt(newOffset);
-        count = Integer.parseInt(newCount);
-      }
-    } while (hasNextPage);
+  private PageCursor nextPageCursor(Bundle bundle) {
+    Optional<String> nextUrl =
+        bundle.getLink().stream()
+            .filter(link -> "next".equals(link.getRelation()))
+            .map(Bundle.BundleLinkComponent::getUrl)
+            .findFirst();
+    if (nextUrl.isEmpty()) {
+      return null;
+    }
+    var queryParams = UriComponentsBuilder.fromUriString(nextUrl.get()).build().getQueryParams();
+    String newOffset = queryParams.getFirst("_offset");
+    String newCount = queryParams.getFirst("_count");
+    if (newOffset == null || newCount == null) {
+      throw new IllegalStateException(
+          "Bundle next link is missing _offset or _count: " + nextUrl.get());
+    }
+    return new PageCursor(Integer.parseInt(newOffset), Integer.parseInt(newCount));
   }
 
   private boolean isActiveCodeSystemHistoryEntry(Bundle.BundleEntryComponent entry) {

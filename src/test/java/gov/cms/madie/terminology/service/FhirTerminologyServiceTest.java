@@ -353,6 +353,9 @@ class FhirTerminologyServiceTest {
     bundle.addEntry(t);
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(mockCodeSystemsResource);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("ObservationInterpretation"), eq(0), eq(50), anyString()))
+        .thenReturn(mockCodeSystemsResource);
     when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.empty());
 
@@ -387,6 +390,9 @@ class FhirTerminologyServiceTest {
     bundle.addEntry().setResource(c1);
 
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(mockCodeSystemsResource);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("ObservationInterpretation"), eq(0), eq(50), anyString()))
         .thenReturn(mockCodeSystemsResource);
     var existingCodeSystem =
         gov.cms.madie.terminology.models.CodeSystem.builder()
@@ -432,6 +438,9 @@ class FhirTerminologyServiceTest {
 
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullVersionBundle);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("ObservationInterpretation"), eq(0), eq(50), anyString()))
+        .thenReturn(nullVersionBundle);
 
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
@@ -467,6 +476,9 @@ class FhirTerminologyServiceTest {
 
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(blankVersionBundle);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("ObservationInterpretation"), eq(0), eq(50), anyString()))
+        .thenReturn(blankVersionBundle);
 
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
@@ -501,6 +513,9 @@ class FhirTerminologyServiceTest {
 
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullStringUrlBundle);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("ObservationInterpretation"), eq(0), eq(50), anyString()))
+        .thenReturn(nullStringUrlBundle);
 
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
@@ -530,6 +545,9 @@ class FhirTerminologyServiceTest {
             + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
 
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(noUrlBundle);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("ObservationInterpretation"), eq(0), eq(50), anyString()))
         .thenReturn(noUrlBundle);
 
     List<gov.cms.madie.terminology.models.CodeSystem> result =
@@ -569,6 +587,18 @@ class FhirTerminologyServiceTest {
           "resourceType": "Bundle",
           "type": "history",
           "entry": [
+            {
+              "resource": {
+                "resourceType": "CodeSystem",
+                "id": "logical-id",
+                "url": "http://example.com/system",
+                "identifier": [{"value": "urn:oid:1.2.3"}],
+                "version": "2",
+                "name": "DifferentFriendlyName",
+                "title": "Example"
+              },
+              "request": {"method": "PUT", "url": "CodeSystem/logical-id"}
+            },
             {
               "resource": {
                 "resourceType": "CodeSystem",
@@ -631,6 +661,7 @@ class FhirTerminologyServiceTest {
     Bundle currentBundle = new Bundle().setType(Bundle.BundleType.SEARCHSET);
     currentBundle.addEntry().setResource(current);
     Bundle firstHistoryPage = new Bundle().setType(Bundle.BundleType.HISTORY);
+    firstHistoryPage.addEntry().setResource(current);
     firstHistoryPage.addEntry().setResource(historicalVersion2);
     firstHistoryPage.addLink(
         new Bundle.BundleLinkComponent()
@@ -1181,12 +1212,11 @@ class FhirTerminologyServiceTest {
             eq("https://example.com/next?page=3"), eq(TEST_API_KEY), eq("bundle"));
   }
 
-  /* this test covers private void recursiveRetrieveCodeSystems()
-   * when l.getRelation().equals("next")
-   * NOTE: retrieveAllCodeSystems() calls recursiveRetrieveCodeSystems()
+  /* this test covers paging through the CodeSystem search via the "next" link
+   * and fetching history for each discovered code system id.
    */
   @Test
-  void retrieveAllCodeSystemsParsesOffsetAndCountFromNextLink_andRecurses() {
+  void retrieveAllCodeSystemsParsesOffsetAndCountFromNextLinkAndFetchesHistoryPerId() {
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // build first bundle with one CodeSystem and a next link containing _offset and _count
@@ -1236,18 +1266,33 @@ class FhirTerminologyServiceTest {
     // initial page invoked by retrieveAllCodeSystems -> return page for offset=0,count=50
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(0), eq(50), anyString()))
         .thenReturn(json1);
-    // return page for the recursive offset=50,count=50
+    // return page for the next offset=50,count=50
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(50), eq(50), anyString()))
         .thenReturn(json2);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("title1v1"), eq(0), eq(50), anyString()))
+        .thenReturn(
+            parser.encodeResourceToString(
+                new Bundle()
+                    .setType(Bundle.BundleType.HISTORY)
+                    .addEntry(new Bundle.BundleEntryComponent().setResource(cs1))));
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("title2v2"), eq(0), eq(50), anyString()))
+        .thenReturn(
+            parser.encodeResourceToString(
+                new Bundle()
+                    .setType(Bundle.BundleType.HISTORY)
+                    .addEntry(new Bundle.BundleEntryComponent().setResource(cs2))));
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     var result = fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
 
-    // should collect both code systems from initial + recursive
-    assertEquals(2, result.size());
-    // calls getCodeSystemsPage(offset,count,apiKey) when retrieving pages
-    verify(fhirTerminologyServiceWebClient, atLeast(1))
-        .getCodeSystemsPage(anyInt(), anyInt(), eq(TEST_API_KEY));
+    // should collect history for both code systems found across both search pages
+    assertEquals(
+        List.of("name1", "name2"),
+        result.stream().map(gov.cms.madie.terminology.models.CodeSystem::getName).toList());
+    verify(fhirTerminologyServiceWebClient).getCodeSystemsPage(0, 50, TEST_API_KEY);
+    verify(fhirTerminologyServiceWebClient).getCodeSystemsPage(50, 50, TEST_API_KEY);
   }
 
   /* this branch coverage is for retrieveCodesAndCodeSystems() method, line 487
@@ -1743,9 +1788,13 @@ class FhirTerminologyServiceTest {
         .when(codeSystemRepository)
         .save(any());
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    String loincBundle =
+        "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}";
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(
-            "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
+        .thenReturn(loincBundle);
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            eq("cs1"), eq(0), eq(50), anyString()))
+        .thenReturn(loincBundle);
     // Call the method under test
     List<gov.cms.madie.terminology.models.CodeSystem> result =
         fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
@@ -1828,11 +1877,9 @@ class FhirTerminologyServiceTest {
     assertNotNull(result);
   }
 
-  /* branch coverage for lines 406:
-   * assert newOffset != null;
-   */
+  /* next link missing _offset should fail rather than silently stop paging */
   @Test
-  void retrieveAllCodeSystemsOffsetNullFromNextLinkAssertsNotNull() {
+  void retrieveAllCodeSystemsOffsetNullFromNextLinkThrows() {
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Build a bundle with a next link containing only _count
@@ -1885,14 +1932,12 @@ class FhirTerminologyServiceTest {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
     assertThrows(
-        AssertionError.class, () -> fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
+        IllegalStateException.class, () -> fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
   }
 
-  /* branch coverage for line 407:
-   * assert count != null;
-   */
+  /* next link missing _count should fail rather than silently stop paging */
   @Test
-  void retrieveAllCodeSystemsCountNullFromNextLinkAssertsNotNull() {
+  void retrieveAllCodeSystemsCountNullFromNextLinkThrows() {
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Build a bundle with a next link containing only _offset
@@ -1945,7 +1990,7 @@ class FhirTerminologyServiceTest {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
     assertThrows(
-        AssertionError.class, () -> fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
+        IllegalStateException.class, () -> fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
   }
 
   @Test
