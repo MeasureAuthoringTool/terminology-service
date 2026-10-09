@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -29,23 +28,14 @@ public class CodeSystem {
   @NotNull @Valid private Version version;
   private String versionId;
   @NotBlank private String oid; // identifier[0].value oid of identifier List
-  private Instant lastUpdated; // when queried
+  private Instant lastUpdated; // last updated in our system
   private Date lastUpdatedUpstream; // when was resource last updated on vsac end
 
   @JsonProperty("isLatestVersion")
   private boolean isLatestVersion;
 
-  public boolean isFhir() {
-    return version != null && StringUtils.isNotBlank(version.getFhirVersion()) && fullUrl != null;
-  }
-
-  public boolean isQdm() {
-    return version != null && StringUtils.isNotBlank(version.getVsacVersion()) && oid != null;
-  }
-
-  public boolean isVsacSearchable() {
-    return isFhir() && !oid.contains("NOT.IN.VSAC") || isQdm();
-  }
+  @JsonProperty("isInVsac")
+  private boolean isInVsac;
 
   @Data
   @AllArgsConstructor

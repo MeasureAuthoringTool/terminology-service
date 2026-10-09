@@ -15,6 +15,7 @@ import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
@@ -342,7 +343,7 @@ public class FhirTerminologyService {
   }
 
   public List<CodeSystem> getAllCodeSystems() {
-    return codeSystemRepository.findAll().stream().filter(CodeSystem::isVsacSearchable).toList();
+    return codeSystemRepository.findAll().stream().filter(CodeSystem::isInVsac).distinct().toList();
   }
 
   public Page<CodeSystem> getCodeSystems(Pageable pageable, String filterField, String searchText) {
@@ -389,7 +390,7 @@ public class FhirTerminologyService {
                 codeSystemRepository
                     .findByNameAndVersionVsacVersion(codeSystemName, version)
                     .orElse(null));
-    if (codeSystem == null || !codeSystem.isVsacSearchable()) {
+    if (codeSystem == null || !codeSystem.isInVsac()) {
       return null;
     }
     return retrieveCodes(codeName, codeSystemName, codeSystem, apiKey);
@@ -415,6 +416,7 @@ public class FhirTerminologyService {
                           CodeSystem.Version.builder().fhirVersion(codeSystem.getVersion()).build())
                       .versionId(codeSystem.getMeta().getVersionId())
                       .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
+                      .isInVsac(true)
                       .lastUpdated(Instant.now())
                       .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
                       .build());
@@ -443,7 +445,7 @@ public class FhirTerminologyService {
         // MADiE is only concerned with the Level 2 OID ending in .285 as
         // it contains CMS's custom codes. Level 1 is a duplicate of CPT,
         // and users should be utilizing CPT directly.
-        if (StringUtils.equalsIgnoreCase(
+        if (Strings.CI.equals(
             StringUtils.deleteWhitespace(identifier.getValue()),
             "urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285")) {
           return "urn:oid:2.16.840.1.113883.6.285";
@@ -465,20 +467,20 @@ public class FhirTerminologyService {
   private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList) {
     for (CodeSystem codeSystem : codeSystemList) {
       if (codeSystem.getVersion() == null
-          || StringUtils.isEmpty(codeSystem.getVersion().getFhirVersion())
-          || StringUtils.equalsIgnoreCase(codeSystem.getVersion().getFhirVersion(), "null")) {
+          || StringUtils.isBlank(codeSystem.getVersion().getFhirVersion())
+          || Strings.CI.equals(codeSystem.getVersion().getFhirVersion(), "null")) {
         log.warn("Skipping CodeSystem with missing FHIR version: {}", codeSystem);
         continue;
       }
       if (StringUtils.isBlank(codeSystem.getFullUrl())
-          || StringUtils.equalsIgnoreCase(codeSystem.getFullUrl(), "null")) {
+          || Strings.CI.equals(codeSystem.getFullUrl(), "null")) {
         log.warn("Skipping CodeSystem with missing fullUrl: {}", codeSystem);
         continue;
       }
       try {
         Optional<CodeSystem> existingCodeSystemOptional =
-            codeSystemRepository.findByOidAndVersionFhirVersion(
-                codeSystem.getOid(), codeSystem.getVersion().getFhirVersion());
+            codeSystemRepository.findByFullUrlAndVersionFhirVersion(
+                codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion());
         if (existingCodeSystemOptional.isEmpty()) {
           // Insert new CodeSystem
           codeSystemRepository.save(codeSystem);
@@ -506,17 +508,17 @@ public class FhirTerminologyService {
   }
 
   public CodeSystem createCodeSystem(CodeSystem codeSystem) {
-    if (codeSystemRepository
-        .findByOidAndVersionFhirVersion(
-            codeSystem.getOid(), codeSystem.getVersion().getFhirVersion())
-        .isPresent()) {
+    Optional<CodeSystem> existingCodeSystem =
+        codeSystemRepository.findByFullUrlAndVersionFhirVersion(
+            codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion());
+    if (existingCodeSystem.isPresent()) {
       log.warn(
-          "Duplicate CodeSystem — oid: [{}] fhir version: [{}] already exists",
-          codeSystem.getOid(),
+          "Duplicate CodeSystem — url: [{}] fhir version: [{}] already exists",
+          codeSystem.getFullUrl(),
           codeSystem.getVersion().getFhirVersion());
       throw new DuplicateCodeSystemException(
-          "CodeSystem with oid ["
-              + codeSystem.getOid()
+          "CodeSystem with url ["
+              + codeSystem.getFullUrl()
               + "] and fhir version ["
               + codeSystem.getVersion().getFhirVersion()
               + "] already exists");
@@ -527,7 +529,7 @@ public class FhirTerminologyService {
     // Admin marked the new code system as the latest version so demote any existing versions for
     // the same OID
     if (codeSystem.isLatestVersion()) {
-      demoteAllLatestVersionsByOid(codeSystem.getOid());
+      demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
     }
 
     CodeSystem saved = codeSystemRepository.save(codeSystem);
@@ -546,6 +548,7 @@ public class FhirTerminologyService {
                   return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
                 });
     existing.setFullUrl(codeSystem.getFullUrl());
+    existing.setInVsac(codeSystem.isInVsac());
 
     if (codeSystem.getTitle() != null) {
       existing.setTitle(codeSystem.getTitle());
@@ -572,7 +575,7 @@ public class FhirTerminologyService {
     // Admin marked the updated code system as the latest version so demote any existing versions
     // for the same OID
     if (codeSystem.isLatestVersion()) {
-      demoteAllLatestVersionsByOid(codeSystem.getOid());
+      demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
     }
 
     // Setting to true re-promotes existing after helper demotes all code system (including
@@ -585,18 +588,18 @@ public class FhirTerminologyService {
     return updated;
   }
 
-  private void demoteAllLatestVersionsByOid(String oid) {
-    List<CodeSystem> existingCodeSystems = codeSystemRepository.findAllByOid(oid);
+  private void demoteAllLatestVersionsByUrl(String url) {
+    List<CodeSystem> existingCodeSystems = codeSystemRepository.findAllByFullUrl(url);
 
     if (!CollectionUtils.isEmpty(existingCodeSystems)) {
       existingCodeSystems.forEach(
           existingCodeSystem -> {
             if (existingCodeSystem.isLatestVersion()) {
               log.info(
-                  "Demoting existing CodeSystem id: [{}] oid: [{}] fhirVersion: [{}]"
+                  "Demoting existing CodeSystem id: [{}] url: [{}] fhirVersion: [{}]"
                       + " - setting its isLatestVersion from true to false",
                   existingCodeSystem.getId(),
-                  existingCodeSystem.getOid(),
+                  existingCodeSystem.getFullUrl(),
                   existingCodeSystem.getVersion().getFhirVersion());
               existingCodeSystem.setLatestVersion(false);
             }
@@ -632,8 +635,7 @@ public class FhirTerminologyService {
 
               if (codeSystemVersion.isEmpty()
                   || StringUtils.isEmpty(codeName)
-                  || StringUtils.isEmpty(codeSystemName)
-                  || !codeSystemVersion.get().isFhir()) {
+                  || StringUtils.isEmpty(codeSystemName)) {
                 return null;
               }
 
@@ -659,17 +661,17 @@ public class FhirTerminologyService {
           codeSystems.stream()
               .filter(
                   codeSystemEntry ->
-                      StringUtils.equals(codeSystemEntry.getOid(), oid)
+                      Strings.CS.equals(codeSystemEntry.getOid(), oid)
                           && codeSystemEntry.isLatestVersion())
               .findFirst();
     } else {
       result =
           codeSystems.stream()
-              .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
+              .filter(codeSystemEntry -> Strings.CS.equals(codeSystemEntry.getOid(), oid))
               .filter(
                   codeSystemVersion ->
-                      StringUtils.equals(codeSystemVersion.getVersion().getVsacVersion(), version)
-                          || StringUtils.equals(
+                      Strings.CS.equals(codeSystemVersion.getVersion().getVsacVersion(), version)
+                          || Strings.CS.equals(
                               codeSystemVersion.getVersion().getFhirVersion(), version))
               .findFirst();
     }
