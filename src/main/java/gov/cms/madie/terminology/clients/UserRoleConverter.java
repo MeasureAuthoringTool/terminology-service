@@ -47,7 +47,7 @@ public class UserRoleConverter implements Converter<Jwt, JwtAuthenticationToken>
             .map(SimpleGrantedAuthority::new)
             .collect(Collectors.toList());
 
-    log.debug("User {} has roles: {}", userId, roles);
+    log.info("User {} has roles: {}", userId, roles);
     return new JwtAuthenticationToken(jwt, authorities);
   }
 }

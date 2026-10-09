@@ -4,8 +4,6 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
-import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
-import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -18,14 +16,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -342,40 +335,6 @@ public class FhirTerminologyService {
     }
   }
 
-  public List<CodeSystem> getAllCodeSystems() {
-    return codeSystemRepository.findAll().stream().filter(CodeSystem::isInVsac).distinct().toList();
-  }
-
-  public Page<CodeSystem> getCodeSystems(Pageable pageable, String filterField, String searchText) {
-    if (StringUtils.isBlank(searchText)) {
-      return codeSystemRepository.findAll(pageable);
-    }
-
-    if (filterField == null) {
-      return codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
-    }
-
-    return switch (StringUtils.deleteWhitespace(StringUtils.lowerCase(filterField))) {
-      case "title" -> codeSystemRepository.findAllByTitleContainingIgnoreCase(searchText, pageable);
-      case "name" -> codeSystemRepository.findAllByNameContainingIgnoreCase(searchText, pageable);
-      case "version" ->
-          codeSystemRepository.findAllByVersionFhirVersionContainingIgnoreCase(
-              searchText, pageable);
-      case "fullurl" ->
-          codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable);
-      default -> codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
-    };
-  }
-
-  public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
-    List<CodeSystem> allCodeSystems = new ArrayList<>();
-
-    recursiveRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems);
-    // Once we have all codeSystems, update DB using mongo
-    updateOrInsertAllCodeSystems(allCodeSystems);
-    return allCodeSystems;
-  }
-
   public Code retrieveCode(String codeName, String codeSystemName, String version, String apiKey) {
     if (StringUtils.isEmpty(codeName)
         || StringUtils.isEmpty(codeSystemName)
@@ -394,228 +353,6 @@ public class FhirTerminologyService {
       return null;
     }
     return retrieveCodes(codeName, codeSystemName, codeSystem, apiKey);
-  }
-
-  private void recursiveRetrieveCodeSystems(
-      UmlsUser umlsUser, Integer offset, Integer count, List<CodeSystem> allCodeSystems) {
-    log.info("requesting page offset: {} count: {}", offset, count);
-    Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, offset, count);
-    List<CodeSystem> codeSystemsPage = new ArrayList<>(); // build small list
-    codeSystemBundle
-        .getEntry()
-        .forEach(
-            entry -> {
-              var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
-              // Also update isLatest flag if any new version is found.
-              codeSystemsPage.add(
-                  CodeSystem.builder()
-                      .fullUrl(codeSystem.getUrl())
-                      .title(codeSystem.getTitle())
-                      .name(codeSystem.getName())
-                      .version(
-                          CodeSystem.Version.builder().fhirVersion(codeSystem.getVersion()).build())
-                      .versionId(codeSystem.getMeta().getVersionId())
-                      .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
-                      .isInVsac(true)
-                      .lastUpdated(Instant.now())
-                      .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
-                      .build());
-            });
-    allCodeSystems.addAll(codeSystemsPage); // update big list
-    var links = codeSystemBundle.getLink();
-    links.forEach(
-        (l) -> {
-          if (l.getRelation().equals("next")) {
-            // if next, call self and continue until fail.
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(l.getUrl());
-            String newOffset = builder.build().getQueryParams().getFirst("_offset");
-            String newCount = builder.build().getQueryParams().getFirst("_count");
-            assert newOffset != null;
-            assert newCount != null;
-            recursiveRetrieveCodeSystems(
-                umlsUser, Integer.parseInt(newOffset), Integer.parseInt(newCount), allCodeSystems);
-          }
-        });
-  }
-
-  private String parseOidFromIdentifier(List<Identifier> identifiers) {
-    for (Identifier identifier : identifiers) {
-      if (identifier.getValue() != null && !identifier.getValue().isEmpty()) {
-        // HCPCS contains two OIDs, which VSAC returns as a comma-delimited String.
-        // MADiE is only concerned with the Level 2 OID ending in .285 as
-        // it contains CMS's custom codes. Level 1 is a duplicate of CPT,
-        // and users should be utilizing CPT directly.
-        if (Strings.CI.equals(
-            StringUtils.deleteWhitespace(identifier.getValue()),
-            "urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285")) {
-          return "urn:oid:2.16.840.1.113883.6.285";
-        }
-        return identifier.getValue();
-      }
-    }
-    return "";
-  }
-
-  // one to call only, one to mutate and build
-  private Bundle retrieveCodeSystemsPage(UmlsUser umlsUser, Integer offset, Integer count) {
-    IParser parser = fhirContext.newJsonParser();
-    String responseString =
-        fhirTerminologyServiceWebClient.getCodeSystemsPage(offset, count, umlsUser.getApiKey());
-    return parser.parseResource(Bundle.class, responseString);
-  }
-
-  private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList) {
-    for (CodeSystem codeSystem : codeSystemList) {
-      if (codeSystem.getVersion() == null
-          || StringUtils.isBlank(codeSystem.getVersion().getFhirVersion())
-          || Strings.CI.equals(codeSystem.getVersion().getFhirVersion(), "null")) {
-        log.warn("Skipping CodeSystem with missing FHIR version: {}", codeSystem);
-        continue;
-      }
-      if (StringUtils.isBlank(codeSystem.getFullUrl())
-          || Strings.CI.equals(codeSystem.getFullUrl(), "null")) {
-        log.warn("Skipping CodeSystem with missing fullUrl: {}", codeSystem);
-        continue;
-      }
-      try {
-        Optional<CodeSystem> existingCodeSystemOptional =
-            codeSystemRepository.findByFullUrlAndVersionFhirVersion(
-                codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion());
-        if (existingCodeSystemOptional.isEmpty()) {
-          // Insert new CodeSystem
-          codeSystemRepository.save(codeSystem);
-          log.info("New CodeSystem inserted: {}", codeSystem);
-        } else {
-          CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
-          existingCodeSystem.setTitle(codeSystem.getTitle());
-          existingCodeSystem.setFullUrl(codeSystem.getFullUrl());
-          existingCodeSystem.setName(codeSystem.getName());
-          existingCodeSystem.getVersion().setFhirVersion(codeSystem.getVersion().getFhirVersion());
-          existingCodeSystem.setVersionId(codeSystem.getVersionId());
-          existingCodeSystem.setOid(codeSystem.getOid());
-          existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
-          existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
-          codeSystemRepository.save(existingCodeSystem);
-          log.info("CodeSystem updated: {}", existingCodeSystem);
-        }
-      } catch (DataAccessException e) {
-        log.error(
-            "Database error while updating/inserting CodeSystem {}: {}",
-            codeSystem.getName(),
-            e.getMessage());
-      }
-    }
-  }
-
-  public CodeSystem createCodeSystem(CodeSystem codeSystem) {
-    Optional<CodeSystem> existingCodeSystem =
-        codeSystemRepository.findByFullUrlAndVersionFhirVersion(
-            codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion());
-    if (existingCodeSystem.isPresent()) {
-      log.warn(
-          "Duplicate CodeSystem — url: [{}] fhir version: [{}] already exists",
-          codeSystem.getFullUrl(),
-          codeSystem.getVersion().getFhirVersion());
-      throw new DuplicateCodeSystemException(
-          "CodeSystem with url ["
-              + codeSystem.getFullUrl()
-              + "] and fhir version ["
-              + codeSystem.getVersion().getFhirVersion()
-              + "] already exists");
-    }
-
-    codeSystem.setLastUpdated(Instant.now());
-
-    // Admin marked the new code system as the latest version so demote any existing versions for
-    // the same OID
-    if (codeSystem.isLatestVersion()) {
-      demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
-    }
-
-    CodeSystem saved = codeSystemRepository.save(codeSystem);
-    log.info("New CodeSystem created by admin: {}", saved);
-
-    return saved;
-  }
-
-  public CodeSystem updateCodeSystem(String id, CodeSystem codeSystem) {
-    CodeSystem existing =
-        codeSystemRepository
-            .findById(id)
-            .orElseThrow(
-                () -> {
-                  log.warn("CodeSystem not found for update — id: [{}]", id);
-                  return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
-                });
-    existing.setFullUrl(codeSystem.getFullUrl());
-    existing.setInVsac(codeSystem.isInVsac());
-
-    if (codeSystem.getTitle() != null) {
-      existing.setTitle(codeSystem.getTitle());
-    }
-
-    existing.setName(codeSystem.getName());
-
-    existing.getVersion().setFhirVersion(codeSystem.getVersion().getFhirVersion());
-    if (codeSystem.getVersion().getVsacVersion() != null) {
-      existing.getVersion().setVsacVersion(codeSystem.getVersion().getVsacVersion());
-    }
-
-    if (codeSystem.getVersionId() != null) {
-      existing.setVersionId(codeSystem.getVersionId());
-    }
-
-    existing.setOid(codeSystem.getOid());
-    existing.setLastUpdated(Instant.now());
-
-    if (codeSystem.getLastUpdatedUpstream() != null) {
-      existing.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
-    }
-
-    // Admin marked the updated code system as the latest version so demote any existing versions
-    // for the same OID
-    if (codeSystem.isLatestVersion()) {
-      demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
-    }
-
-    // Setting to true re-promotes existing after helper demotes all code system (including
-    // existing) while setting to false only demotes existing
-    existing.setLatestVersion(codeSystem.isLatestVersion());
-
-    CodeSystem updated = codeSystemRepository.save(existing);
-    log.info("CodeSystem updated by admin: {}", updated);
-
-    return updated;
-  }
-
-  private void demoteAllLatestVersionsByUrl(String url) {
-    List<CodeSystem> existingCodeSystems = codeSystemRepository.findAllByFullUrl(url);
-
-    if (!CollectionUtils.isEmpty(existingCodeSystems)) {
-      existingCodeSystems.forEach(
-          existingCodeSystem -> {
-            if (existingCodeSystem.isLatestVersion()) {
-              log.info(
-                  "Demoting existing CodeSystem id: [{}] url: [{}] fhirVersion: [{}]"
-                      + " - setting its isLatestVersion from true to false",
-                  existingCodeSystem.getId(),
-                  existingCodeSystem.getFullUrl(),
-                  existingCodeSystem.getVersion().getFhirVersion());
-              existingCodeSystem.setLatestVersion(false);
-            }
-          });
-
-      codeSystemRepository.saveAll(existingCodeSystems);
-    }
-  }
-
-  public void deleteCodeSystem(String id) {
-    if (!codeSystemRepository.existsById(id)) {
-      log.warn("CodeSystem not found for delete — id: [{}]", id);
-      throw new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
-    }
-    codeSystemRepository.deleteById(id);
-    log.info("CodeSystem deleted by admin, id: {}", id);
   }
 
   public List<Code> retrieveCodesAndCodeSystems(List<Map<String, String>> codeList, String apiKey) {

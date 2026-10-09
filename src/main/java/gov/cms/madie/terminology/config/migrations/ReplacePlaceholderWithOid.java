@@ -78,12 +78,12 @@ public class ReplacePlaceholderWithOid {
     // Replace "NOT.IN.VSAC" OIDs with the relevant retrieved OID.
     // Match on the fullUrl of the CodeSystem, and set inVsac to false.
     // For Code Systems that already had a valid OID, set inVsac to true.
-    // For Code Systems that had "NOT.IN.VSAC##", but no OID was found, set OID to "NOT.IN.VSAC".
+    // For Code Systems that had "NOT.IN.VSAC##", but no OID was found, set OID to "N/A".
     for (CodeSystem codeSystem : codeSystems) {
       String codeSystemUrl = codeSystem.getFullUrl();
       if (codeSystem.getOid().contains("NOT.IN.VSAC")) {
         codeSystem.setInVsac(false);
-        codeSystem.setOid("NOT.IN.VSAC");
+        codeSystem.setOid("N/A");
         if (urlToOid.containsKey(codeSystemUrl)) {
           String newOid = urlToOid.get(codeSystemUrl);
           codeSystem.setOid(newOid);

@@ -106,9 +106,9 @@ public class CodeSystemExportService {
 
   /**
    * Reads the full list of code systems retained in the database (sorted by title) and maps each to
-   * an export row. Unlike {@code FhirTerminologyService#getAllCodeSystems()}, this intentionally
-   * does NOT filter out non-VSAC-searchable code systems: the export is meant to show the complete
-   * list, including code systems missing a VSAC version.
+   * an export row. Unlike {@code CodeSystemService#getAllCodeSystems()}, this intentionally does
+   * NOT filter out non-VSAC-searchable code systems: the export is meant to show the complete list,
+   * including code systems missing a VSAC version.
    *
    * @return one export row per code system in the database
    */

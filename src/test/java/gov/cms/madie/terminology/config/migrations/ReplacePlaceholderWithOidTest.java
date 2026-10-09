@@ -86,7 +86,7 @@ class ReplacePlaceholderWithOidTest {
         mongoTemplate, txTerminologyServiceWebClient, fhirContext, codeSystemRepository);
 
     verify(codeSystemRepository).saveAll(savedSystems.capture());
-    assertEquals("NOT.IN.VSAC", savedSystems.getValue().get(0).getOid());
+    assertEquals("N/A", savedSystems.getValue().get(0).getOid());
     assertFalse(savedSystems.getValue().get(0).isInVsac());
   }
 
@@ -101,7 +101,7 @@ class ReplacePlaceholderWithOidTest {
         mongoTemplate, txTerminologyServiceWebClient, fhirContext, codeSystemRepository);
 
     verify(codeSystemRepository).saveAll(savedSystems.capture());
-    assertEquals("NOT.IN.VSAC", savedSystems.getValue().get(0).getOid());
+    assertEquals("N/A", savedSystems.getValue().get(0).getOid());
     assertFalse(savedSystems.getValue().get(0).isInVsac());
   }
 
@@ -116,7 +116,7 @@ class ReplacePlaceholderWithOidTest {
         mongoTemplate, txTerminologyServiceWebClient, fhirContext, codeSystemRepository);
 
     verify(codeSystemRepository).saveAll(savedSystems.capture());
-    assertEquals("NOT.IN.VSAC", savedSystems.getValue().get(0).getOid());
+    assertEquals("N/A", savedSystems.getValue().get(0).getOid());
     assertFalse(savedSystems.getValue().get(0).isInVsac());
   }
 
@@ -130,7 +130,7 @@ class ReplacePlaceholderWithOidTest {
         mongoTemplate, txTerminologyServiceWebClient, fhirContext, codeSystemRepository);
 
     verify(codeSystemRepository).saveAll(savedSystems.capture());
-    assertEquals("NOT.IN.VSAC", savedSystems.getValue().get(0).getOid());
+    assertEquals("N/A", savedSystems.getValue().get(0).getOid());
     assertFalse(savedSystems.getValue().get(0).isInVsac());
   }
 
@@ -145,7 +145,7 @@ class ReplacePlaceholderWithOidTest {
         mongoTemplate, txTerminologyServiceWebClient, fhirContext, codeSystemRepository);
 
     verify(codeSystemRepository).saveAll(savedSystems.capture());
-    assertEquals("NOT.IN.VSAC", savedSystems.getValue().get(0).getOid());
+    assertEquals("N/A", savedSystems.getValue().get(0).getOid());
     assertFalse(savedSystems.getValue().get(0).isInVsac());
   }
 

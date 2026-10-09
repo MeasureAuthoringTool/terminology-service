@@ -10,7 +10,8 @@ import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
-import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemService;
+import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,8 @@ class AdminControllerMvcTest {
 
   private static final String TEST_USR = "FAKE";
 
-  @MockitoBean private FhirTerminologyService fhirTerminologyService;
+  @MockitoBean private CodeSystemService codeSystemService;
+  @MockitoBean private CodeSystemSyncService codeSystemSyncService;
   @MockitoBean private VsacService vsacService;
   @MockitoBean private FhirContext fhirContext;
   @MockitoBean private UpdateCodeSystemTask updateCodeSystemTask;
@@ -76,7 +78,7 @@ class AdminControllerMvcTest {
   void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
     UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USR).build();
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(fhirTerminologyService.retrieveAllCodeSystems(any(UmlsUser.class)))
+    when(codeSystemSyncService.retrieveAllCodeSystems(any(UmlsUser.class)))
         .thenReturn(List.of(codeSystem));
 
     mockMvc
@@ -86,7 +88,7 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isOk());
 
-    verify(fhirTerminologyService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
+    verify(codeSystemSyncService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
   }
 
   @Test
@@ -98,12 +100,12 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isForbidden());
 
-    verify(fhirTerminologyService, never()).retrieveAllCodeSystems(any());
+    verify(codeSystemSyncService, never()).retrieveAllCodeSystems(any());
   }
 
   @Test
   void testCreateCodeSystemSuccessfully() throws Exception {
-    when(fhirTerminologyService.createCodeSystem(any(CodeSystem.class))).thenReturn(codeSystem);
+    when(codeSystemService.createCodeSystem(any(CodeSystem.class))).thenReturn(codeSystem);
 
     MvcResult result =
         mockMvc
@@ -117,7 +119,7 @@ class AdminControllerMvcTest {
             .andReturn();
 
     assertThat(result.getResponse().getStatus(), is(equalTo(201)));
-    verify(fhirTerminologyService, times(1)).createCodeSystem(any(CodeSystem.class));
+    verify(codeSystemService, times(1)).createCodeSystem(any(CodeSystem.class));
   }
 
   @Test
@@ -131,7 +133,7 @@ class AdminControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden());
 
-    verify(fhirTerminologyService, never()).createCodeSystem(any());
+    verify(codeSystemService, never()).createCodeSystem(any());
   }
 
   @Test
@@ -147,12 +149,12 @@ class AdminControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest());
 
-    verify(fhirTerminologyService, never()).createCodeSystem(any());
+    verify(codeSystemService, never()).createCodeSystem(any());
   }
 
   @Test
   void testCreateCodeSystemDuplicate() throws Exception {
-    when(fhirTerminologyService.createCodeSystem(any(CodeSystem.class)))
+    when(codeSystemService.createCodeSystem(any(CodeSystem.class)))
         .thenThrow(
             new DuplicateCodeSystemException(
                 "CodeSystem with oid [urn:oid:2.16.840.1.113883.6.1] and fhir version [2.40] already exists"));
@@ -169,7 +171,7 @@ class AdminControllerMvcTest {
             .andReturn();
 
     assertThat(result.getResponse().getStatus(), is(equalTo(400)));
-    verify(fhirTerminologyService, times(1)).createCodeSystem(any(CodeSystem.class));
+    verify(codeSystemService, times(1)).createCodeSystem(any(CodeSystem.class));
   }
 
   @Test
@@ -185,12 +187,12 @@ class AdminControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isBadRequest());
 
-    verify(fhirTerminologyService, never()).updateCodeSystem(anyString(), any());
+    verify(codeSystemService, never()).updateCodeSystem(anyString(), any());
   }
 
   @Test
   void testUpdateCodeSystemSuccessfully() throws Exception {
-    when(fhirTerminologyService.updateCodeSystem(anyString(), any(CodeSystem.class)))
+    when(codeSystemService.updateCodeSystem(anyString(), any(CodeSystem.class)))
         .thenReturn(codeSystem);
 
     MvcResult result =
@@ -205,7 +207,7 @@ class AdminControllerMvcTest {
             .andReturn();
 
     assertThat(result.getResponse().getStatus(), is(equalTo(200)));
-    verify(fhirTerminologyService, times(1)).updateCodeSystem(anyString(), any(CodeSystem.class));
+    verify(codeSystemService, times(1)).updateCodeSystem(anyString(), any(CodeSystem.class));
   }
 
   @Test
@@ -219,12 +221,12 @@ class AdminControllerMvcTest {
                 .contentType(MediaType.APPLICATION_JSON_VALUE))
         .andExpect(status().isForbidden());
 
-    verify(fhirTerminologyService, never()).updateCodeSystem(anyString(), any());
+    verify(codeSystemService, never()).updateCodeSystem(anyString(), any());
   }
 
   @Test
   void testUpdateCodeSystemNotFound() throws Exception {
-    when(fhirTerminologyService.updateCodeSystem(anyString(), any(CodeSystem.class)))
+    when(codeSystemService.updateCodeSystem(anyString(), any(CodeSystem.class)))
         .thenThrow(new CodeSystemNotFoundException("CodeSystem not found for id: nonexistent"));
 
     MvcResult result =
@@ -243,7 +245,7 @@ class AdminControllerMvcTest {
 
   @Test
   void testDeleteCodeSystemSuccessfully() throws Exception {
-    doNothing().when(fhirTerminologyService).deleteCodeSystem(anyString());
+    doNothing().when(codeSystemService).deleteCodeSystem(anyString());
 
     MvcResult result =
         mockMvc
@@ -256,7 +258,7 @@ class AdminControllerMvcTest {
             .andReturn();
 
     assertThat(result.getResponse().getStatus(), is(equalTo(204)));
-    verify(fhirTerminologyService, times(1)).deleteCodeSystem(codeSystem.getId());
+    verify(codeSystemService, times(1)).deleteCodeSystem(codeSystem.getId());
   }
 
   @Test
@@ -268,13 +270,13 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isForbidden());
 
-    verify(fhirTerminologyService, never()).deleteCodeSystem(anyString());
+    verify(codeSystemService, never()).deleteCodeSystem(anyString());
   }
 
   @Test
   void testDeleteCodeSystemNotFound() throws Exception {
     doThrow(new CodeSystemNotFoundException("CodeSystem not found for id: nonexistent"))
-        .when(fhirTerminologyService)
+        .when(codeSystemService)
         .deleteCodeSystem(anyString());
 
     MvcResult result =
@@ -287,6 +289,6 @@ class AdminControllerMvcTest {
             .andReturn();
 
     assertThat(result.getResponse().getStatus(), is(equalTo(204)));
-    verify(fhirTerminologyService, times(1)).deleteCodeSystem("nonexistent");
+    verify(codeSystemService, times(1)).deleteCodeSystem("nonexistent");
   }
 }
