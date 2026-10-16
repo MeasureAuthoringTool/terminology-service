@@ -1,7 +1,7 @@
 package gov.cms.madie.terminology.task;
 
 import gov.cms.madie.terminology.models.UmlsUser;
-import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class CodeSystemAsyncWorker {
 
-  private final FhirTerminologyService fhirTerminologyService;
+  private final CodeSystemSyncService codeSystemSyncService;
 
   @Value("${code-system-refresh-task.terminology-key}")
   private String apiKey;
@@ -27,7 +27,7 @@ public class CodeSystemAsyncWorker {
       UmlsUser user = new UmlsUser();
       user.setApiKey(apiKey);
 
-      fhirTerminologyService.retrieveAllCodeSystems(user);
+      codeSystemSyncService.retrieveAllCodeSystems(user);
 
       log.info("Code system update completed.");
     } catch (Exception ex) {

@@ -78,6 +78,16 @@ public class TxTerminologyServiceWebClient {
     return fetchResource(uri);
   }
 
+  public String getCodeSystemBundle(String codeSystemUrl, String codeSystemVersion) {
+    String uri = "/CodeSystem?url=" + codeSystemUrl;
+    if (codeSystemVersion != null && !codeSystemVersion.isEmpty()) {
+      uri += "&version=" + codeSystemVersion;
+    }
+    log.debug(
+        "Retrieving CodeSystem from TX Terminology Service for CodeSystem url: {}", codeSystemUrl);
+    return fetchResource(uri);
+  }
+
   /**
    * Performs a generic GET against the TX Terminology Service.
    *

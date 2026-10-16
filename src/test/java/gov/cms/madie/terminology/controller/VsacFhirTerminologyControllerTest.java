@@ -9,6 +9,7 @@ import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemService;
 import gov.cms.madie.terminology.service.VsacService;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -40,6 +41,7 @@ class VsacFhirTerminologyControllerTest {
 
   @Mock private VsacService vsacService;
   @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock private CodeSystemService codeSystemService;
   @Mock private FhirContext fhirContext;
   @InjectMocks private VsacFhirTerminologyController vsacFhirTerminologyController;
   private UmlsUser umlsUser;
@@ -131,7 +133,7 @@ class VsacFhirTerminologyControllerTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build());
-    when(fhirTerminologyService.getAllCodeSystems()).thenReturn(mockCodeSystemsPage);
+    when(codeSystemService.getAllCodeSystems()).thenReturn(mockCodeSystemsPage);
 
     ResponseEntity<List<CodeSystem>> response =
         vsacFhirTerminologyController.getAllCodeSystems(principal);

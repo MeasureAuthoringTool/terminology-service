@@ -9,6 +9,7 @@ import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemService;
 import gov.cms.madie.terminology.service.VsacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VsacFhirTerminologyController {
   private final FhirTerminologyService fhirTerminologyService;
+  private final CodeSystemService codeSystemService;
   private final VsacService vsacService;
   private final FhirContext fhirContext;
 
@@ -68,7 +70,7 @@ public class VsacFhirTerminologyController {
   public ResponseEntity<List<CodeSystem>> getAllCodeSystems(Principal principal) {
     final String username = principal.getName();
     log.info("Retrieving list of codeSystems for user: {}", username);
-    return ResponseEntity.ok().body(fhirTerminologyService.getAllCodeSystems());
+    return ResponseEntity.ok().body(codeSystemService.getAllCodeSystems());
   }
 
   @GetMapping(path = "/search-value-sets", produces = MediaType.APPLICATION_JSON_VALUE)
