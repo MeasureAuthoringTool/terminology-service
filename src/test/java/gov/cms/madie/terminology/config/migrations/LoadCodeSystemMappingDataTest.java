@@ -83,10 +83,9 @@ class LoadCodeSystemMappingDataTest {
     assertEquals(
         mappingDocEntry.getVersions().get(0).getFhir(),
         codeSystemCaptor.getValue().getVersion().getFhirVersion());
-    assertTrue(codeSystemCaptor.getValue().isQdm());
-    assertTrue(codeSystemCaptor.getValue().isFhir());
+    assertFhirAndQdmSupport(codeSystemCaptor.getValue());
     assertTrue(codeSystemCaptor.getValue().isLatestVersion());
-    assertTrue(codeSystemCaptor.getValue().isVsacSearchable());
+    assertFalse(codeSystemCaptor.getValue().isInVsac());
   }
 
   @Test
@@ -108,8 +107,7 @@ class LoadCodeSystemMappingDataTest {
 
     // Update Existing Code System Version entry
     assertEquals(existingCodeSystem.getId(), codeSystemCaptor.getValue().getId());
-    assertTrue(codeSystemCaptor.getValue().isFhir());
-    assertTrue(codeSystemCaptor.getValue().isQdm());
+    assertFhirAndQdmSupport(codeSystemCaptor.getValue());
     assertEquals(existingCodeSystem.getVersion(), codeSystemCaptor.getValue().getVersion());
     assertEquals(
         mappingDocEntry.getVersions().get(0).getVsac(),
@@ -144,8 +142,7 @@ class LoadCodeSystemMappingDataTest {
         mappingDocEntry.getVersions().get(0).getFhir(),
         codeSystemSaves.get(0).getVersion().getFhirVersion());
     assertNull(codeSystemSaves.get(0).getTitle());
-    assertTrue(codeSystemSaves.get(0).isFhir());
-    assertTrue(codeSystemSaves.get(0).isQdm());
+    assertFhirAndQdmSupport(codeSystemSaves.get(0));
     assertTrue(codeSystemSaves.get(0).isLatestVersion());
 
     assertEquals(existingCodeSystem.getTitle(), codeSystemSaves.get(1).getTitle());
@@ -156,8 +153,7 @@ class LoadCodeSystemMappingDataTest {
         mappingDocEntry.getVersions().get(1).getFhir(),
         codeSystemSaves.get(1).getVersion().getFhirVersion());
     assertFalse(codeSystemSaves.get(1).isLatestVersion());
-    assertTrue(codeSystemSaves.get(1).isFhir());
-    assertTrue(codeSystemSaves.get(1).isQdm());
+    assertFhirAndQdmSupport(codeSystemSaves.get(1));
   }
 
   @Test
@@ -176,8 +172,7 @@ class LoadCodeSystemMappingDataTest {
     ArgumentCaptor<CodeSystem> codeSystemCaptor = ArgumentCaptor.forClass(CodeSystem.class);
     verify(codeSystemRepositoryMock, times(1)).save(codeSystemCaptor.capture());
 
-    assertFalse(codeSystemCaptor.getValue().isFhir());
-    assertTrue(codeSystemCaptor.getValue().isQdm());
+    assertQdmSupport(codeSystemCaptor.getValue());
     assertEquals("urn:oid:1.1.1.1", codeSystemCaptor.getValue().getOid());
     assertEquals("9.9.9", codeSystemCaptor.getValue().getVersion().getVsacVersion());
   }
@@ -197,8 +192,8 @@ class LoadCodeSystemMappingDataTest {
     ArgumentCaptor<CodeSystem> codeSystemCaptor = ArgumentCaptor.forClass(CodeSystem.class);
     verify(codeSystemRepositoryMock, times(1)).save(codeSystemCaptor.capture());
 
-    assertTrue(codeSystemCaptor.getValue().isFhir());
-    assertFalse(codeSystemCaptor.getValue().isQdm());
+    assertFhirSupport(codeSystemCaptor.getValue());
+    assertNotQdm(codeSystemCaptor.getValue());
     assertEquals(existingCodeSystem.getId(), codeSystemCaptor.getValue().getId());
     assertEquals(existingCodeSystem.getOid(), codeSystemCaptor.getValue().getOid());
     assertEquals(existingCodeSystem.getVersion(), codeSystemCaptor.getValue().getVersion());
@@ -221,8 +216,7 @@ class LoadCodeSystemMappingDataTest {
 
     ArgumentCaptor<CodeSystem> codeSystemCaptor = ArgumentCaptor.forClass(CodeSystem.class);
     verify(codeSystemRepositoryMock, times(1)).save(codeSystemCaptor.capture());
-    assertTrue(codeSystemCaptor.getValue().isQdm());
-    assertTrue(codeSystemCaptor.getValue().isFhir());
+    assertFhirAndQdmSupport(codeSystemCaptor.getValue());
     assertEquals(
         mappingDocEntry.getVersions().get(0).getFhir(),
         codeSystemCaptor.getValue().getVersion().getFhirVersion());
@@ -251,8 +245,7 @@ class LoadCodeSystemMappingDataTest {
 
     // New FHIR Code System
     assertEquals(mappingDocEntry.getOid(), codeSystemCaptor.getValue().getOid());
-    assertTrue(codeSystemCaptor.getValue().isFhir());
-    assertTrue(codeSystemCaptor.getValue().isQdm());
+    assertFhirAndQdmSupport(codeSystemCaptor.getValue());
     assertEquals(
         mappingDocEntry.getVersions().get(0).getFhir(),
         codeSystemCaptor.getValue().getVersion().getFhirVersion());
@@ -279,10 +272,9 @@ class LoadCodeSystemMappingDataTest {
     verify(codeSystemRepositoryMock, times(1)).save(codeSystemCaptor.capture());
 
     // New QDM Code System
-    assertFalse(codeSystemCaptor.getValue().isFhir());
-    assertTrue(codeSystemCaptor.getValue().isQdm());
+    assertQdmSupport(codeSystemCaptor.getValue());
     assertTrue(codeSystemCaptor.getValue().isLatestVersion());
-    assertTrue(codeSystemCaptor.getValue().isVsacSearchable());
+    assertFalse(codeSystemCaptor.getValue().isInVsac());
     assertEquals(mappingDocEntry.getOid(), codeSystemCaptor.getValue().getOid());
     assertEquals(
         mappingDocEntry.getVersions().get(0).getVsac(),
@@ -305,10 +297,10 @@ class LoadCodeSystemMappingDataTest {
     ArgumentCaptor<CodeSystem> codeSystemCaptor = ArgumentCaptor.forClass(CodeSystem.class);
     verify(codeSystemRepositoryMock, times(1)).save(codeSystemCaptor.capture());
 
-    assertTrue(codeSystemCaptor.getValue().isFhir());
-    assertFalse(codeSystemCaptor.getValue().isQdm());
+    assertFhirSupport(codeSystemCaptor.getValue());
+    assertNotQdm(codeSystemCaptor.getValue());
     assertTrue(codeSystemCaptor.getValue().isLatestVersion());
-    assertFalse(codeSystemCaptor.getValue().isVsacSearchable());
+    assertFalse(codeSystemCaptor.getValue().isInVsac());
     assertEquals(mappingDocEntry.getOid(), codeSystemCaptor.getValue().getOid());
     assertEquals(
         mappingDocEntry.getVersions().get(0).getFhir(),
@@ -322,8 +314,8 @@ class LoadCodeSystemMappingDataTest {
     when(codeSystemRepositoryMock.findAll()).thenReturn(List.of(existingCodeSystem));
 
     // Deterministic values
-    assertTrue(existingCodeSystem.isFhir());
-    assertFalse(existingCodeSystem.isQdm());
+    assertFhirSupport(existingCodeSystem);
+    assertNotQdm(existingCodeSystem);
 
     migration.apply(
         mongoTemplateMock, codeSystemRepositoryMock, objectMapperMock, updateCodeSystemTaskMock);
@@ -334,10 +326,10 @@ class LoadCodeSystemMappingDataTest {
     List<CodeSystem> rolledBackCodeSystems = codeSystemSaves.get(0);
     assertEquals(1, rolledBackCodeSystems.size());
     assertEquals(existingCodeSystem.getId(), rolledBackCodeSystems.get(0).getId());
-    assertTrue(rolledBackCodeSystems.get(0).isFhir());
-    assertFalse(rolledBackCodeSystems.get(0).isQdm());
+    assertFhirSupport(rolledBackCodeSystems.get(0));
+    assertNotQdm(rolledBackCodeSystems.get(0));
     assertFalse(rolledBackCodeSystems.get(0).isLatestVersion());
-    assertTrue(rolledBackCodeSystems.get(0).isVsacSearchable());
+    assertFalse(rolledBackCodeSystems.get(0).isInVsac());
   }
 
   @Test
@@ -444,7 +436,31 @@ class LoadCodeSystemMappingDataTest {
             "deserializeFromFile", ObjectMapper.class);
     method.setAccessible(true);
     Object result = method.invoke(migration, objectMapperMock);
-    assertTrue(result instanceof List);
+    assertInstanceOf(List.class, result);
     assertTrue(((List<?>) result).isEmpty());
+  }
+
+  private void assertFhirAndQdmSupport(CodeSystem codeSystem) {
+    assertNotNull(codeSystem.getFullUrl());
+    assertNotNull(codeSystem.getOid());
+    assertNotNull(codeSystem.getVersion());
+    assertNotNull(codeSystem.getVersion().getFhirVersion());
+    assertNotNull(codeSystem.getVersion().getVsacVersion());
+  }
+
+  private void assertFhirSupport(CodeSystem codeSystem) {
+    assertNotNull(codeSystem.getFullUrl());
+    assertNotNull(codeSystem.getVersion());
+    assertNotNull(codeSystem.getVersion().getFhirVersion());
+  }
+
+  private void assertQdmSupport(CodeSystem codeSystem) {
+    assertNotNull(codeSystem.getVersion());
+    assertNotNull(codeSystem.getOid());
+    assertNotNull(codeSystem.getVersion().getVsacVersion());
+  }
+
+  private void assertNotQdm(CodeSystem codeSystem) {
+    assertTrue(codeSystem.getVersion() == null || codeSystem.getVersion().getVsacVersion() == null);
   }
 }

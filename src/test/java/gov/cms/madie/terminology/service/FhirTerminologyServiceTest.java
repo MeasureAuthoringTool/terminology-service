@@ -7,8 +7,6 @@ import gov.cms.madie.terminology.dto.CodeStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetForSearch;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
-import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
-import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 // local resource helpers used instead of the shared TestHelpers to avoid
 // sure-fire single-test compilation issues during focused runs
@@ -19,7 +17,6 @@ import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import org.apache.commons.io.FileUtils;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -29,17 +26,14 @@ import gov.cms.madie.terminology.dto.ValueSetSearchResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import org.mockito.ArgumentCaptor;
 
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -62,7 +56,9 @@ class FhirTerminologyServiceTest {
   @Mock FhirContext fhirContext;
   @Mock CodeSystemRepository codeSystemRepository;
   @Mock VsacService vsacService;
-  @InjectMocks FhirTerminologyService fhirTerminologyService;
+  FhirTerminologyService fhirTerminologyService;
+  CodeSystemService codeSystemService;
+  CodeSystemSyncService codeSystemSyncService;
 
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
@@ -134,10 +130,18 @@ class FhirTerminologyServiceTest {
               gov.cms.madie.terminology.models.CodeSystem.Version.builder()
                   .fhirVersion("2.40")
                   .build())
+          .isInVsac(false)
           .build();
 
   @BeforeEach
   public void setUp() throws IOException {
+    codeSystemService = new CodeSystemService(codeSystemRepository);
+    codeSystemSyncService =
+        new CodeSystemSyncService(
+            fhirContext, fhirTerminologyServiceWebClient, codeSystemRepository);
+    fhirTerminologyService =
+        new FhirTerminologyService(
+            fhirContext, fhirTerminologyServiceWebClient, codeSystemRepository, vsacService);
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     File fileWithCodes = getTestResourceFile("/value-sets/value_set_with_expansion_codes.json");
     File fileWithNoCodes = getTestResourceFile("/value-sets/value_set_with_no_expansions.json");
@@ -201,6 +205,7 @@ class FhirTerminologyServiceTest {
                             .fhirVersion("2022")
                             .vsacVersion("2022-05")
                             .build())
+                    .isInVsac(true)
                     .versionId("vid")
                     .oid("urn:oid:2.16.840.1.113883.6.90")
                     .build()));
@@ -304,243 +309,12 @@ class FhirTerminologyServiceTest {
   }
 
   @Test
-  void testRetrieveAllCodeSystems() {
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    Bundle bundle = new Bundle();
-    var identifierList = new ArrayList<Identifier>();
-    var i1 = new Identifier().setValue("codeUrl");
-    identifierList.add(i1);
-    var m1 = new Meta();
-    m1.setVersionId("vid");
-    m1.setLastUpdated(new Date());
-    var c1 =
-        new CodeSystem()
-            .setTitle("title")
-            .setName("name1")
-            .setVersion("version")
-            .setIdentifier(identifierList)
-            .setMeta(m1)
-            .setId("titleversion");
-
-    var identifierList2 = new ArrayList<Identifier>();
-    var i2 = new Identifier().setValue("codeUrl");
-    identifierList2.add(i2);
-    var m2 = new Meta();
-    m2.setVersionId("vid");
-    m2.setLastUpdated(new Date());
-    var c2 =
-        new CodeSystem()
-            .setTitle("title")
-            .setName("name2")
-            .setVersion("version")
-            .setIdentifier(identifierList2)
-            .setMeta(m2)
-            .setId("titleversion");
-    bundle.addEntry().setResource(c1);
-    Bundle.BundleEntryComponent t =
-        new Bundle.BundleEntryComponent()
-            .setFullUrl("http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation")
-            .setResource(c2);
-    bundle.addEntry(t);
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(mockCodeSystemsResource);
-    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
-        .thenReturn(Optional.empty());
-
-    // call method under test and assert results
-    List<gov.cms.madie.terminology.models.CodeSystem> resultList =
-        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-    assertEquals(2, resultList.size());
-    assertEquals(resultList.get(1).getFullUrl(), t.getFullUrl());
-    verify(codeSystemRepository, times(2))
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-  }
-
-  @Test
-  void testRetrieveAllCodeSystemsWithInsert() {
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    Bundle bundle = new Bundle();
-    var c1 = new CodeSystem();
-    var identifierList = new ArrayList<Identifier>();
-    var i1 = new Identifier().setValue("codeUrl");
-    identifierList.add(i1);
-    var m1 = new Meta();
-    m1.setVersionId("vid");
-    m1.setLastUpdated(new Date());
-    c1.setId("titleversion");
-    c1.setTitle("title");
-    c1.setName("name1");
-    c1.setVersion("version");
-    c1.setMeta(m1);
-    c1.setIdentifier(identifierList);
-    bundle.addEntry().setResource(c1);
-
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(mockCodeSystemsResource);
-    var existingCodeSystem =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id("titleversion")
-            .title("title")
-            .name("name1")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("version")
-                    .build())
-            .versionId("vid")
-            .oid("codeUrl")
-            .lastUpdated(Instant.now())
-            .lastUpdatedUpstream(new Date())
-            .build();
-
-    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
-        .thenReturn(Optional.ofNullable(existingCodeSystem));
-
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-    verify(codeSystemRepository, times(2))
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-  }
-
-  @Test
-  void testRetrieveAllCodeSystemsSkipsNullStringFhirVersion() {
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    // Bundle with a single entry whose version is the literal string "null"
-    String nullVersionBundle =
-        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
-            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
-            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
-            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
-            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
-            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
-            + "\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
-            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
-            + "\"version\":\"null\",\"name\":\"ObservationInterpretation\","
-            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
-
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(nullVersionBundle);
-
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-
-    assertEquals(1, result.size());
-    assertEquals(
-        "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
-        result.get(0).getFullUrl());
-    assertEquals("null", result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemRepository, never())
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
-  }
-
-  @Test
-  void testRetrieveAllCodeSystemsSkipsBlankFhirVersion() {
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    // Bundle with a single entry whose version is missing.
-    String blankVersionBundle =
-        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
-            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
-            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
-            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
-            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
-            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
-            + "\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
-            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
-            // missing version field.
-            + " \"name\":\"ObservationInterpretation\","
-            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
-
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(blankVersionBundle);
-
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-
-    assertEquals(1, result.size());
-    assertEquals(
-        "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
-        result.get(0).getFullUrl());
-    assertNull(result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemRepository, never())
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
-  }
-
-  @Test
-  void testRetrieveAllCodeSystemsSkipsNullFullUrl() {
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    // Bundle with a single entry whose resource has no url (fullUrl will be null)
-    String nullStringUrlBundle =
-        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
-            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
-            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
-            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
-            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
-            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
-            + "\"url\":\"null\","
-            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
-            + "\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\","
-            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
-
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(nullStringUrlBundle);
-
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-
-    assertEquals(1, result.size());
-    assertEquals("null", result.get(0).getFullUrl());
-    verify(codeSystemRepository, never())
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
-  }
-
-  @Test
-  void testRetrieveAllCodeSystemsSkipsBlankFullUrl() {
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    // Bundle with a single entry whose resource has no url (fullUrl will be null)
-    String noUrlBundle =
-        "{\"resourceType\":\"Bundle\",\"id\":\"cs-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},"
-            + "\"type\":\"searchset\",\"total\":1,\"link\":[{\"relation\":\"self\","
-            + "\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=50\"}],"
-            + "\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\","
-            + "\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\","
-            + "\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\"},"
-            + "\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],"
-            + "\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\","
-            + "\"title\":\"ObservationInterpretation\",\"status\":\"active\"}}]}";
-
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(noUrlBundle);
-
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-
-    assertEquals(1, result.size());
-    assertNull(result.get(0).getFullUrl());
-    verify(codeSystemRepository, never())
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-    verify(codeSystemRepository, never()).findByOidAndVersionFhirVersion(anyString(), anyString());
-  }
-
-  @Test
   void testGetAllCodeSystems() {
     var c1 = new gov.cms.madie.terminology.models.CodeSystem();
     c1.setTitle("t1");
     c1.setOid("fakeoid1");
     c1.setFullUrl("http://example.com/cs1");
+    c1.setInVsac(true);
     c1.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("1.0")
@@ -550,6 +324,7 @@ class FhirTerminologyServiceTest {
     c2.setTitle("t2");
     c2.setOid("fakeoid2");
     c2.setFullUrl("http://example.com/cs2");
+    c2.setInVsac(true);
     c2.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("2.0")
@@ -559,11 +334,13 @@ class FhirTerminologyServiceTest {
     c3.setTitle("t3");
     c3.setOid("fakeoid3");
     c3.setFullUrl("http://example.com/cs3");
+    c3.setInVsac(false);
     c3.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
     var c4 = new gov.cms.madie.terminology.models.CodeSystem();
     c4.setTitle("t4");
     c4.setOid("NOT.IN.VSAC");
+    c4.setInVsac(false);
     c4.setFullUrl("http://example.com/cs4");
     c4.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
@@ -573,10 +350,10 @@ class FhirTerminologyServiceTest {
     List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3, c4);
     when(codeSystemRepository.findAll()).thenReturn(codeSystems);
     List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getAllCodeSystems();
+        codeSystemService.getAllCodeSystems();
 
     verify(codeSystemRepository).findAll();
-    assertEquals(3, result.size());
+    assertEquals(2, result.size());
     assertEquals("t1", result.get(0).getTitle());
     assertEquals("1.0", result.get(0).getVersion().getFhirVersion());
     assertEquals("1", result.get(0).getVersion().getVsacVersion());
@@ -585,10 +362,7 @@ class FhirTerminologyServiceTest {
     assertEquals("2.0", result.get(1).getVersion().getFhirVersion());
     assertEquals("2", result.get(1).getVersion().getVsacVersion());
 
-    // Verify FHIR only Code Systems appear in the result set
-    assertEquals("t3", result.get(2).getTitle());
-    assertEquals("2024", result.get(2).getVersion().getFhirVersion());
-    assertNull(result.get(2).getVersion().getVsacVersion());
+    assertTrue(result.stream().noneMatch(codeSystem -> "t3".equals(codeSystem.getTitle())));
   }
 
   @Test
@@ -597,6 +371,7 @@ class FhirTerminologyServiceTest {
     c1.setTitle("t1");
     c1.setOid("fakeoid1");
     c1.setFullUrl("http://example.com/cs1");
+    c1.setInVsac(true);
     c1.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("1.0")
@@ -606,6 +381,7 @@ class FhirTerminologyServiceTest {
     c2.setTitle("t2");
     c2.setOid("fakeoid2");
     c2.setFullUrl("http://example.com/cs2");
+    c2.setInVsac(true);
     c2.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("2.0")
@@ -615,12 +391,14 @@ class FhirTerminologyServiceTest {
     c3.setTitle("t3");
     c3.setOid("fakeoid3");
     c3.setFullUrl("http://example.com/cs3");
+    c3.setInVsac(false);
     c3.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
     var c4 = new gov.cms.madie.terminology.models.CodeSystem();
     c4.setTitle("t4");
     c4.setOid("NOT.IN.VSAC");
     c4.setFullUrl("http://example.com/cs4");
+    c4.setInVsac(false);
     c4.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("fhirOnly")
@@ -632,7 +410,7 @@ class FhirTerminologyServiceTest {
 
     PageRequest pageable = PageRequest.of(0, 10);
     Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, null, null);
+        codeSystemService.getCodeSystems(pageable, null, null);
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(4, result.getTotalElements());
@@ -726,6 +504,7 @@ class FhirTerminologyServiceTest {
                     .build())
             .versionId("2084800774")
             .oid("urn:oid:2.16.840.1.113883.6.1")
+            .isInVsac(true)
             .build();
     when(codeSystemRepository.findByNameAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
@@ -790,6 +569,7 @@ class FhirTerminologyServiceTest {
             .lastUpdated(Instant.parse("2024-04-30T20:18:48.706Z"))
             .lastUpdatedUpstream(new Date("Fri Apr 01 00:00:00 EDT 2022"))
             .isLatestVersion(true)
+            .isInVsac(true)
             .build();
 
     when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
@@ -1055,75 +835,6 @@ class FhirTerminologyServiceTest {
             eq("https://example.com/next?page=3"), eq(TEST_API_KEY), eq("bundle"));
   }
 
-  /* this test covers private void recursiveRetrieveCodeSystems()
-   * when l.getRelation().equals("next")
-   * NOTE: retrieveAllCodeSystems() calls recursiveRetrieveCodeSystems()
-   */
-  @Test
-  void retrieveAllCodeSystemsParsesOffsetAndCountFromNextLink_andRecurses() {
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    // build first bundle with one CodeSystem and a next link containing _offset and _count
-    org.hl7.fhir.r4.model.CodeSystem cs1 = new org.hl7.fhir.r4.model.CodeSystem();
-    cs1.setTitle("title1");
-    cs1.setName("name1");
-    cs1.setVersion("v1");
-    cs1.setId("title1v1");
-    cs1.setUrl("http://example.com/cs1");
-    var id1 = new ArrayList<Identifier>();
-    id1.add(new Identifier().setValue("codeUrl1"));
-    Meta m1 = new Meta();
-    m1.setVersionId("vid1");
-    m1.setLastUpdated(new Date());
-    cs1.setMeta(m1);
-    cs1.setIdentifier(id1);
-
-    Bundle bundle1 = new Bundle();
-    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(cs1));
-    bundle1.addLink(
-        new Bundle.BundleLinkComponent()
-            .setRelation("next")
-            .setUrl("http://example.com/res/CodeSystem?_offset=50&_count=50"));
-
-    // second bundle (recursive result) with another CodeSystem
-    org.hl7.fhir.r4.model.CodeSystem cs2 = new org.hl7.fhir.r4.model.CodeSystem();
-    cs2.setTitle("title2");
-    cs2.setName("name2");
-    cs2.setVersion("v2");
-    cs2.setId("title2v2");
-    cs2.setUrl("http://example.com/cs2");
-    var id2 = new ArrayList<Identifier>();
-    id2.add(new Identifier().setValue("codeUrl2"));
-    Meta m2 = new Meta();
-    m2.setVersionId("vid2");
-    m2.setLastUpdated(new Date());
-    cs2.setMeta(m2);
-    cs2.setIdentifier(id2);
-
-    Bundle bundle2 = new Bundle();
-    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(cs2));
-
-    IParser parser = FhirContext.forR4().newJsonParser();
-    String json1 = parser.encodeResourceToString(bundle1);
-    String json2 = parser.encodeResourceToString(bundle2);
-
-    // initial page invoked by retrieveAllCodeSystems -> return page for offset=0,count=50
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(0), eq(50), anyString()))
-        .thenReturn(json1);
-    // return page for the recursive offset=50,count=50
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(50), eq(50), anyString()))
-        .thenReturn(json2);
-
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    var result = fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-
-    // should collect both code systems from initial + recursive
-    assertEquals(2, result.size());
-    // calls getCodeSystemsPage(offset,count,apiKey) when retrieving pages
-    verify(fhirTerminologyServiceWebClient, atLeast(1))
-        .getCodeSystemsPage(anyInt(), anyInt(), eq(TEST_API_KEY));
-  }
-
   /* this branch coverage is for retrieveCodesAndCodeSystems() method, line 487
    * when codeSystemVersion.isEmpty(), it should: return null;
    */
@@ -1180,59 +891,6 @@ class FhirTerminologyServiceTest {
     when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
     List<Code> result = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
     assertNull(result.get(0));
-  }
-
-  /* this test is branch coverage for retrieveCodesAndCodeSystems() method, line 490
-   * when !codeSystemVersion.get().isFhir()
-   */
-  @Test
-  void retrieveCodesAndCodeSystemsReturnsNullWhenFhirVersionNull() {
-    List<Map<String, String>> codeList =
-        List.of(
-            Map.of(
-                "code", "test",
-                "codeSystem", "LOINC",
-                "oid", "'urn:oid:2.16.840.1.113883.6.1'",
-                "versionIncluded", "false",
-                "version", "")); // !codeSystemVersion.get().isFhir()
-
-    codeSystem.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-            .fhirVersion("")
-            .vsacVersion("")
-            .build());
-    when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
-    List<Code> result = fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, TEST_API_KEY);
-    assertNull(result.get(0));
-  }
-
-  /* this test is for private String parseOidFromIdentifier(),line 424
-   * when StringUtils.equalsIgnoreCase(StringUtils.deleteWhitespace(identifier.getValue())
-   * it should: return "urn:oid:2.16.840.1.113883.6.285";
-   */
-  @Test
-  void parseOidFromIdentifierReturnsCustomOidForHCPCS() throws Exception {
-    Identifier id = new Identifier();
-    id.setValue("urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285");
-    Method method =
-        FhirTerminologyService.class.getDeclaredMethod("parseOidFromIdentifier", List.class);
-    method.setAccessible(true);
-    String result = (String) method.invoke(fhirTerminologyService, List.of(id));
-    assertEquals("urn:oid:2.16.840.1.113883.6.285", result);
-  }
-
-  /* this test is for parseOidFromIdentifier() method, line 429
-   * covering last line: return "";
-   */
-  @Test
-  void parseOidFromIdentifierReturnsEmptyStringWhenValueEmpty() throws Exception {
-    Identifier id = new Identifier();
-    id.setValue("");
-    Method method =
-        FhirTerminologyService.class.getDeclaredMethod("parseOidFromIdentifier", List.class);
-    method.setAccessible(true);
-    String result = (String) method.invoke(fhirTerminologyService, List.of(id));
-    assertEquals("", result);
   }
 
   /* this test covers private Optional<CodeSystemEntry.Version> getCodeSystemVersion(),
@@ -1597,37 +1255,6 @@ class FhirTerminologyServiceTest {
     assertEquals("2026-03-15", valueSetList.get(0).getEffectiveDate());
   }
 
-  /* coverage for DataAccessException, lines 463-467
-   * when doing updateOrInsertAllCodeSystems(),
-   */
-  @Test
-  void retrieveAllCodeSystemsHandlesDataAccessException() {
-    UmlsUser umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    gov.cms.madie.terminology.models.CodeSystem codeSystem =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .build();
-    // Mock repository to throw DataAccessException when save is called
-    doThrow(new DataAccessException("Simulated DB error") {})
-        .when(codeSystemRepository)
-        .save(any());
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(
-            "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
-    // Call the method under test
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.retrieveAllCodeSystems(umlsUser);
-    // Assert that the result is not empty and the error branch was triggered
-    assertFalse(result.isEmpty());
-    assertEquals("LOINC", result.get(0).getName());
-  }
-
   /* branch coverage for retrieveCode(), line 367:
    * codeSystem != null
    */
@@ -1644,18 +1271,15 @@ class FhirTerminologyServiceTest {
     assertNull(result);
   }
 
-  /* branch coverage for retrieveCode(), line 367:
-   * !codeSystem.isVsacSearchable()
-   */
   @Test
-  void retrieveCodeCodeSystemNotVsacSearchable() {
+  void retrieveCodeCodeSystemNotInVsac() {
     String codeName = "test-code";
     String codeSystemName = "LOINC";
     String version = "2.40";
-    // Mock codeSystem with isVsacSearchable() == false
+    // Mock codeSystem with isInVsac() == false
     gov.cms.madie.terminology.models.CodeSystem codeSystem =
         mock(gov.cms.madie.terminology.models.CodeSystem.class);
-    when(codeSystem.isVsacSearchable()).thenReturn(false);
+    when(codeSystem.isInVsac()).thenReturn(false);
     when(codeSystemRepository.findByNameAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
     Code result =
@@ -1663,18 +1287,15 @@ class FhirTerminologyServiceTest {
     assertNull(result);
   }
 
-  /* branch coverage for retrieveCode(), line 367:
-   * codeSystem.isVsacSearchable()
-   */
   @Test
-  void retrieveCodeCodeSystemVsacSearchableTrue() {
+  void retrieveCodeCodeSystemInVsac() {
     String codeName = "test-code";
     String codeSystemName = "LOINC";
     String version = "2.40";
-    // Mock codeSystem with isVsacSearchable() == true
+    // Mock codeSystem with isInVsac() == true
     gov.cms.madie.terminology.models.CodeSystem codeSystem =
         mock(gov.cms.madie.terminology.models.CodeSystem.class);
-    when(codeSystem.isVsacSearchable()).thenReturn(true);
+    when(codeSystem.isInVsac()).thenReturn(true);
     // Mock getVersion() to return a valid Version object
     gov.cms.madie.terminology.models.CodeSystem.Version versionObj =
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
@@ -1700,670 +1321,5 @@ class FhirTerminologyServiceTest {
     Code result =
         fhirTerminologyService.retrieveCode(codeName, codeSystemName, version, TEST_API_KEY);
     assertNotNull(result);
-  }
-
-  /* branch coverage for lines 406:
-   * assert newOffset != null;
-   */
-  @Test
-  void retrieveAllCodeSystemsOffsetNullFromNextLinkAssertsNotNull() {
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    // Build a bundle with a next link containing only _count
-    org.hl7.fhir.r4.model.CodeSystem cs1 = new org.hl7.fhir.r4.model.CodeSystem();
-    cs1.setTitle("title1");
-    cs1.setName("name1");
-    cs1.setVersion("v1");
-    cs1.setId("title1v1");
-    cs1.setUrl("http://example.com/cs1");
-    var id1 = new ArrayList<Identifier>();
-    id1.add(new Identifier().setValue("codeUrl1"));
-    Meta m1 = new Meta();
-    m1.setVersionId("vid1");
-    m1.setLastUpdated(new Date());
-    cs1.setMeta(m1);
-    cs1.setIdentifier(id1);
-
-    Bundle bundle1 = new Bundle();
-    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(cs1));
-    bundle1.addLink(
-        new Bundle.BundleLinkComponent()
-            .setRelation("next")
-            .setUrl("http://example.com/res/CodeSystem?_count=50"));
-
-    // Second bundle (recursive result) with another CodeSystem
-    org.hl7.fhir.r4.model.CodeSystem cs2 = new org.hl7.fhir.r4.model.CodeSystem();
-    cs2.setTitle("title2");
-    cs2.setName("name2");
-    cs2.setVersion("v2");
-    cs2.setId("title2v2");
-    cs2.setUrl("http://example.com/cs2");
-    var id2 = new ArrayList<Identifier>();
-    id2.add(new Identifier().setValue("codeUrl2"));
-    Meta m2 = new Meta();
-    m2.setVersionId("vid2");
-    m2.setLastUpdated(new Date());
-    cs2.setMeta(m2);
-    cs2.setIdentifier(id2);
-
-    Bundle bundle2 = new Bundle();
-    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(cs2));
-
-    IParser parser = FhirContext.forR4().newJsonParser();
-    String json1 = parser.encodeResourceToString(bundle1);
-
-    // initial page invoked by retrieveAllCodeSystems -> return page for offset=0,count=50
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(0), eq(50), anyString()))
-        .thenReturn(json1);
-
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-
-    assertThrows(
-        AssertionError.class, () -> fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
-  }
-
-  /* branch coverage for line 407:
-   * assert count != null;
-   */
-  @Test
-  void retrieveAllCodeSystemsCountNullFromNextLinkAssertsNotNull() {
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-
-    // Build a bundle with a next link containing only _offset
-    org.hl7.fhir.r4.model.CodeSystem cs1 = new org.hl7.fhir.r4.model.CodeSystem();
-    cs1.setTitle("title1");
-    cs1.setName("name1");
-    cs1.setVersion("v1");
-    cs1.setId("title1v1");
-    cs1.setUrl("http://example.com/cs1");
-    var id1 = new ArrayList<Identifier>();
-    id1.add(new Identifier().setValue("codeUrl1"));
-    Meta m1 = new Meta();
-    m1.setVersionId("vid1");
-    m1.setLastUpdated(new Date());
-    cs1.setMeta(m1);
-    cs1.setIdentifier(id1);
-
-    Bundle bundle1 = new Bundle();
-    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(cs1));
-    bundle1.addLink(
-        new Bundle.BundleLinkComponent()
-            .setRelation("next")
-            .setUrl("http://example.com/res/CodeSystem?_offset=50"));
-
-    // Second bundle (recursive result) with another CodeSystem
-    org.hl7.fhir.r4.model.CodeSystem cs2 = new org.hl7.fhir.r4.model.CodeSystem();
-    cs2.setTitle("title2");
-    cs2.setName("name2");
-    cs2.setVersion("v2");
-    cs2.setId("title2v2");
-    cs2.setUrl("http://example.com/cs2");
-    var id2 = new ArrayList<Identifier>();
-    id2.add(new Identifier().setValue("codeUrl2"));
-    Meta m2 = new Meta();
-    m2.setVersionId("vid2");
-    m2.setLastUpdated(new Date());
-    cs2.setMeta(m2);
-    cs2.setIdentifier(id2);
-
-    Bundle bundle2 = new Bundle();
-    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(cs2));
-
-    IParser parser = FhirContext.forR4().newJsonParser();
-    String json1 = parser.encodeResourceToString(bundle1);
-
-    // initial page invoked by retrieveAllCodeSystems -> return page for offset=0,count=50
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(0), eq(50), anyString()))
-        .thenReturn(json1);
-
-    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-
-    assertThrows(
-        AssertionError.class, () -> fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
-  }
-
-  @Test
-  void testCreateCodeSystem() {
-    gov.cms.madie.terminology.models.CodeSystem codeSystem =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .title("LOINC")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .build();
-    gov.cms.madie.terminology.models.CodeSystem saved =
-        codeSystem.toBuilder().id("LOINCversion2.40").build();
-
-    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
-        .thenReturn(Optional.empty());
-    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
-        .thenReturn(saved);
-
-    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
-        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
-
-    gov.cms.madie.terminology.models.CodeSystem result =
-        fhirTerminologyService.createCodeSystem(codeSystem);
-
-    assertNotNull(result);
-    assertEquals("LOINCversion2.40", result.getId());
-    assertEquals("LOINC", result.getName());
-    assertEquals("urn:oid:2.16.840.1.113883.6.1", result.getOid());
-    assertEquals("https://loinc.org", result.getFullUrl());
-    assertEquals("2.40", result.getVersion().getFhirVersion());
-    verify(codeSystemRepository, times(1)).save(captor.capture());
-    assertNotNull(captor.getValue().getLastUpdated());
-    verify(codeSystemRepository, never()).findAllByOid(anyString());
-  }
-
-  @Test
-  void testCreateCodeSystemDemotesExistingLatestVersionsWhenMarkedAsLatest() {
-    gov.cms.madie.terminology.models.CodeSystem incoming =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(true)
-            .build();
-
-    gov.cms.madie.terminology.models.CodeSystem existingLatest =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id("LOINCversion2.39")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(true)
-            .build();
-
-    gov.cms.madie.terminology.models.CodeSystem existingNonLatest =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id("LOINCversion2.38")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.38")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(false)
-            .build();
-
-    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
-        .thenReturn(Optional.empty());
-    when(codeSystemRepository.findAllByOid(anyString()))
-        .thenReturn(List.of(existingLatest, existingNonLatest));
-    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
-        .thenReturn(incoming.toBuilder().id("LOINCversion2.40").build());
-
-    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
-        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
-
-    fhirTerminologyService.createCodeSystem(incoming);
-
-    verify(codeSystemRepository, times(1)).saveAll(anyList());
-    verify(codeSystemRepository, times(1)).save(captor.capture());
-
-    assertTrue(captor.getValue().isLatestVersion());
-    assertFalse(existingLatest.isLatestVersion());
-    assertFalse(existingNonLatest.isLatestVersion());
-  }
-
-  @Test
-  void testCreateCodeSystemThrowsDuplicateException() {
-    gov.cms.madie.terminology.models.CodeSystem codeSystem =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .title("LOINC")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .build();
-
-    when(codeSystemRepository.findByOidAndVersionFhirVersion(anyString(), anyString()))
-        .thenReturn(Optional.of(codeSystem));
-
-    assertThrows(
-        DuplicateCodeSystemException.class,
-        () -> fhirTerminologyService.createCodeSystem(codeSystem));
-    verify(codeSystemRepository, never())
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-  }
-
-  @Test
-  void testUpdateCodeSystem() {
-    String id = "LOINCversion2.40";
-    Date existingLastUpdatedUpstream = new Date(0);
-    Date newLastUpdatedUpstream = new Date(existingLastUpdatedUpstream.getTime() + 1);
-
-    gov.cms.madie.terminology.models.CodeSystem existing =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id(id)
-            .title("Old Title")
-            .name("Old Name")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .vsacVersion("2.39")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .versionId("1")
-            .lastUpdatedUpstream(existingLastUpdatedUpstream)
-            .build();
-
-    gov.cms.madie.terminology.models.CodeSystem incoming =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .title("New Title")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .vsacVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .versionId("2")
-            .lastUpdatedUpstream(newLastUpdatedUpstream)
-            .build();
-
-    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
-        .thenReturn(existing);
-
-    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
-        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
-
-    fhirTerminologyService.updateCodeSystem(id, incoming);
-
-    verify(codeSystemRepository, times(1)).save(captor.capture());
-    verify(codeSystemRepository, never()).findAllByOid(anyString());
-    gov.cms.madie.terminology.models.CodeSystem saved = captor.getValue();
-
-    assertNotNull(saved.getLastUpdated());
-    assertEquals("New Title", saved.getTitle());
-    assertEquals("LOINC", saved.getName());
-    assertEquals("urn:oid:2.16.840.1.113883.6.1", saved.getOid());
-    assertEquals("https://loinc.org", saved.getFullUrl());
-    assertEquals("2.40", saved.getVersion().getFhirVersion());
-    assertEquals("2.40", saved.getVersion().getVsacVersion());
-    assertEquals("2", saved.getVersionId());
-    assertEquals(newLastUpdatedUpstream, saved.getLastUpdatedUpstream());
-  }
-
-  @Test
-  void testUpdateCodeSystemDemotesExistingLatestVersionsWhenMarkedAsLatest() {
-    String id = "LOINCversion2.40";
-
-    gov.cms.madie.terminology.models.CodeSystem existing =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id(id)
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(false)
-            .build();
-
-    gov.cms.madie.terminology.models.CodeSystem incoming =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(true)
-            .build();
-
-    gov.cms.madie.terminology.models.CodeSystem existingLatest =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id("LOINCversion2.39")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(true)
-            .build();
-
-    gov.cms.madie.terminology.models.CodeSystem existingNonLatest =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id("LOINCversion2.38")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.38")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(false)
-            .build();
-
-    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.findAllByOid(anyString()))
-        .thenReturn(List.of(existingLatest, existingNonLatest, existing));
-    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
-        .thenReturn(existing);
-
-    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
-        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
-
-    fhirTerminologyService.updateCodeSystem(id, incoming);
-
-    verify(codeSystemRepository, times(1)).saveAll(anyList());
-    verify(codeSystemRepository, times(1)).save(captor.capture());
-
-    assertTrue(captor.getValue().isLatestVersion());
-    assertFalse(existingLatest.isLatestVersion());
-    assertFalse(existingNonLatest.isLatestVersion());
-  }
-
-  @Test
-  void testUpdateCodeSystemSetsLatestVersionFalseWhenNotMarkedAsLatest() {
-    String id = "LOINCversion2.40";
-
-    gov.cms.madie.terminology.models.CodeSystem existing =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id(id)
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(true)
-            .build();
-
-    gov.cms.madie.terminology.models.CodeSystem incoming =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(false)
-            .build();
-
-    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
-        .thenReturn(existing);
-
-    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
-        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
-
-    fhirTerminologyService.updateCodeSystem(id, incoming);
-
-    verify(codeSystemRepository, never()).findAllByOid(anyString());
-    verify(codeSystemRepository, times(1)).save(captor.capture());
-    assertFalse(captor.getValue().isLatestVersion());
-  }
-
-  @Test
-  void testUpdateCodeSystemPreservesOptionalFieldsWhenNotProvided() {
-    String id = "LOINCversion2.40";
-    Date existingLastUpdatedUpstream = new Date();
-    gov.cms.madie.terminology.models.CodeSystem existing =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .id(id)
-            .title("Old Title")
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .vsacVersion("2.39")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .versionId("1")
-            .lastUpdatedUpstream(existingLastUpdatedUpstream)
-            .build();
-
-    // title, vsacVersion, versionId, lastUpdatedUpstream omitted — existing values should be
-    // preserved
-    gov.cms.madie.terminology.models.CodeSystem incoming =
-        gov.cms.madie.terminology.models.CodeSystem.builder()
-            .name("LOINC")
-            .version(
-                gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .build();
-
-    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.save(any(gov.cms.madie.terminology.models.CodeSystem.class)))
-        .thenReturn(existing);
-
-    ArgumentCaptor<gov.cms.madie.terminology.models.CodeSystem> captor =
-        ArgumentCaptor.forClass(gov.cms.madie.terminology.models.CodeSystem.class);
-
-    fhirTerminologyService.updateCodeSystem(id, incoming);
-
-    verify(codeSystemRepository, times(1)).save(captor.capture());
-    gov.cms.madie.terminology.models.CodeSystem saved = captor.getValue();
-    assertEquals("Old Title", saved.getTitle());
-    assertEquals("2.39", saved.getVersion().getVsacVersion());
-    assertEquals("1", saved.getVersionId());
-    assertEquals(existingLastUpdatedUpstream, saved.getLastUpdatedUpstream());
-  }
-
-  @Test
-  void testUpdateCodeSystemThrowsNotFoundException() {
-    String id = "nonexistent";
-    gov.cms.madie.terminology.models.CodeSystem codeSystem =
-        gov.cms.madie.terminology.models.CodeSystem.builder().build();
-
-    when(codeSystemRepository.findById(id)).thenReturn(Optional.empty());
-
-    assertThrows(
-        CodeSystemNotFoundException.class,
-        () -> fhirTerminologyService.updateCodeSystem(id, codeSystem));
-    verify(codeSystemRepository, never())
-        .save(any(gov.cms.madie.terminology.models.CodeSystem.class));
-  }
-
-  @Test
-  void testDeleteCodeSystem() {
-    String id = "LOINCversion2.40";
-    when(codeSystemRepository.existsById(id)).thenReturn(true);
-
-    fhirTerminologyService.deleteCodeSystem(id);
-
-    verify(codeSystemRepository, times(1)).deleteById(id);
-  }
-
-  @Test
-  void testDeleteCodeSystemThrowsNotFoundException() {
-    String id = "nonexistent";
-    when(codeSystemRepository.existsById(id)).thenReturn(false);
-
-    assertThrows(
-        CodeSystemNotFoundException.class, () -> fhirTerminologyService.deleteCodeSystem(id));
-    verify(codeSystemRepository, never()).deleteById(anyString());
-  }
-
-  @Test
-  void testGetCodeSystemsWithBlankFilterAndSearchText() {
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "", "");
-
-    verify(codeSystemRepository).findAll(pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsFilterByTitle() {
-    String searchText = "LOINC";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByTitleContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "title", searchText);
-
-    verify(codeSystemRepository).findAllByTitleContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsFilterByName() {
-    String searchText = "LOINC";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByNameContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "name", searchText);
-
-    verify(codeSystemRepository).findAllByNameContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsFilterByVersion() {
-    String searchText = "2.74";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByVersionFhirVersionContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "version", searchText);
-
-    verify(codeSystemRepository)
-        .findAllByVersionFhirVersionContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsFilterByFullUrl() {
-    String searchText = "http://loinc.org";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "fullurl", searchText);
-
-    verify(codeSystemRepository).findAllByFullUrlContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsFilterByFullUrlCaseInsensitive() {
-    String searchText = "http://loinc.org";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "FULLURL", searchText);
-
-    verify(codeSystemRepository).findAllByFullUrlContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsFilterByDefaultAnyField() {
-    String searchText = "SNOMEDCTcoding";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "unknownField", searchText);
-
-    verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsWithNullFilterField() {
-    String searchText = "search";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, null, searchText);
-
-    verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsWithNullSearchText() {
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "title", null);
-
-    verify(codeSystemRepository).findAll(pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsWithWhitespaceFilterField() {
-    String searchText = "search";
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
-        .thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "   ", searchText);
-
-    verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
-    assertEquals(mockPage, result);
-  }
-
-  @Test
-  void testGetCodeSystemsWithWhitespaceSearchText() {
-    Page<gov.cms.madie.terminology.models.CodeSystem> mockPage = new PageImpl<>(List.of());
-    PageRequest pageable = PageRequest.of(0, 10);
-    when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, "title", "   ");
-
-    verify(codeSystemRepository).findAll(pageable);
-    assertEquals(mockPage, result);
   }
 }
