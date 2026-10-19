@@ -14,7 +14,7 @@
   <name>Terminology Service</name>
   <description>Terminology Service for MADiE</description>
   <properties>
-    <hapifhir.version>8.10.1</hapifhir.version>
+    <hapifhir.version>8.12.1</hapifhir.version>
     <java.version>17</java.version>
     <jxbmavenplugin.version>3.2.0</jxbmavenplugin.version>
     <maven.compiler.source>17</maven.compiler.source>
@@ -147,7 +147,7 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-translator-commons</artifactId>
-      <version>3.5.0</version>
+      <version>3.12.1</version>
       <exclusions>
         <exclusion>
           <groupId>org.jetbrains.kotlinx</groupId>
