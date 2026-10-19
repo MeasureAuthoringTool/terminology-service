@@ -3,7 +3,8 @@ package gov.cms.madie.terminology.controller;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
-import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemService;
+import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import gov.cms.madie.terminology.util.PagingUtil;
@@ -36,7 +37,8 @@ public class AdminController {
       DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
   private final UpdateCodeSystemTask updateCodeSystemTask;
-  private final FhirTerminologyService fhirTerminologyService;
+  private final CodeSystemService codeSystemService;
+  private final CodeSystemSyncService codeSystemSyncService;
   private final VsacService vsacService;
   private final CacheManager cacheManager;
   private final CodeSystemExportService codeSystemExportService;
@@ -47,7 +49,7 @@ public class AdminController {
     final String username = principal.getName();
     log.info("Admin user [{}] is triggering a manual code system refresh", username);
     UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
-    return ResponseEntity.ok().body(fhirTerminologyService.retrieveAllCodeSystems(umlsUser));
+    return ResponseEntity.ok().body(codeSystemSyncService.retrieveAllCodeSystems(umlsUser));
   }
 
   @PostMapping(
@@ -66,7 +68,7 @@ public class AdminController {
         codeSystem.getFullUrl(),
         codeSystem.getVersion());
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(fhirTerminologyService.createCodeSystem(codeSystem));
+        .body(codeSystemService.createCodeSystem(codeSystem));
   }
 
   @PutMapping(
@@ -85,14 +87,14 @@ public class AdminController {
         codeSystem.getOid(),
         codeSystem.getFullUrl(),
         codeSystem.getVersion());
-    return ResponseEntity.ok().body(fhirTerminologyService.updateCodeSystem(id, codeSystem));
+    return ResponseEntity.ok().body(codeSystemService.updateCodeSystem(id, codeSystem));
   }
 
   @DeleteMapping(path = "/code-system/{id}")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<Void> deleteCodeSystem(Principal principal, @PathVariable String id) {
     log.info("Admin user [{}] is deleting code system with id: [{}]", principal.getName(), id);
-    fhirTerminologyService.deleteCodeSystem(id);
+    codeSystemService.deleteCodeSystem(id);
     return ResponseEntity.noContent().build();
   }
 
@@ -126,8 +128,7 @@ public class AdminController {
       @RequestParam(required = false, name = "searchText") String searchText) {
 
     Pageable pageReq = PagingUtil.buildPageable(page, limit, sortInfo, "title", this::mapSortField);
-    return ResponseEntity.ok(
-        fhirTerminologyService.getCodeSystems(pageReq, filterField, searchText));
+    return ResponseEntity.ok(codeSystemService.getCodeSystems(pageReq, filterField, searchText));
   }
 
   @PutMapping(value = "/codesystems/export", produces = CodeSystemExportService.XLSX_MEDIA_TYPE)

@@ -16,12 +16,12 @@ import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.webclient.TerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -122,31 +122,32 @@ public class VsacService {
       return;
     }
 
-    List<CodeSystem> targetCodeSystemVersions;
+    List<CodeSystem> targetCodeSystemVersions = new ArrayList<>();
+    Optional<CodeSystem> codeSystem = Optional.empty();
     // Verify code system is known.
     if (model.contains("QDM")) {
       targetCodeSystemVersions = codeSystemRepository.findAllByOid(cqlCodeSystemOid);
     } else {
-      targetCodeSystemVersions = codeSystemRepository.findAllByFullUrl(cqlCodeSystemOid);
+      codeSystem = codeSystemRepository.findByFullUrlAndIsLatestVersion(cqlCodeSystemOid, true);
     }
-    if (CollectionUtils.isEmpty(targetCodeSystemVersions)) {
+
+    if (codeSystem.isEmpty() && targetCodeSystemVersions.isEmpty()) {
       log.info("No Code system versions found for {}", cqlCode.getCodeSystem().getOid());
       cqlCode.getCodeSystem().setValid(false);
       cqlCode.getCodeSystem().setErrorMessage("Unable to find a code system version");
       return;
     }
 
-    // if FHIR and any code system version is listed as NOT IN VSAC, then it is a valid FHIR code
-    // system.
+    // if FHIR, but the code system is not in vsac, we assume it is valid.
     cqlCode.getCodeSystem().setValid(true);
-    if (targetCodeSystemVersions.stream()
-        .filter(CodeSystem::isFhir)
-        .map(CodeSystem::getOid)
-        .anyMatch(oid -> oid.contains("NOT.IN.VSAC"))) {
+    if (codeSystem.isPresent() && !codeSystem.get().isInVsac() && !model.contains("QDM")) {
       return;
     }
 
-    remoteValidateCode(umlsUser, cqlCode, targetCodeSystemVersions);
+    remoteValidateCode(
+        umlsUser,
+        cqlCode,
+        targetCodeSystemVersions.isEmpty() ? List.of(codeSystem.get()) : targetCodeSystemVersions);
   }
 
   private void remoteValidateCode(

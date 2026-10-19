@@ -2552,7 +2552,7 @@
     {
         "oid": "urn:oid:2.16.840.1.113883.6.345",
         "url": "http://va.gov/terminology/medrt",
-        "name": "MED-RT",
+        "name": "MEDRT",
         "versions": [
             {
                 "vsac": "2025-07",

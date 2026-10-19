@@ -19,9 +19,9 @@ public interface CodeSystemRepository extends MongoRepository<CodeSystem, String
 
   Optional<CodeSystem> findByNameAndVersionVsacVersion(String name, String version);
 
-  Optional<CodeSystem> findByOidAndVersionFhirVersion(String oid, String version);
-
   Optional<CodeSystem> findByFullUrlAndVersionFhirVersion(String fullUrl, String version);
+
+  Optional<CodeSystem> findByFullUrlAndIsLatestVersion(String fullUrl, boolean isLatest);
 
   List<CodeSystem> findAllByOid(String oid);
 
