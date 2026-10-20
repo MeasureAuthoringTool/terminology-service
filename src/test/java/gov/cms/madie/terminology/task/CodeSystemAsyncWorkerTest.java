@@ -37,12 +37,12 @@ class CodeSystemAsyncWorkerTest {
   void testRunJobAsyncRunsSuccessfully() {
     AtomicBoolean running = new AtomicBoolean(true);
 
-    when(codeSystemSyncService.retrieveAllCodeSystems(any(UmlsUser.class)))
+    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(any(UmlsUser.class)))
         .thenReturn(List.of(new CodeSystem()));
 
     codeSystemAsyncWorker.runJobAsync(running);
 
-    verify(codeSystemSyncService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
+    verify(codeSystemSyncService, times(1)).remoteRetrieveAllCodeSystems(any(UmlsUser.class));
 
     assertFalse(running.get());
   }
@@ -54,19 +54,19 @@ class CodeSystemAsyncWorkerTest {
     codeSystemAsyncWorker.runJobAsync(running);
 
     verify(codeSystemSyncService)
-        .retrieveAllCodeSystems(argThat(user -> user != null && API_KEY.equals(user.getApiKey())));
+        .remoteRetrieveAllCodeSystems(argThat(user -> user != null && API_KEY.equals(user.getApiKey())));
   }
 
   @Test
   void testRunJobAsyncHandlesExceptionAndResetsRunningFlag() {
     AtomicBoolean running = new AtomicBoolean(true);
 
-    when(codeSystemSyncService.retrieveAllCodeSystems(any(UmlsUser.class)))
+    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(any(UmlsUser.class)))
         .thenThrow(new RuntimeException("failure"));
 
     codeSystemAsyncWorker.runJobAsync(running);
 
-    verify(codeSystemSyncService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
+    verify(codeSystemSyncService, times(1)).remoteRetrieveAllCodeSystems(any(UmlsUser.class));
 
     assertFalse(running.get());
   }

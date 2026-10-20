@@ -93,7 +93,8 @@ class CodeSystemSyncServiceTest {
         .thenReturn(Optional.empty());
 
     // call method under test and assert results
-    List<CodeSystem> resultList = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> resultList =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
     assertEquals(2, resultList.size());
     assertEquals(resultList.get(1).getFullUrl(), t.getFullUrl());
     verify(codeSystemRepository, times(2)).save(any(CodeSystem.class));
@@ -138,7 +139,7 @@ class CodeSystemSyncServiceTest {
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.ofNullable(existingCodeSystem));
 
-    codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     verify(codeSystemRepository, times(2)).save(any(CodeSystem.class));
   }
@@ -164,7 +165,8 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullVersionBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals(
@@ -198,7 +200,8 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(blankVersionBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals(
@@ -231,7 +234,8 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullStringUrlBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals("null", result.get(0).getFullUrl());
@@ -260,7 +264,8 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(noUrlBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertNull(result.get(0).getFullUrl());
@@ -325,7 +330,7 @@ class CodeSystemSyncServiceTest {
         .thenReturn(json2);
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    var result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    var result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // should collect both code systems from initial + recursive
     assertEquals(2, result.size());
@@ -346,7 +351,8 @@ class CodeSystemSyncServiceTest {
         .thenReturn(
             "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
     // Call the method under test
-    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
     // Assert that the result is not empty and the error branch was triggered
     assertFalse(result.isEmpty());
     assertEquals("LOINC", result.get(0).getName());
@@ -406,7 +412,7 @@ class CodeSystemSyncServiceTest {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
     assertThrows(
-        AssertionError.class, () -> codeSystemSyncService.retrieveAllCodeSystems(umlsUser));
+        AssertionError.class, () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
   }
 
   @Test
@@ -463,6 +469,6 @@ class CodeSystemSyncServiceTest {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
     assertThrows(
-        AssertionError.class, () -> codeSystemSyncService.retrieveAllCodeSystems(umlsUser));
+        AssertionError.class, () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
   }
 }

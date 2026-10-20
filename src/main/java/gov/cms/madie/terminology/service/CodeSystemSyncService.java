@@ -29,7 +29,7 @@ public class CodeSystemSyncService {
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   private final CodeSystemRepository codeSystemRepository;
 
-  public List<CodeSystem> retrieveAllCodeSystems(UmlsUser umlsUser) {
+  public List<CodeSystem> remoteRetrieveAllCodeSystems(UmlsUser umlsUser) {
     List<CodeSystem> allCodeSystems = new ArrayList<>();
     recursiveRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems);
     updateOrInsertAllCodeSystems(allCodeSystems);

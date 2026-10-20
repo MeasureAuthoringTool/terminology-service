@@ -27,7 +27,7 @@ public class CodeSystemAsyncWorker {
       UmlsUser user = new UmlsUser();
       user.setApiKey(apiKey);
 
-      codeSystemSyncService.retrieveAllCodeSystems(user);
+      codeSystemSyncService.remoteRetrieveAllCodeSystems(user);
 
       log.info("Code system update completed.");
     } catch (Exception ex) {

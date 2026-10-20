@@ -88,7 +88,7 @@ class AdminControllerTest {
     when(principal.getName()).thenReturn(TEST_USER);
     UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USER).build();
     when(vsacService.verifyUmlsAccess(TEST_USER)).thenReturn(umlsUser);
-    when(codeSystemSyncService.retrieveAllCodeSystems(umlsUser)).thenReturn(List.of(codeSystem));
+    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser)).thenReturn(List.of(codeSystem));
 
     ResponseEntity<List<CodeSystem>> response =
         adminController.retrieveAndUpdateCodeSystems(principal);

@@ -62,8 +62,16 @@ public class MadieValueSet {
 
   // Admin management
   private boolean manuallyModified; // true when directly set by an admin via the admin API
+  private ExpansionResultStatus result; // indicate whether the expansion was successful
 
   // FHIR ValueSet
   @NotBlank(message = "Value set expansion is required")
   private String valueSet;
+
+  public enum ExpansionResultStatus {
+    UNAVAILABLE_TOO_COSTLY,
+    UNAVAILABLE_NOT_FOUND,
+    EXPANDED,
+    SKIPPED,
+  }
 }

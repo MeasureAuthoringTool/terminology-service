@@ -84,7 +84,7 @@ class AdminControllerMvcTest {
   void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
     UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USR).build();
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(codeSystemSyncService.retrieveAllCodeSystems(any(UmlsUser.class)))
+    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(any(UmlsUser.class)))
         .thenReturn(List.of(codeSystem));
 
     mockMvc
@@ -94,7 +94,7 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isOk());
 
-    verify(codeSystemSyncService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
+    verify(codeSystemSyncService, times(1)).remoteRetrieveAllCodeSystems(any(UmlsUser.class));
   }
 
   @Test
@@ -106,7 +106,7 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isForbidden());
 
-    verify(codeSystemSyncService, never()).retrieveAllCodeSystems(any());
+    verify(codeSystemSyncService, never()).remoteRetrieveAllCodeSystems(any());
   }
 
   @Test
