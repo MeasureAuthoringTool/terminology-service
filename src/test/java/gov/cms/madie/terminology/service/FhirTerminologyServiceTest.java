@@ -26,6 +26,8 @@ import gov.cms.madie.terminology.dto.ValueSetSearchResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -755,6 +757,62 @@ class FhirTerminologyServiceTest {
     // ensure fetchResourceFromVsac was not called since there is no 'next' link
     verify(fhirTerminologyServiceWebClient, times(0))
         .fetchResourceFromVsac(anyString(), anyString(), anyString());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "9, 10, Second, false",
+    "10, 9, First, false",
+    "9, 10, Second, true",
+    "10, 9, First, true",
+    ", 10, Second, true",
+    "10, , First, true",
+    ", , First, false",
+    ", , First, true",
+    "10, 10, First, false",
+    "2147483648, 2147483649, Second, false"
+  })
+  void searchValueSetsReturnsOnlyLatestVersion(
+      String firstVersionId, String secondVersionId, String expectedTitle, boolean separatePages) {
+    IParser parser = FhirContext.forR4().newJsonParser();
+    when(fhirContext.newJsonParser()).thenReturn(parser);
+
+    ValueSet first = new ValueSet();
+    first.setTitle("First");
+    first.setVersion("2025-01-01");
+    first.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    first.setMeta(new Meta().setVersionId(firstVersionId).setLastUpdated(new Date()));
+    ValueSet second = first.copy();
+    second.setTitle("Second");
+    second.setVersion("2024-01-01");
+    second.getMeta().setVersionId(secondVersionId);
+    ValueSet unrelated = first.copy();
+    unrelated.addIdentifier(new Identifier().setValue("urn:oid:2"));
+
+    Bundle firstPage = new Bundle();
+    firstPage.addEntry().setResource(first);
+    firstPage.addEntry().setResource(unrelated);
+    if (separatePages) {
+      firstPage.addLink().setRelation("next").setUrl("http://example.com/next?page=2");
+      Bundle secondPage = new Bundle();
+      secondPage.addEntry().setResource(second);
+      when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+              "https://example.com/next?page=2", TEST_API_KEY, "bundle"))
+          .thenReturn(parser.encodeResourceToString(secondPage));
+    } else {
+      firstPage.addEntry().setResource(second);
+    }
+    String response = parser.encodeResourceToString(firstPage);
+    when(fhirTerminologyServiceWebClient.searchValueSets(TEST_API_KEY, Map.of()))
+        .thenReturn(response);
+
+    ValueSetSearchResult result = fhirTerminologyService.searchValueSets(TEST_API_KEY, Map.of());
+
+    assertEquals(2, result.getValueSets().size());
+    assertEquals("urn:oid:1", result.getValueSets().get(0).getOid());
+    assertEquals(expectedTitle, result.getValueSets().get(0).getTitle());
+    assertEquals("urn:oid:2", result.getValueSets().get(1).getOid());
+    assertEquals(response, result.getResultBundle());
   }
 
   /* this test covers searchValueSets() method
