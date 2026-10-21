@@ -93,12 +93,10 @@ class CodeSystemSyncServiceTest {
         .thenReturn(Optional.empty());
 
     // call method under test and assert results
-    List<CodeSystem> resultList =
-        codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> resultList = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
     assertEquals(2, resultList.size());
     assertEquals(resultList.get(1).getFullUrl(), t.getFullUrl());
-    verify(codeSystemRepository, times(2))
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, times(2)).save(any(CodeSystem.class));
   }
 
   @Test
@@ -129,10 +127,7 @@ class CodeSystemSyncServiceTest {
             .id("titleversion")
             .title("title")
             .name("name1")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("version")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("version").build())
             .versionId("vid")
             .oid("codeUrl")
             .lastUpdated(Instant.now())
@@ -145,8 +140,7 @@ class CodeSystemSyncServiceTest {
 
     codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
 
-    verify(codeSystemRepository, times(2))
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, times(2)).save(any(CodeSystem.class));
   }
 
   @Test
@@ -170,16 +164,14 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullVersionBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals(
         "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
         result.get(0).getFullUrl());
     assertEquals("null", result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemRepository, never())
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -206,16 +198,14 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(blankVersionBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals(
         "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
         result.get(0).getFullUrl());
     assertNull(result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemRepository, never())
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -241,13 +231,11 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullStringUrlBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals("null", result.get(0).getFullUrl());
-    verify(codeSystemRepository, never())
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -272,13 +260,11 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(noUrlBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertNull(result.get(0).getFullUrl());
-    verify(codeSystemRepository, never())
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -360,8 +346,7 @@ class CodeSystemSyncServiceTest {
         .thenReturn(
             "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
     // Call the method under test
-    List<CodeSystem> result =
-        codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.retrieveAllCodeSystems(umlsUser);
     // Assert that the result is not empty and the error branch was triggered
     assertFalse(result.isEmpty());
     assertEquals("LOINC", result.get(0).getName());

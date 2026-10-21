@@ -20,6 +20,7 @@ public class ValueSetForSearch {
   private String oid;
   private String steward;
   private String version;
+  private String versionId;
   private String codeSystem;
   private Enumerations.PublicationStatus status;
 }
