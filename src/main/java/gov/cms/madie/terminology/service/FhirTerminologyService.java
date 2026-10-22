@@ -19,6 +19,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -252,8 +253,22 @@ public class FhirTerminologyService {
           }
         });
 
+    Comparator<ValueSetForSearch> byVersionId =
+        Comparator.comparing(
+            ValueSetForSearch::getVersionId,
+            Comparator.nullsFirst(Comparator.comparing(BigInteger::new)));
+    Map<String, ValueSetForSearch> latestValueSets =
+        valueSetList.stream()
+            .collect(
+                Collectors.toMap(
+                    ValueSetForSearch::getOid,
+                    valueSet -> valueSet,
+                    (existing, candidate) ->
+                        byVersionId.compare(existing, candidate) >= 0 ? existing : candidate,
+                    LinkedHashMap::new));
+
     return ValueSetSearchResult.builder()
-        .valueSets(valueSetList)
+        .valueSets(new ArrayList<>(latestValueSets.values()))
         .resultBundle(responseString)
         .build();
   }
@@ -325,6 +340,7 @@ public class FhirTerminologyService {
               .lastUpdated(vs.getMeta().getLastUpdated().toString())
               .url(vs.getUrl())
               .version(vs.getVersion())
+              .versionId(vs.getMeta().getVersionId())
               .status(vs.getStatus())
               .publisher(vs.getPublisher())
               .purpose(vs.getPurpose())

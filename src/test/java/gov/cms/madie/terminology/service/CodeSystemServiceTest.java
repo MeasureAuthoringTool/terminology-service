@@ -34,27 +34,20 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .title("LOINC")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isInVsac(false)
             .build();
-    CodeSystem saved =
-        codeSystem.toBuilder().id("LOINCversion2.40").build();
+    CodeSystem saved = codeSystem.toBuilder().id("LOINCversion2.40").build();
 
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.empty());
-    when(codeSystemRepository.save(any(CodeSystem.class)))
-        .thenReturn(saved);
+    when(codeSystemRepository.save(any(CodeSystem.class))).thenReturn(saved);
 
-    ArgumentCaptor<CodeSystem> captor =
-        ArgumentCaptor.forClass(CodeSystem.class);
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
-    CodeSystem result =
-        codeSystemService.createCodeSystem(codeSystem);
+    CodeSystem result = codeSystemService.createCodeSystem(codeSystem);
 
     assertNotNull(result);
     assertEquals("LOINCversion2.40", result.getId());
@@ -72,10 +65,7 @@ class CodeSystemServiceTest {
     CodeSystem incoming =
         CodeSystem.builder()
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(true)
@@ -86,10 +76,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .id("LOINCversion2.39")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.39").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(true)
@@ -100,10 +87,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .id("LOINCversion2.38")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.38")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.38").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(false)
@@ -117,8 +101,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.save(any(CodeSystem.class)))
         .thenReturn(incoming.toBuilder().id("LOINCversion2.40").build());
 
-    ArgumentCaptor<CodeSystem> captor =
-        ArgumentCaptor.forClass(CodeSystem.class);
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
     codeSystemService.createCodeSystem(incoming);
 
@@ -136,10 +119,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .title("LOINC")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isInVsac(false)
@@ -150,8 +130,7 @@ class CodeSystemServiceTest {
 
     assertThrows(
         DuplicateCodeSystemException.class, () -> codeSystemService.createCodeSystem(codeSystem));
-    verify(codeSystemRepository, never())
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
   }
 
   @Test
@@ -165,11 +144,7 @@ class CodeSystemServiceTest {
             .id(id)
             .title("Old Title")
             .name("Old Name")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .vsacVersion("2.39")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.39").vsacVersion("2.39").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .versionId("1")
@@ -181,11 +156,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .title("New Title")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .vsacVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").vsacVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .versionId("2")
@@ -194,11 +165,9 @@ class CodeSystemServiceTest {
             .build();
 
     when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.save(any(CodeSystem.class)))
-        .thenReturn(existing);
+    when(codeSystemRepository.save(any(CodeSystem.class))).thenReturn(existing);
 
-    ArgumentCaptor<CodeSystem> captor =
-        ArgumentCaptor.forClass(CodeSystem.class);
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
     codeSystemService.updateCodeSystem(id, incoming);
 
@@ -226,10 +195,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .id(id)
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(false)
@@ -239,10 +205,7 @@ class CodeSystemServiceTest {
     CodeSystem incoming =
         CodeSystem.builder()
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(true)
@@ -253,10 +216,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .id("LOINCversion2.39")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.39").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(true)
@@ -267,10 +227,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .id("LOINCversion2.38")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.38")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.38").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(false)
@@ -280,11 +237,9 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
     when(codeSystemRepository.findAllByFullUrl(anyString()))
         .thenReturn(List.of(existingLatest, existingNonLatest, existing));
-    when(codeSystemRepository.save(any(CodeSystem.class)))
-        .thenReturn(existing);
+    when(codeSystemRepository.save(any(CodeSystem.class))).thenReturn(existing);
 
-    ArgumentCaptor<CodeSystem> captor =
-        ArgumentCaptor.forClass(CodeSystem.class);
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
     codeSystemService.updateCodeSystem(id, incoming);
 
@@ -304,10 +259,7 @@ class CodeSystemServiceTest {
         CodeSystem.builder()
             .id(id)
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(true)
@@ -317,10 +269,7 @@ class CodeSystemServiceTest {
     CodeSystem incoming =
         CodeSystem.builder()
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(false)
@@ -328,11 +277,9 @@ class CodeSystemServiceTest {
             .build();
 
     when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.save(any(CodeSystem.class)))
-        .thenReturn(existing);
+    when(codeSystemRepository.save(any(CodeSystem.class))).thenReturn(existing);
 
-    ArgumentCaptor<CodeSystem> captor =
-        ArgumentCaptor.forClass(CodeSystem.class);
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
     codeSystemService.updateCodeSystem(id, incoming);
 
@@ -350,11 +297,7 @@ class CodeSystemServiceTest {
             .id(id)
             .title("Old Title")
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.39")
-                    .vsacVersion("2.39")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.39").vsacVersion("2.39").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .versionId("1")
@@ -367,21 +310,16 @@ class CodeSystemServiceTest {
     CodeSystem incoming =
         CodeSystem.builder()
             .name("LOINC")
-            .version(
-                CodeSystem.Version.builder()
-                    .fhirVersion("2.40")
-                    .build())
+            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isInVsac(false)
             .build();
 
     when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
-    when(codeSystemRepository.save(any(CodeSystem.class)))
-        .thenReturn(existing);
+    when(codeSystemRepository.save(any(CodeSystem.class))).thenReturn(existing);
 
-    ArgumentCaptor<CodeSystem> captor =
-        ArgumentCaptor.forClass(CodeSystem.class);
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
     codeSystemService.updateCodeSystem(id, incoming);
 
@@ -396,16 +334,14 @@ class CodeSystemServiceTest {
   @Test
   void testUpdateCodeSystemThrowsNotFoundException() {
     String id = "nonexistent";
-    CodeSystem codeSystem =
-        CodeSystem.builder().isInVsac(false).build();
+    CodeSystem codeSystem = CodeSystem.builder().isInVsac(false).build();
 
     when(codeSystemRepository.findById(id)).thenReturn(Optional.empty());
 
     assertThrows(
         CodeSystemNotFoundException.class,
         () -> codeSystemService.updateCodeSystem(id, codeSystem));
-    verify(codeSystemRepository, never())
-        .save(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
   }
 
   @Test
@@ -435,8 +371,7 @@ class CodeSystemServiceTest {
     PageRequest pageable = PageRequest.of(0, 10);
     when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "", "");
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "", "");
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(mockPage, result);
@@ -450,8 +385,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findAllByTitleContainingIgnoreCase(searchText, pageable))
         .thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "title", searchText);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "title", searchText);
 
     verify(codeSystemRepository).findAllByTitleContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
@@ -465,8 +399,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findAllByNameContainingIgnoreCase(searchText, pageable))
         .thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "name", searchText);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "name", searchText);
 
     verify(codeSystemRepository).findAllByNameContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
@@ -480,8 +413,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findAllByVersionFhirVersionContainingIgnoreCase(searchText, pageable))
         .thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "version", searchText);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "version", searchText);
 
     verify(codeSystemRepository)
         .findAllByVersionFhirVersionContainingIgnoreCase(searchText, pageable);
@@ -496,8 +428,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable))
         .thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "fullurl", searchText);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "fullurl", searchText);
 
     verify(codeSystemRepository).findAllByFullUrlContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
@@ -511,8 +442,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findAllByFullUrlContainingIgnoreCase(searchText, pageable))
         .thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "FULLURL", searchText);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "FULLURL", searchText);
 
     verify(codeSystemRepository).findAllByFullUrlContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
@@ -541,8 +471,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
         .thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, null, searchText);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, null, searchText);
 
     verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
@@ -554,8 +483,7 @@ class CodeSystemServiceTest {
     PageRequest pageable = PageRequest.of(0, 10);
     when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "title", null);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "title", null);
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(mockPage, result);
@@ -569,8 +497,7 @@ class CodeSystemServiceTest {
     when(codeSystemRepository.findAllByAnyFieldContainingIgnoreCase(searchText, pageable))
         .thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "   ", searchText);
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "   ", searchText);
 
     verify(codeSystemRepository).findAllByAnyFieldContainingIgnoreCase(searchText, pageable);
     assertEquals(mockPage, result);
@@ -582,8 +509,7 @@ class CodeSystemServiceTest {
     PageRequest pageable = PageRequest.of(0, 10);
     when(codeSystemRepository.findAll(pageable)).thenReturn(mockPage);
 
-    Page<CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, "title", "   ");
+    Page<CodeSystem> result = codeSystemService.getCodeSystems(pageable, "title", "   ");
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(mockPage, result);
