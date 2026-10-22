@@ -411,17 +411,19 @@ class CodeSystemServiceTest {
   @Test
   void testDeleteCodeSystem() {
     String id = "LOINCversion2.40";
-    when(codeSystemRepository.existsById(id)).thenReturn(true);
+    CodeSystem existing = CodeSystem.builder().id(id).name("LOINC").build();
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
 
-    codeSystemService.deleteCodeSystem(id);
+    CodeSystem deleted = codeSystemService.deleteCodeSystem(id);
 
+    assertSame(existing, deleted);
     verify(codeSystemRepository, times(1)).deleteById(id);
   }
 
   @Test
   void testDeleteCodeSystemThrowsNotFoundException() {
     String id = "nonexistent";
-    when(codeSystemRepository.existsById(id)).thenReturn(false);
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.empty());
 
     assertThrows(CodeSystemNotFoundException.class, () -> codeSystemService.deleteCodeSystem(id));
     verify(codeSystemRepository, never()).deleteById(anyString());

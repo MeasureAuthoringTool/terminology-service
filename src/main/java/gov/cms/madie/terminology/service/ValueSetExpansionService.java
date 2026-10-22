@@ -350,7 +350,7 @@ public class ValueSetExpansionService {
     }
   }
 
-  public void deleteValueSet(String id) {
+  public MadieValueSet deleteValueSet(String id) {
     MadieValueSet existing =
         vseRepo
             .findById(id)
@@ -362,6 +362,7 @@ public class ValueSetExpansionService {
         existing.getVersion());
     vseRepo.deleteById(id);
     log.info("Successfully deleted value set with id: [{}]", id);
+    return existing;
   }
 
   private Optional<ValueSet> parseExpansionResponse(String rawResponse) {
