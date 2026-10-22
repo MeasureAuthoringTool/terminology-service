@@ -1,5 +1,9 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.audit.AdminAuditService;
+import gov.cms.madie.terminology.audit.AdminAuditService.Action;
+import gov.cms.madie.terminology.audit.AuditResource;
+import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
@@ -53,6 +57,7 @@ class AdminControllerTest {
   @Mock private CacheManager cacheManager;
   @Mock private Cache cache;
   @Mock private CodeSystemExportService codeSystemExportService;
+  @Mock private AdminAuditService adminAuditService;
   @InjectMocks private AdminController adminController;
 
   private static final String TEST_USER = "test.admin.user";
@@ -114,6 +119,8 @@ class AdminControllerTest {
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     assertEquals(codeSystem, response.getBody());
     verify(codeSystemService, times(1)).createCodeSystem(any(CodeSystem.class));
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.CREATE, AuditResource.from(codeSystem));
   }
 
   @Test
@@ -127,6 +134,7 @@ class AdminControllerTest {
     assertThrows(
         DuplicateCodeSystemException.class,
         () -> adminController.createCodeSystem(principal, codeSystem));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -141,6 +149,8 @@ class AdminControllerTest {
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(codeSystem, response.getBody());
     verify(codeSystemService, times(1)).updateCodeSystem(anyString(), any(CodeSystem.class));
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.UPDATE, AuditResource.from(codeSystem));
   }
 
   @Test
@@ -152,17 +162,20 @@ class AdminControllerTest {
     assertThrows(
         CodeSystemNotFoundException.class,
         () -> adminController.updateCodeSystem(principal, "nonexistent", codeSystem));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
   void testDeleteCodeSystemSuccessfully() {
     when(principal.getName()).thenReturn(TEST_USER);
-    doNothing().when(codeSystemService).deleteCodeSystem(anyString());
+    when(codeSystemService.deleteCodeSystem(anyString())).thenReturn(codeSystem);
 
     ResponseEntity<Void> response = adminController.deleteCodeSystem(principal, codeSystem.getId());
 
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     verify(codeSystemService, times(1)).deleteCodeSystem(codeSystem.getId());
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.DELETE, AuditResource.from(codeSystem));
   }
 
   @Test
@@ -175,6 +188,7 @@ class AdminControllerTest {
     assertThrows(
         CodeSystemNotFoundException.class,
         () -> adminController.deleteCodeSystem(principal, "nonexistent"));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -197,19 +211,26 @@ class AdminControllerTest {
   void testTriggerCodeSystemRefreshStarted() {
     when(updateCodeSystemTask.startJob()).thenReturn(true);
 
-    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
+    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals("Code system refresh has been started", response.getBody());
 
     verify(updateCodeSystemTask, times(1)).startJob();
+    verify(adminAuditService)
+        .logAdminAction(
+            principal,
+            Action.UPDATE,
+            AuditResource.bulk(
+                ResourceType.CODE_SYSTEM,
+                "Update Code Systems: started job to refresh all code systems from VSAC"));
   }
 
   @Test
   void testTriggerCodeSystemRefreshConflict() {
     when(updateCodeSystemTask.startJob()).thenReturn(false);
 
-    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
+    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
     assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
     assertEquals(
@@ -217,6 +238,7 @@ class AdminControllerTest {
         response.getBody());
 
     verify(updateCodeSystemTask, times(1)).startJob();
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test

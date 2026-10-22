@@ -133,12 +133,17 @@ public class CodeSystemService {
     }
   }
 
-  public void deleteCodeSystem(String id) {
-    if (!codeSystemRepository.existsById(id)) {
-      log.warn("CodeSystem not found for delete — id: [{}]", id);
-      throw new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
-    }
+  public CodeSystem deleteCodeSystem(String id) {
+    CodeSystem existing =
+        codeSystemRepository
+            .findById(id)
+            .orElseThrow(
+                () -> {
+                  log.warn("CodeSystem not found for delete — id: [{}]", id);
+                  return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
+                });
     codeSystemRepository.deleteById(id);
     log.info("CodeSystem deleted by admin, id: {}", id);
+    return existing;
   }
 }
