@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -168,7 +169,8 @@ class ValueSetExpansionAdminControllerMvcTest {
 
   @Test
   void updateAllValueSetDependenciesSuccessfully() throws Exception {
-    doNothing().when(valueSetExpansionService).updateValueSetDependencies();
+    when(valueSetExpansionService.updateValueSetDependencies())
+        .thenReturn(CompletableFuture.completedFuture(0));
 
     mockMvc
         .perform(

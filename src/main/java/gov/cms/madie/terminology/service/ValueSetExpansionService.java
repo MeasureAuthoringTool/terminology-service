@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /** VSES */
@@ -106,7 +107,7 @@ public class ValueSetExpansionService {
   }
 
   @Async
-  public void updateValueSetDependencies() {
+  public CompletableFuture<Integer> updateValueSetDependencies() {
     List<MadieValueSet> madieValueSets = implementationGuideManager.getValueSetDependencies();
     log.info("Found {} Value Set dependencies.", madieValueSets.size());
 
@@ -117,25 +118,30 @@ public class ValueSetExpansionService {
 
     log.info("{} Value Set expansions retrieved.", expandedValueSets.size());
 
-    saveValueSetExpansions(expandedValueSets);
+    int savedValueSetCount = saveValueSetExpansions(expandedValueSets);
     log.info(
         "Update of all Value set expansions completed in {} milliseconds.",
         Duration.between(now, Instant.now()).toMillis());
+    return CompletableFuture.completedFuture(savedValueSetCount);
   }
 
-  private void saveValueSetExpansions(List<MadieValueSet> madieValueSets) {
+  private int saveValueSetExpansions(List<MadieValueSet> madieValueSets) {
+    int savedValueSetCount = 0;
     for (MadieValueSet madieValueSet : madieValueSets) {
       Optional<MadieValueSet> existingValueSet =
           vseRepo.findByUrlAndVersion(madieValueSet.getUrl(), madieValueSet.getVersion());
 
       if (existingValueSet.isEmpty()) {
         vseRepo.save(madieValueSet);
+        savedValueSetCount++;
       } else if (!existingValueSet.get().isManuallyModified()) {
         existingValueSet.get().setValueSet(madieValueSet.getValueSet());
         vseRepo.save(existingValueSet.get());
+        savedValueSetCount++;
       }
     }
-    log.info("Saved {} value set expansions.", madieValueSets.size());
+    log.info("Saved {} value set expansions.", savedValueSetCount);
+    return savedValueSetCount;
   }
 
   private ValueSetDisplayForAdmin convertToDisplayDto(MadieValueSet valueSet) {
