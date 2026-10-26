@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.clients;
 
+import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.dto.UserRolesDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,45 @@ class UserServiceClientTest {
 
     result = userServiceClient.getUserRoles("", TOKEN);
     assertThat(result, is(nullValue()));
+
+    verifyNoInteractions(userServiceRestTemplate);
+  }
+
+  @Test
+  void testGetUserDetails() {
+    String url = BASE_URL + "/users/" + HARP_ID + "/details";
+    UserDetailsDto expected =
+        UserDetailsDto.builder().harpId(HARP_ID).firstName("Jane").lastName("Doe").build();
+
+    when(userServiceRestTemplate.exchange(
+            eq(url), eq(HttpMethod.GET), any(HttpEntity.class), eq(UserDetailsDto.class)))
+        .thenReturn(ResponseEntity.ok(expected));
+
+    UserDetailsDto result = userServiceClient.getUserDetails(HARP_ID);
+
+    assertThat(result, is(equalTo(expected)));
+    verify(userServiceRestTemplate, times(1))
+        .exchange(
+            eq(url), eq(HttpMethod.GET), httpEntityCaptor.capture(), eq(UserDetailsDto.class));
+    assertThat(
+        httpEntityCaptor.getValue().getHeaders().getContentType(), is(MediaType.APPLICATION_JSON));
+  }
+
+  @Test
+  void testGetUserDetailsWithException() {
+    when(userServiceRestTemplate.exchange(
+            anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(UserDetailsDto.class)))
+        .thenThrow(new RestClientException("Connection error"));
+
+    UserDetailsDto result = userServiceClient.getUserDetails(HARP_ID);
+
+    assertThat(result, is(nullValue()));
+  }
+
+  @Test
+  void testGetUserDetailsReturnsNullWhenHarpIdIsBlank() {
+    assertThat(userServiceClient.getUserDetails(null), is(nullValue()));
+    assertThat(userServiceClient.getUserDetails(""), is(nullValue()));
 
     verifyNoInteractions(userServiceRestTemplate);
   }

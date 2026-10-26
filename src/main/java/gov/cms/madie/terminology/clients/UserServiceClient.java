@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.clients;
 
+import gov.cms.madie.models.dto.UserDetailsDto;
 import gov.cms.madie.models.dto.UserRolesDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,43 @@ public class UserServiceClient {
     } catch (Exception e) {
       log.error(
           "Failed to fetch user roles from user service for HARP ID: [{}]: {}",
+          harpId,
+          e.getMessage(),
+          e);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches UserDetailsDto from the user service. The bearer token is added by the
+   * userServiceRestTemplate interceptor from the current request's security context.
+   *
+   * @param harpId: HARP ID to fetch UserDetailsDto for
+   * @return UserDetailsDto which contains the user's HARP ID, name and email, or null if service
+   *     call fails
+   */
+  public UserDetailsDto getUserDetails(String harpId) {
+    log.debug("Requesting user details for HARP ID: [{}]", harpId);
+    if (!StringUtils.hasText(harpId)) {
+      log.debug("Skipping user details fetch — harpId is blank");
+      return null;
+    }
+
+    String url = userServiceBaseUrl + "/users/" + harpId + "/details";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<Void> request = new HttpEntity<>(headers);
+
+    try {
+      log.debug("Calling user-service to request user details for HARP ID: [{}]", harpId);
+      ResponseEntity<UserDetailsDto> responseEntity =
+          userServiceRestTemplate.exchange(url, HttpMethod.GET, request, UserDetailsDto.class);
+      UserDetailsDto response = responseEntity.getBody();
+      log.debug("Successfully retrieved user details for HARP ID: [{}]", harpId);
+      return response;
+    } catch (Exception e) {
+      log.error(
+          "Failed to fetch user details from user service for HARP ID: [{}]: {}",
           harpId,
           e.getMessage(),
           e);

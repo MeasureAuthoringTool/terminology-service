@@ -1,6 +1,10 @@
 package gov.cms.madie.terminology.controller;
 
 import ca.uhn.fhir.context.FhirContext;
+import gov.cms.madie.terminology.audit.AdminAuditService;
+import gov.cms.madie.terminology.audit.AdminAuditService.Action;
+import gov.cms.madie.terminology.audit.AuditResource;
+import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.terminology.clients.UserServiceClient;
@@ -25,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.security.Principal;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -53,6 +58,7 @@ class AdminControllerMvcTest {
   @MockitoBean private UpdateCodeSystemTask updateCodeSystemTask;
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean private CodeSystemExportService codeSystemExportService;
+  @MockitoBean private AdminAuditService adminAuditService;
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
 
@@ -120,6 +126,9 @@ class AdminControllerMvcTest {
 
     assertThat(result.getResponse().getStatus(), is(equalTo(201)));
     verify(codeSystemService, times(1)).createCodeSystem(any(CodeSystem.class));
+    verify(adminAuditService)
+        .logAdminAction(
+            any(Principal.class), eq(Action.CREATE), eq(AuditResource.from(codeSystem)));
   }
 
   @Test
@@ -134,6 +143,7 @@ class AdminControllerMvcTest {
         .andExpect(status().isForbidden());
 
     verify(codeSystemService, never()).createCodeSystem(any());
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -208,6 +218,9 @@ class AdminControllerMvcTest {
 
     assertThat(result.getResponse().getStatus(), is(equalTo(200)));
     verify(codeSystemService, times(1)).updateCodeSystem(anyString(), any(CodeSystem.class));
+    verify(adminAuditService)
+        .logAdminAction(
+            any(Principal.class), eq(Action.UPDATE), eq(AuditResource.from(codeSystem)));
   }
 
   @Test
@@ -222,6 +235,7 @@ class AdminControllerMvcTest {
         .andExpect(status().isForbidden());
 
     verify(codeSystemService, never()).updateCodeSystem(anyString(), any());
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -245,7 +259,7 @@ class AdminControllerMvcTest {
 
   @Test
   void testDeleteCodeSystemSuccessfully() throws Exception {
-    doNothing().when(codeSystemService).deleteCodeSystem(anyString());
+    when(codeSystemService.deleteCodeSystem(anyString())).thenReturn(codeSystem);
 
     MvcResult result =
         mockMvc
@@ -259,6 +273,9 @@ class AdminControllerMvcTest {
 
     assertThat(result.getResponse().getStatus(), is(equalTo(204)));
     verify(codeSystemService, times(1)).deleteCodeSystem(codeSystem.getId());
+    verify(adminAuditService)
+        .logAdminAction(
+            any(Principal.class), eq(Action.DELETE), eq(AuditResource.from(codeSystem)));
   }
 
   @Test
@@ -271,6 +288,7 @@ class AdminControllerMvcTest {
         .andExpect(status().isForbidden());
 
     verify(codeSystemService, never()).deleteCodeSystem(anyString());
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -290,5 +308,39 @@ class AdminControllerMvcTest {
 
     assertThat(result.getResponse().getStatus(), is(equalTo(204)));
     verify(codeSystemService, times(1)).deleteCodeSystem("nonexistent");
+  }
+
+  @Test
+  void testTriggerCodeSystemRefreshAuditsWhenJobStarts() throws Exception {
+    when(updateCodeSystemTask.startJob()).thenReturn(true);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/trigger-code-system-refresh")
+                .with(user(TEST_USR).roles("MADIE-ADMIN"))
+                .with(csrf()))
+        .andExpect(status().isOk());
+
+    verify(adminAuditService)
+        .logAdminAction(
+            any(Principal.class),
+            eq(Action.UPDATE),
+            eq(
+                AuditResource.bulk(
+                    ResourceType.CODE_SYSTEM,
+                    "Update Code Systems: started job to refresh all code systems from VSAC")));
+  }
+
+  @Test
+  void testTriggerCodeSystemRefreshForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/trigger-code-system-refresh")
+                .with(user(TEST_USR))
+                .with(csrf()))
+        .andExpect(status().isForbidden());
+
+    verify(updateCodeSystemTask, never()).startJob();
+    verifyNoInteractions(adminAuditService);
   }
 }
