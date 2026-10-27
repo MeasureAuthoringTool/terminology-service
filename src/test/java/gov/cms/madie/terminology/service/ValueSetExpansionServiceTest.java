@@ -1060,8 +1060,9 @@ class ValueSetExpansionServiceTest {
 
     when(vseRepo.findById("test-id")).thenReturn(Optional.of(existing));
 
-    valueSetExpansionService.deleteValueSet("test-id");
+    MadieValueSet deleted = valueSetExpansionService.deleteValueSet("test-id");
 
+    assertSame(existing, deleted);
     verify(vseRepo, times(1)).deleteById("test-id");
   }
 

@@ -1,5 +1,9 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.audit.AdminAuditService;
+import gov.cms.madie.terminology.audit.AdminAuditService.Action;
+import gov.cms.madie.terminology.audit.AuditResource;
+import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.config.SecurityConfig;
 import ca.uhn.fhir.context.FhirContext;
@@ -15,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -35,10 +40,14 @@ class ValueSetExpansionAdminControllerMvcTest {
   private static final String TEST_USR = "FAKE";
   private static final String IG_NAME = "hl7.fhir.us.core";
   private static final String IG_VERSION = "6.1.0";
+  private static final String VALUE_SET_BODY =
+      "{\"url\":\"http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3\",\"version\":\"20240101\","
+          + "\"valueSet\":\"{}\"}";
 
   @MockitoBean private ValueSetExpansionService valueSetExpansionService;
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean private FhirContext fhirContext;
+  @MockitoBean private AdminAuditService adminAuditService;
   @Autowired private MockMvc mockMvc;
 
   // ---------------------------------------------------------------------------
@@ -180,6 +189,15 @@ class ValueSetExpansionAdminControllerMvcTest {
         .andExpect(status().isAccepted());
 
     verify(valueSetExpansionService, times(1)).updateValueSetDependencies();
+    verify(adminAuditService)
+        .logAdminAction(
+            any(Principal.class),
+            eq(Action.UPDATE),
+            eq(
+                AuditResource.bulk(
+                    ResourceType.VALUE_SET,
+                    "Update VSES Data: started job to refresh value set expansions from VSAC"
+                        + " for all implementation guides")));
   }
 
   @Test
@@ -198,6 +216,18 @@ class ValueSetExpansionAdminControllerMvcTest {
         .andExpect(status().isAccepted());
 
     verify(valueSetExpansionService, times(1)).updateIgValueSetDependencies(IG_NAME, IG_VERSION);
+    verify(adminAuditService)
+        .logAdminAction(
+            any(Principal.class),
+            eq(Action.UPDATE),
+            eq(
+                AuditResource.bulk(
+                    ResourceType.VALUE_SET,
+                    "Update VSES Data: started job to refresh value set expansions from VSAC"
+                        + " for implementation guide "
+                        + IG_NAME
+                        + " version "
+                        + IG_VERSION)));
   }
 
   @Test
@@ -212,6 +242,7 @@ class ValueSetExpansionAdminControllerMvcTest {
     verify(valueSetExpansionService, never()).updateValueSetDependencies();
     verify(valueSetExpansionService, never())
         .updateIgValueSetDependencies(anyString(), anyString());
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -268,5 +299,52 @@ class ValueSetExpansionAdminControllerMvcTest {
     String body = result.getResponse().getContentAsString();
     assertThat(body, is(equalTo("[]")));
     verify(valueSetExpansionService, times(1)).getImplementationGuides();
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST / PUT / DELETE /terminology/admin/value-set
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void addValueSetReturnsForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/value-set")
+                .with(user(TEST_USR))
+                .with(csrf())
+                .content(VALUE_SET_BODY)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isForbidden());
+
+    verify(valueSetExpansionService, never()).addValueSet(any());
+    verifyNoInteractions(adminAuditService);
+  }
+
+  @Test
+  void upsertValueSetReturnsForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.put("/terminology/admin/value-set")
+                .with(user(TEST_USR))
+                .with(csrf())
+                .content(VALUE_SET_BODY)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isForbidden());
+
+    verify(valueSetExpansionService, never()).upsertValueSet(any());
+    verifyNoInteractions(adminAuditService);
+  }
+
+  @Test
+  void deleteValueSetReturnsForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.delete("/terminology/admin/value-set/test-id")
+                .with(user(TEST_USR))
+                .with(csrf()))
+        .andExpect(status().isForbidden());
+
+    verify(valueSetExpansionService, never()).deleteValueSet(anyString());
+    verifyNoInteractions(adminAuditService);
   }
 }
