@@ -19,25 +19,29 @@ import org.springframework.dao.DataAccessException;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CodeSystemSyncServiceTest {
-  @Mock private FhirContext fhirContext;
+  @Mock private FhirContext mockContext;
   @Mock private FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   @Mock private CodeSystemRepository codeSystemRepository;
+  @Mock private CodeSystemService codeSystemService;
   @InjectMocks private CodeSystemSyncService codeSystemSyncService;
 
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
   private static final String TEST_API_KEY = "te$tKey";
 
-  private final String mockCodeSystemsResource =
-      "{\"resourceType\":\"Bundle\",\"id\":\"codesystem-search\",\"meta\":{\"lastUpdated\":\"2024-03-28T15:04:59.375-04:00\"},\"type\":\"searchset\",\"total\":831,\"link\":[{\"relation\":\"self\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=500&_count=2\"},{\"relation\":\"first\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=2\"},{\"relation\":\"previous\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=498&_count=2\"},{\"relation\":\"last\",\"url\":\"http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=829&_count=2\"}],\"entry\":[{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1710382394\",\"lastUpdated\":\"2019-04-25T00:00:00.000-04:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-03-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-04-15T00:00:00-04:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}},{\"fullUrl\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"ObservationInterpretation\",\"meta\":{\"versionId\":\"1305437570\",\"lastUpdated\":\"2020-01-16T00:00:00.000-05:00\",\"profile\":[\"http://hl7.org/fhir/StructureDefinition/shareablecodesystem\"]},\"url\":\"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation\",\"identifier\":[{\"system\":\"urn:ietf:rfc:3986\",\"value\":\"urn:oid:2.16.840.1.113883.5.83\"}],\"version\":\"2019-12-01\",\"name\":\"ObservationInterpretation\",\"title\":\"ObservationInterpretation\",\"status\":\"active\",\"experimental\":false,\"date\":\"2019-12-27T00:00:00-05:00\",\"_publisher\":{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\",\"valueCode\":\"unknown\"}]},\"content\":\"complete\",\"count\":57,\"concept\":[{\"code\":\"<\",\"display\":\"Offscalelow\"},{\"code\":\">\",\"display\":\"Offscalehigh\"},{\"code\":\"A\",\"display\":\"Abnormal\"},{\"code\":\"AA\",\"display\":\"Criticalabnormal\"},{\"code\":\"AC\",\"display\":\"Anti-complementarysubstancespresent\"},{\"code\":\"B\",\"display\":\"Better\"},{\"code\":\"CAR\",\"display\":\"Carrier\"},{\"code\":\"Carrier\",\"display\":\"Carrier\"},{\"code\":\"D\",\"display\":\"Significantchangedown\"},{\"code\":\"DET\",\"display\":\"Detected\"},{\"code\":\"E\",\"display\":\"Equivocal\"},{\"code\":\"EX\",\"display\":\"outsidethreshold\"},{\"code\":\"EXP\",\"display\":\"Expected\"},{\"code\":\"H\",\"display\":\"High\"},{\"code\":\"H>\",\"display\":\"Significantlyhigh\"},{\"code\":\"HH\",\"display\":\"Criticalhigh\"},{\"code\":\"HM\",\"display\":\"HoldforMedicalReview\"},{\"code\":\"HU\",\"display\":\"Significantlyhigh\"},{\"code\":\"HX\",\"display\":\"abovehighthreshold\"},{\"code\":\"I\",\"display\":\"Intermediate\"},{\"code\":\"IE\",\"display\":\"Insufficientevidence\"},{\"code\":\"IND\",\"display\":\"Indeterminate\"},{\"code\":\"L\",\"display\":\"Low\"},{\"code\":\"L<\",\"display\":\"Significantlylow\"},{\"code\":\"LL\",\"display\":\"Criticallow\"},{\"code\":\"LU\",\"display\":\"Significantlylow\"},{\"code\":\"LX\",\"display\":\"belowlowthreshold\"},{\"code\":\"MS\",\"display\":\"moderatelysusceptible\"},{\"code\":\"N\",\"display\":\"Normal\"},{\"code\":\"NCL\",\"display\":\"NoCLSIdefinedbreakpoint\"},{\"code\":\"ND\",\"display\":\"Notdetected\"},{\"code\":\"NEG\",\"display\":\"Negative\"},{\"code\":\"NR\",\"display\":\"Non-reactive\"},{\"code\":\"NS\",\"display\":\"Non-susceptible\"},{\"code\":\"OBX\",\"display\":\"InterpretationqualifiersinseparateOBXsegments\"},{\"code\":\"ObservationInterpretationDetection\",\"display\":\"ObservationInterpretationDetection\"},{\"code\":\"ObservationInterpretationExpectation\",\"display\":\"ObservationInterpretationExpectation\"},{\"code\":\"POS\",\"display\":\"Positive\"},{\"code\":\"QCF\",\"display\":\"Qualitycontrolfailure\"},{\"code\":\"R\",\"display\":\"Resistant\"},{\"code\":\"RR\",\"display\":\"Reactive\"},{\"code\":\"ReactivityObservationInterpretation\",\"display\":\"ReactivityObservationInterpretation\"},{\"code\":\"S\",\"display\":\"Susceptible\"},{\"code\":\"SDD\",\"display\":\"Susceptible-dosedependent\"},{\"code\":\"SYN-R\",\"display\":\"Synergy-resistant\"},{\"code\":\"SYN-S\",\"display\":\"Synergy-susceptible\"},{\"code\":\"TOX\",\"display\":\"Cytotoxicsubstancepresent\"},{\"code\":\"U\",\"display\":\"Significantchangeup\"},{\"code\":\"UNE\",\"display\":\"Unexpected\"},{\"code\":\"VS\",\"display\":\"verysusceptible\"},{\"code\":\"W\",\"display\":\"Worse\"},{\"code\":\"WR\",\"display\":\"Weaklyreactive\"},{\"code\":\"_GeneticObservationInterpretation\",\"display\":\"GeneticObservationInterpretation\"},{\"code\":\"_ObservationInterpretationChange\",\"display\":\"ObservationInterpretationChange\"},{\"code\":\"_ObservationInterpretationExceptions\",\"display\":\"ObservationInterpretationExceptions\"},{\"code\":\"_ObservationInterpretationNormality\",\"display\":\"ObservationInterpretationNormality\"},{\"code\":\"_ObservationInterpretationSusceptibility\",\"display\":\"ObservationInterpretationSusceptibility\"}]}}]}";
+  private final Bundle mockCodeSystemResponseBundle = createMockCodeSystemsResource();
+  private final String mockCodeSystemResponseJson =
+      FhirContext.forR4().newJsonParser().encodeResourceToString(mockCodeSystemResponseBundle);
 
   @BeforeEach
   public void setUp() throws IOException {
@@ -45,109 +49,181 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
-  void testRetrieveAllCodeSystems() {
+  void testRemoteRetrieveAllCodeSystems() {
+    // Given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
-    Bundle bundle = new Bundle();
-    var identifierList = new ArrayList<Identifier>();
-    var i1 = new Identifier().setValue("codeUrl");
-    identifierList.add(i1);
-    var m1 = new Meta();
-    m1.setVersionId("vid");
-    m1.setLastUpdated(new Date());
-    var c1 =
-        new org.hl7.fhir.r4.model.CodeSystem()
-            .setTitle("title")
-            .setName("name1")
-            .setVersion("version")
-            .setIdentifier(identifierList)
-            .setMeta(m1)
-            .setId("titleversion");
-
-    var identifierList2 = new ArrayList<Identifier>();
-    var i2 = new Identifier().setValue("codeUrl");
-    identifierList2.add(i2);
-    var m2 = new Meta();
-    m2.setVersionId("vid");
-    m2.setLastUpdated(new Date());
-    var c2 =
-        new org.hl7.fhir.r4.model.CodeSystem()
-            .setTitle("title")
-            .setName("name2")
-            .setVersion("version")
-            .setIdentifier(identifierList2)
-            .setMeta(m2)
-            .setId("titleversion");
-    bundle.addEntry().setResource(c1);
-    Bundle.BundleEntryComponent t =
-        new Bundle.BundleEntryComponent()
-            .setFullUrl("http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation")
-            .setResource(c2);
-    bundle.addEntry(t);
-
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(mockCodeSystemsResource);
-
+        .thenReturn(mockCodeSystemResponseJson);
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.empty());
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
-    // call method under test and assert results
-    List<CodeSystem> resultList =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // When
+    List<CodeSystem> resultList = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // Then
     assertEquals(2, resultList.size());
-    assertEquals(resultList.get(1).getFullUrl(), t.getFullUrl());
+    assertTrue(
+        resultList.stream()
+            .anyMatch(
+                cs ->
+                    cs.getFullUrl()
+                        .equals(mockCodeSystemResponseBundle.getEntryFirstRep().getFullUrl())));
+    assertTrue(
+        resultList.stream()
+            .anyMatch(
+                cs ->
+                    cs.getFullUrl()
+                        .equals(mockCodeSystemResponseBundle.getEntry().get(1).getFullUrl())));
+    assertTrue(resultList.get(0).isLatestVersion());
+    assertTrue(resultList.get(1).isLatestVersion());
+
     verify(codeSystemRepository, times(2)).save(any(CodeSystem.class));
   }
 
   @Test
-  void testRetrieveAllCodeSystemsWithInsert() {
+  void testRemoteRetrieveAllCodeSystemsWithNewAndExisting() {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
-    Bundle bundle = new Bundle();
-    var c1 = new org.hl7.fhir.r4.model.CodeSystem();
-    var identifierList = new ArrayList<Identifier>();
-    var i1 = new Identifier().setValue("codeUrl");
-    identifierList.add(i1);
-    var m1 = new Meta();
-    m1.setVersionId("vid");
-    m1.setLastUpdated(new Date());
-    c1.setId("titleversion");
-    c1.setTitle("title");
-    c1.setName("name1");
-    c1.setVersion("version");
-    c1.setMeta(m1);
-    c1.setIdentifier(identifierList);
-    bundle.addEntry().setResource(c1);
-
-    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
-        .thenReturn(mockCodeSystemsResource);
     var existingCodeSystem =
         CodeSystem.builder()
             .id("titleversion")
             .title("title")
             .name("name1")
+            .fullUrl("http://test")
             .version(CodeSystem.Version.builder().fhirVersion("version").build())
             .versionId("vid")
             .oid("codeUrl")
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
+            .isLatestVersion(true)
             .isInVsac(false)
             .build();
 
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(mockCodeSystemResponseJson);
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
-        .thenReturn(Optional.ofNullable(existingCodeSystem));
+        .thenReturn(Optional.empty());
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
-    codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> codeSystems = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     verify(codeSystemRepository, times(2)).save(any(CodeSystem.class));
+    assertFalse(
+        codeSystems.stream()
+            .anyMatch(cs -> cs.getFullUrl().equals(existingCodeSystem.getFullUrl())));
+    assertTrue(
+        codeSystems.stream()
+            .anyMatch(
+                cs ->
+                    cs.getFullUrl()
+                        .equals(mockCodeSystemResponseBundle.getEntryFirstRep().getFullUrl())));
+    assertTrue(
+        codeSystems.stream()
+            .anyMatch(
+                cs ->
+                    cs.getFullUrl()
+                        .equals(mockCodeSystemResponseBundle.getEntry().get(1).getFullUrl())));
+    assertTrue(codeSystems.stream().allMatch(CodeSystem::isLatestVersion));
   }
 
   @Test
-  void testRetrieveAllCodeSystemsSkipsNullStringFhirVersion() {
+  void testRemoteRetrieveAllCodeSystemsWithUpdatedCodeSystem() {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    org.hl7.fhir.r4.model.CodeSystem csResource =
+        (org.hl7.fhir.r4.model.CodeSystem)
+            mockCodeSystemResponseBundle.getEntryFirstRep().getResource();
+    CodeSystem existingCodeSystem =
+        CodeSystem.builder()
+            .fullUrl(mockCodeSystemResponseBundle.getEntryFirstRep().getFullUrl())
+            .name(csResource.getName())
+            .oid("mockOid")
+            .version(CodeSystem.Version.builder().fhirVersion(csResource.getVersion()).build())
+            .lastUpdatedUpstream(
+                Date.from(
+                    csResource.getMeta().getLastUpdated().toInstant().minus(1, ChronoUnit.DAYS)))
+            .isInVsac(true)
+            .isLatestVersion(false)
+            .build();
+
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(mockCodeSystemResponseJson);
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.of(existingCodeSystem));
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    List<CodeSystem> retrievedCodeSystems =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    assertEquals(2, retrievedCodeSystems.size());
+    Optional<CodeSystem> updatedCodeSystem =
+        retrievedCodeSystems.stream()
+            .filter(
+                cs ->
+                    cs.getFullUrl()
+                        .equals(mockCodeSystemResponseBundle.getEntryFirstRep().getFullUrl()))
+            .findFirst();
+    assertTrue(updatedCodeSystem.isPresent());
+    assertThat(updatedCodeSystem.get().getLastUpdatedUpstream())
+        .isEqualTo(Date.from(csResource.getMeta().getLastUpdated().toInstant()));
+    assertTrue(updatedCodeSystem.get().isLatestVersion());
+  }
+
+  @Test
+  void testRemoteRetrieveAllCodeSystemsPromotesLatest() {
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    org.hl7.fhir.r4.model.CodeSystem csResource =
+        (org.hl7.fhir.r4.model.CodeSystem)
+            mockCodeSystemResponseBundle.getEntryFirstRep().getResource();
+    CodeSystem existingCodeSystem =
+        CodeSystem.builder()
+            .fullUrl(mockCodeSystemResponseBundle.getEntryFirstRep().getFullUrl())
+            .name(csResource.getName())
+            .oid("mockOid")
+            .version(CodeSystem.Version.builder().fhirVersion(csResource.getVersion()).build())
+            .lastUpdatedUpstream(
+                Date.from(
+                    csResource.getMeta().getLastUpdated().toInstant().minus(1, ChronoUnit.DAYS)))
+            .isInVsac(true)
+            .isLatestVersion(true)
+            .build();
+
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
+        .thenReturn(mockCodeSystemResponseJson);
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
+        .thenReturn(Optional.of(existingCodeSystem));
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    List<CodeSystem> retrievedCodeSystems =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    assertEquals(2, retrievedCodeSystems.size());
+    Optional<CodeSystem> updatedCodeSystem =
+        retrievedCodeSystems.stream()
+            .filter(
+                cs ->
+                    cs.getFullUrl()
+                        .equals(mockCodeSystemResponseBundle.getEntryFirstRep().getFullUrl()))
+            .findFirst();
+    assertTrue(updatedCodeSystem.isPresent());
+    assertThat(updatedCodeSystem.get().getLastUpdatedUpstream())
+        .isEqualTo(Date.from(csResource.getMeta().getLastUpdated().toInstant()));
+    assertTrue(updatedCodeSystem.get().isLatestVersion());
+  }
+
+  @Test
+  void testRemoteRetrieveAllCodeSystemsSkipsNullStringFhirVersion() {
+    umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Bundle with a single entry whose version is the literal string "null"
     String nullVersionBundle =
@@ -165,8 +241,7 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullVersionBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals(
@@ -179,9 +254,9 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
-  void testRetrieveAllCodeSystemsSkipsBlankFhirVersion() {
+  void testRemoteRetrieveAllCodeSystemsSkipsBlankFhirVersion() {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Bundle with a single entry whose version is missing.
     String blankVersionBundle =
@@ -200,8 +275,7 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(blankVersionBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals(
@@ -214,9 +288,9 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
-  void testRetrieveAllCodeSystemsSkipsNullFullUrl() {
+  void testRemoteRetrieveAllCodeSystemsSkipsNullFullUrl() {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Bundle with a single entry whose resource has no url (fullUrl will be null)
     String nullStringUrlBundle =
@@ -234,8 +308,7 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(nullStringUrlBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertEquals("null", result.get(0).getFullUrl());
@@ -245,9 +318,9 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
-  void testRetrieveAllCodeSystemsSkipsBlankFullUrl() {
+  void testRemoteRetrieveAllCodeSystemsSkipsBlankFullUrl() {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Bundle with a single entry whose resource has no url (fullUrl will be null)
     String noUrlBundle =
@@ -264,8 +337,7 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(noUrlBundle);
 
-    List<CodeSystem> result =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     assertEquals(1, result.size());
     assertNull(result.get(0).getFullUrl());
@@ -276,7 +348,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsParsesOffsetAndCountFromNextLinkAndRecurses() {
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // build first bundle with one CodeSystem and a next link containing _offset and _count
     org.hl7.fhir.r4.model.CodeSystem cs1 = new org.hl7.fhir.r4.model.CodeSystem();
@@ -328,6 +400,8 @@ class CodeSystemSyncServiceTest {
     // return page for the recursive offset=50,count=50
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(eq(50), eq(50), anyString()))
         .thenReturn(json2);
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     var result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
@@ -346,13 +420,12 @@ class CodeSystemSyncServiceTest {
     doThrow(new DataAccessException("Simulated DB error") {})
         .when(codeSystemRepository)
         .save(any());
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(
             "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
     // Call the method under test
-    List<CodeSystem> result =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
     // Assert that the result is not empty and the error branch was triggered
     assertFalse(result.isEmpty());
     assertEquals("LOINC", result.get(0).getName());
@@ -360,7 +433,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsOffsetNullFromNextLinkAssertsNotNull() {
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Build a bundle with a next link containing only _count
     org.hl7.fhir.r4.model.CodeSystem cs1 = new org.hl7.fhir.r4.model.CodeSystem();
@@ -416,8 +489,8 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
-  void retrieveAllCodeSystemsCountNullFromNextLinkAssertsNotNull() {
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+  void testRemoteRetrieveAllCodeSystemsCountNullFromNextLinkAssertsNotNull() {
+    when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Build a bundle with a next link containing only _offset
     org.hl7.fhir.r4.model.CodeSystem cs1 = new org.hl7.fhir.r4.model.CodeSystem();
@@ -470,5 +543,69 @@ class CodeSystemSyncServiceTest {
 
     assertThrows(
         AssertionError.class, () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+  }
+
+  private Bundle createMockCodeSystemsResource() {
+    Bundle bundle = new Bundle();
+    bundle.setId("codesystem-search");
+    bundle.setMeta(new Meta().setLastUpdated(Date.from(Instant.parse("2024-03-28T19:04:59.375Z"))));
+    bundle.setType(Bundle.BundleType.SEARCHSET);
+    bundle.setTotal(831);
+    bundle
+        .addLink()
+        .setRelation("self")
+        .setUrl("http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=500&_count=2");
+    bundle
+        .addLink()
+        .setRelation("first")
+        .setUrl("http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=0&_count=2");
+    bundle
+        .addLink()
+        .setRelation("previous")
+        .setUrl("http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=498&_count=2");
+    bundle
+        .addLink()
+        .setRelation("last")
+        .setUrl("http://uat-cts.nlm.nih.gov/fhir/res/CodeSystem?_offset=829&_count=2");
+    bundle
+        .addEntry()
+        .setFullUrl("http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation")
+        .setResource(
+            mockFhirCodeSystem(
+                "ObservationInterpretation",
+                "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "urn:oid:2.16.840.1.113883.5.83",
+                "1710382394",
+                "2019-04-25T04:00:00Z",
+                "2019-03-01"));
+    bundle
+        .addEntry()
+        .setFullUrl("http://terminology.hl7.org/CodeSystem/v3-ActCode")
+        .setResource(
+            mockFhirCodeSystem(
+                "v3-ActCode",
+                "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                "urn:oid:2.16.840.1.113883.5.4",
+                "11",
+                "2024-01-15T00:00:00-05:00",
+                "9.0.0"));
+    return bundle;
+  }
+
+  private org.hl7.fhir.r4.model.CodeSystem mockFhirCodeSystem(
+      String id, String url, String oid, String versionId, String lastUpdated, String version) {
+    org.hl7.fhir.r4.model.CodeSystem codeSystem = new org.hl7.fhir.r4.model.CodeSystem();
+    codeSystem.setId(id);
+    codeSystem.setUrl(url);
+    codeSystem.setVersion(version);
+    codeSystem.setName(id);
+    codeSystem.setTitle(id);
+    codeSystem.setStatus(org.hl7.fhir.r4.model.Enumerations.PublicationStatus.ACTIVE);
+    codeSystem.setContent(org.hl7.fhir.r4.model.CodeSystem.CodeSystemContentMode.COMPLETE);
+    codeSystem.setCount(57);
+    codeSystem.setMeta(
+        new Meta().setVersionId(versionId).setLastUpdated(Date.from(Instant.parse(lastUpdated))));
+    codeSystem.addIdentifier(new Identifier().setSystem("urn:ietf:rfc:3986").setValue(oid));
+    return codeSystem;
   }
 }

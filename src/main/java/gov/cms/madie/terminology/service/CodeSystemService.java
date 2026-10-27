@@ -105,13 +105,29 @@ public class CodeSystemService {
     }
 
     if (codeSystem.isLatestVersion()) {
-      demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
+      promoteToLatestVersion(existing.getId());
+    } else {
+      existing.setLatestVersion(false);
     }
-    existing.setLatestVersion(codeSystem.isLatestVersion());
 
     CodeSystem updated = codeSystemRepository.save(existing);
     log.info("CodeSystem updated by admin: {}", updated);
     return updated;
+  }
+
+  public void promoteToLatestVersion(String id) {
+    CodeSystem existing =
+        codeSystemRepository
+            .findById(id)
+            .orElseThrow(
+                () -> {
+                  log.warn("CodeSystem not found for promotion — id: [{}]", id);
+                  return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
+                });
+    demoteAllLatestVersionsByUrl(existing.getFullUrl());
+    existing.setLatestVersion(true);
+    codeSystemRepository.save(existing);
+    log.info("CodeSystem promoted to latest version: {}", existing);
   }
 
   private void demoteAllLatestVersionsByUrl(String url) {

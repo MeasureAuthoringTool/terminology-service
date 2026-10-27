@@ -19,6 +19,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -188,7 +189,7 @@ class CodeSystemServiceTest {
   }
 
   @Test
-  void testUpdateCodeSystemDemotesExistingLatestVersionsWhenMarkedAsLatest() {
+  void testUpdateCodeSystemDemotesExistingLatestVersionWhenMarkedAsLatest() {
     String id = "LOINCversion2.40";
 
     CodeSystem existing =
@@ -199,16 +200,6 @@ class CodeSystemServiceTest {
             .oid("urn:oid:2.16.840.1.113883.6.1")
             .fullUrl("https://loinc.org")
             .isLatestVersion(false)
-            .isInVsac(false)
-            .build();
-
-    CodeSystem incoming =
-        CodeSystem.builder()
-            .name("LOINC")
-            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(true)
             .isInVsac(false)
             .build();
 
@@ -241,12 +232,13 @@ class CodeSystemServiceTest {
 
     ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
-    codeSystemService.updateCodeSystem(id, incoming);
+    codeSystemService.updateCodeSystem(id, existing.toBuilder().isLatestVersion(true).build());
 
     verify(codeSystemRepository, times(1)).saveAll(anyList());
-    verify(codeSystemRepository, times(1)).save(captor.capture());
+    verify(codeSystemRepository, times(2)).save(captor.capture());
 
     assertTrue(captor.getValue().isLatestVersion());
+    assertThat(captor.getValue().getId()).isEqualTo(id);
     assertFalse(existingLatest.isLatestVersion());
     assertFalse(existingNonLatest.isLatestVersion());
   }
@@ -283,7 +275,7 @@ class CodeSystemServiceTest {
 
     codeSystemService.updateCodeSystem(id, incoming);
 
-    verify(codeSystemRepository, never()).findAllByOid(anyString());
+    verify(codeSystemRepository, never()).findAllByFullUrl(eq(existing.getFullUrl()));
     verify(codeSystemRepository, times(1)).save(captor.capture());
     assertFalse(captor.getValue().isLatestVersion());
   }
@@ -341,6 +333,17 @@ class CodeSystemServiceTest {
     assertThrows(
         CodeSystemNotFoundException.class,
         () -> codeSystemService.updateCodeSystem(id, codeSystem));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
+  }
+
+  @Test
+  void testPromoteCodeSystemVersionToLatestThrowsNotFoundException() {
+    String id = "nonexistent";
+
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.empty());
+
+    assertThrows(
+        CodeSystemNotFoundException.class, () -> codeSystemService.promoteToLatestVersion(id));
     verify(codeSystemRepository, never()).save(any(CodeSystem.class));
   }
 

@@ -54,7 +54,8 @@ class CodeSystemAsyncWorkerTest {
     codeSystemAsyncWorker.runJobAsync(running);
 
     verify(codeSystemSyncService)
-        .remoteRetrieveAllCodeSystems(argThat(user -> user != null && API_KEY.equals(user.getApiKey())));
+        .remoteRetrieveAllCodeSystems(
+            argThat(user -> user != null && API_KEY.equals(user.getApiKey())));
   }
 
   @Test

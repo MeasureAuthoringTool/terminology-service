@@ -29,7 +29,7 @@ okta:
 
 code-system-refresh-task:
   admin-api-key: ${ADMIN_API_KEY:0a51991c}
-  terminology-key: ${VSAC_API_KEY:b7fbc6aa-e27d-407b-ad41-aa9f833ea75f}
+  terminology-key: ${VSAC_API_KEY:defaultvaluetopreventillegalappstate}
   code-system-cron-date-time:  ${CS_REFRESH_TIME:@midnight}
 
 
@@ -65,7 +65,7 @@ spring:
   codec:
     max-in-memory-size: 24MB
   mongodb:
-    uri: mongodb://${MONGO_HOST:localhost}:27017/terminology?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
+    uri: ${MONGO_URI:mongodb://${DBUSER:root}:${DBPASS:E5press0}@localhost:27017/terminology}?authSource=admin&maxPoolSize=50&connectTimeoutMS=2000&serverSelectionTimeoutMS=2000
 
 mongock:
   migration-scan-package:

@@ -19,7 +19,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+
+import static java.util.Comparator.*;
+import static java.util.stream.Collectors.*;
 
 @Service
 @Slf4j
@@ -27,16 +31,18 @@ import java.util.Optional;
 public class CodeSystemSyncService {
   private final FhirContext fhirContext;
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
+  private final CodeSystemService codeSystemService;
   private final CodeSystemRepository codeSystemRepository;
 
   public List<CodeSystem> remoteRetrieveAllCodeSystems(UmlsUser umlsUser) {
     List<CodeSystem> allCodeSystems = new ArrayList<>();
-    recursiveRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems);
-    updateOrInsertAllCodeSystems(allCodeSystems);
+    recursiveRemoteRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems);
+    markLatestVersion(allCodeSystems);
+    updateOrInsertRetrievedCodeSystems(allCodeSystems);
     return allCodeSystems;
   }
 
-  private void recursiveRetrieveCodeSystems(
+  private void recursiveRemoteRetrieveCodeSystems(
       UmlsUser umlsUser, Integer offset, Integer count, List<CodeSystem> allCodeSystems) {
     log.info("requesting page offset: {} count: {}", offset, count);
     Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, offset, count);
@@ -70,7 +76,7 @@ public class CodeSystemSyncService {
             String newCount = builder.build().getQueryParams().getFirst("_count");
             assert newOffset != null;
             assert newCount != null;
-            recursiveRetrieveCodeSystems(
+            recursiveRemoteRetrieveCodeSystems(
                 umlsUser, Integer.parseInt(newOffset), Integer.parseInt(newCount), allCodeSystems);
           }
         });
@@ -98,8 +104,31 @@ public class CodeSystemSyncService {
     return parser.parseResource(Bundle.class, responseString);
   }
 
-  private void updateOrInsertAllCodeSystems(List<CodeSystem> codeSystemList) {
+  private void markLatestVersion(List<CodeSystem> allCodeSystems) {
+    // Group by fullUrl and find the latest version for each group
+    allCodeSystems.stream()
+        .filter(
+            cs -> Objects.nonNull(cs.getFullUrl()) && Objects.nonNull(cs.getLastUpdatedUpstream()))
+        .collect(
+            groupingBy(
+                CodeSystem::getFullUrl, maxBy(comparing(CodeSystem::getLastUpdatedUpstream))))
+        .values()
+        .forEach(
+            optionalCodeSystem -> {
+              if (optionalCodeSystem.isPresent() && !optionalCodeSystem.get().isLatestVersion()) {
+                CodeSystem latestCodeSystem = optionalCodeSystem.get();
+                latestCodeSystem.setLatestVersion(true);
+                log.info(
+                    "Setting new latest version for CodeSystem with fullUrl: {} and version: {}",
+                    latestCodeSystem.getFullUrl(),
+                    latestCodeSystem.getVersion().getFhirVersion());
+              }
+            });
+  }
+
+  private void updateOrInsertRetrievedCodeSystems(List<CodeSystem> codeSystemList) {
     for (CodeSystem codeSystem : codeSystemList) {
+      // Skip any CodeSystem that is missing a FHIR version or fullUrl.
       if (codeSystem.getVersion() == null
           || StringUtils.isBlank(codeSystem.getVersion().getFhirVersion())
           || Strings.CI.equals(codeSystem.getVersion().getFhirVersion(), "null")) {
@@ -115,8 +144,9 @@ public class CodeSystemSyncService {
         Optional<CodeSystem> existingCodeSystemOptional =
             codeSystemRepository.findByFullUrlAndVersionFhirVersion(
                 codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion());
+        CodeSystem saved;
         if (existingCodeSystemOptional.isEmpty()) {
-          codeSystemRepository.save(codeSystem);
+          saved = codeSystemRepository.save(codeSystem);
           log.info("New CodeSystem inserted: {}", codeSystem);
         } else {
           CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
@@ -128,8 +158,13 @@ public class CodeSystemSyncService {
           existingCodeSystem.setOid(codeSystem.getOid());
           existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
           existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
-          codeSystemRepository.save(existingCodeSystem);
+          existingCodeSystem.setLatestVersion(codeSystem.isLatestVersion());
+          existingCodeSystem.setInVsac(codeSystem.isInVsac());
+          saved = codeSystemRepository.save(existingCodeSystem);
           log.info("CodeSystem updated: {}", existingCodeSystem);
+        }
+        if (saved.isLatestVersion()) {
+          codeSystemService.promoteToLatestVersion(saved.getId());
         }
       } catch (DataAccessException e) {
         log.error(
