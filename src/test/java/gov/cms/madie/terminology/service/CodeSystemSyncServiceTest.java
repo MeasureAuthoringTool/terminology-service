@@ -156,8 +156,6 @@ class CodeSystemSyncServiceTest {
         .thenReturn(mockCodeSystemResponseJson);
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(existingCodeSystem));
-    when(codeSystemRepository.save(any(CodeSystem.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
 
     List<CodeSystem> retrievedCodeSystems =
         codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
@@ -200,8 +198,6 @@ class CodeSystemSyncServiceTest {
         .thenReturn(mockCodeSystemResponseJson);
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(existingCodeSystem));
-    when(codeSystemRepository.save(any(CodeSystem.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
 
     List<CodeSystem> retrievedCodeSystems =
         codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);

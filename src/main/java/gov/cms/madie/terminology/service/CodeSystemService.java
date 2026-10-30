@@ -105,7 +105,7 @@ public class CodeSystemService {
     }
 
     if (codeSystem.isLatestVersion()) {
-      promoteToLatestVersion(existing.getId());
+      promoteToLatestVersion(existing);
     } else {
       existing.setLatestVersion(false);
     }
@@ -115,19 +115,10 @@ public class CodeSystemService {
     return updated;
   }
 
-  public void promoteToLatestVersion(String id) {
-    CodeSystem existing =
-        codeSystemRepository
-            .findById(id)
-            .orElseThrow(
-                () -> {
-                  log.warn("CodeSystem not found for promotion — id: [{}]", id);
-                  return new CodeSystemNotFoundException("CodeSystem not found for id: " + id);
-                });
-    demoteAllLatestVersionsByUrl(existing.getFullUrl());
-    existing.setLatestVersion(true);
-    codeSystemRepository.save(existing);
-    log.info("CodeSystem promoted to latest version: {}", existing);
+  private void promoteToLatestVersion(CodeSystem codeSystem) {
+    demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
+    codeSystem.setLatestVersion(true);
+    log.info("CodeSystem promoted to latest version: {}", codeSystem);
   }
 
   private void demoteAllLatestVersionsByUrl(String url) {

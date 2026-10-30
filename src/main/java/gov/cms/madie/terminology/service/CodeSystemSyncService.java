@@ -119,7 +119,7 @@ public class CodeSystemSyncService {
                 CodeSystem latestCodeSystem = optionalCodeSystem.get();
                 latestCodeSystem.setLatestVersion(true);
                 log.info(
-                    "Setting new latest version for CodeSystem with fullUrl: {} and version: {}",
+                    "New latest version for CodeSystem with fullUrl: {} and version: {}",
                     latestCodeSystem.getFullUrl(),
                     latestCodeSystem.getVersion().getFhirVersion());
               }
@@ -144,27 +144,12 @@ public class CodeSystemSyncService {
         Optional<CodeSystem> existingCodeSystemOptional =
             codeSystemRepository.findByFullUrlAndVersionFhirVersion(
                 codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion());
-        CodeSystem saved;
         if (existingCodeSystemOptional.isEmpty()) {
-          saved = codeSystemRepository.save(codeSystem);
+          codeSystemRepository.save(codeSystem);
           log.info("New CodeSystem inserted: {}", codeSystem);
         } else {
-          CodeSystem existingCodeSystem = existingCodeSystemOptional.get();
-          existingCodeSystem.setTitle(codeSystem.getTitle());
-          existingCodeSystem.setFullUrl(codeSystem.getFullUrl());
-          existingCodeSystem.setName(codeSystem.getName());
-          existingCodeSystem.getVersion().setFhirVersion(codeSystem.getVersion().getFhirVersion());
-          existingCodeSystem.setVersionId(codeSystem.getVersionId());
-          existingCodeSystem.setOid(codeSystem.getOid());
-          existingCodeSystem.setLastUpdated(codeSystem.getLastUpdated());
-          existingCodeSystem.setLastUpdatedUpstream(codeSystem.getLastUpdatedUpstream());
-          existingCodeSystem.setLatestVersion(codeSystem.isLatestVersion());
-          existingCodeSystem.setInVsac(codeSystem.isInVsac());
-          saved = codeSystemRepository.save(existingCodeSystem);
-          log.info("CodeSystem updated: {}", existingCodeSystem);
-        }
-        if (saved.isLatestVersion()) {
-          codeSystemService.promoteToLatestVersion(saved.getId());
+          codeSystemService.updateCodeSystem(existingCodeSystemOptional.get().getId(), codeSystem);
+          log.info("CodeSystem updated: {}", existingCodeSystemOptional.get());
         }
       } catch (DataAccessException e) {
         log.error(
