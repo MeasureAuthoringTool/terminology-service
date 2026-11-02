@@ -739,6 +739,9 @@ class FhirTerminologyServiceTest {
     Meta m = new Meta();
     m.setLastUpdated(new Date());
     vs1.setMeta(m);
+    vs1.setCompose(new ValueSet.ValueSetComposeComponent());
+    vs1.getCompose()
+        .addInclude(new ValueSet.ConceptSetComponent().setSystem("http://example.com/system"));
 
     Bundle bundle1 = new Bundle();
     bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(vs1));
@@ -757,6 +760,77 @@ class FhirTerminologyServiceTest {
     // ensure fetchResourceFromVsac was not called since there is no 'next' link
     verify(fhirTerminologyServiceWebClient, times(0))
         .fetchResourceFromVsac(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void searchValueSetsWithNextLinkFetchesAdditionalPage() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+
+    ValueSet vs1 = new ValueSet();
+    vs1.setId("v1-next");
+    vs1.setTitle("TitleNextOne");
+    vs1.setUrl("http://example.com/ValueSet/v1-next");
+    vs1.setVersion("1.0.0");
+    vs1.setStatus(org.hl7.fhir.r4.model.Enumerations.PublicationStatus.ACTIVE);
+    vs1.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    Meta meta1 = new Meta();
+    meta1.setLastUpdated(new Date());
+    meta1.setVersionId("1");
+    vs1.setMeta(meta1);
+    vs1.setCompose(new ValueSet.ValueSetComposeComponent());
+    vs1.getCompose()
+        .addInclude(new ValueSet.ConceptSetComponent().setSystem("http://example.com/system"));
+
+    ValueSet vs2 = new ValueSet();
+    vs2.setId("v2-next");
+    vs2.setTitle("TitleNextTwo");
+    vs2.setUrl("http://example.com/ValueSet/v2-next");
+    vs2.setVersion("2.0.0");
+    vs2.setStatus(org.hl7.fhir.r4.model.Enumerations.PublicationStatus.ACTIVE);
+    vs2.addIdentifier(new Identifier().setValue("urn:oid:2"));
+    Meta meta2 = new Meta();
+    meta2.setLastUpdated(new Date());
+    meta2.setVersionId("2");
+    vs2.setMeta(meta2);
+    vs2.setCompose(new ValueSet.ValueSetComposeComponent());
+    vs2.getCompose()
+        .addInclude(new ValueSet.ConceptSetComponent().setSystem("http://example.com/system"));
+
+    Bundle bundle1 = new Bundle();
+    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(vs1));
+    bundle1.addLink(
+        new Bundle.BundleLinkComponent()
+            .setRelation("next")
+            .setUrl("http://example.com/next?page=2"));
+
+    Bundle bundle2 = new Bundle();
+    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(vs2));
+
+    when(fhirTerminologyServiceWebClient.searchValueSets(anyString(), anyMap()))
+        .thenReturn(parser.encodeResourceToString(bundle1));
+    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+            "https://example.com/next?page=2", TEST_API_KEY, "bundle"))
+        .thenReturn(parser.encodeResourceToString(bundle2));
+
+    ValueSetSearchResult result = fhirTerminologyService.searchValueSets(TEST_API_KEY, Map.of());
+
+    assertEquals(2, result.getValueSets().size());
+    assertEquals("urn:oid:2", result.getValueSets().get(1).getOid());
+    verify(fhirTerminologyServiceWebClient)
+        .fetchResourceFromVsac("https://example.com/next?page=2", TEST_API_KEY, "bundle");
+  }
+
+  @Test
+  void validateCodeSystemMappingReturnsMissingCodesOnly() {
+    when(codeSystemRepository.findAllByName("alpha")).thenReturn(Collections.emptyList());
+    when(codeSystemRepository.findAllByName("beta"))
+        .thenReturn(List.of(new gov.cms.madie.terminology.models.CodeSystem()));
+
+    List<String> missing =
+        fhirTerminologyService.validateCodeSystemMapping(List.of("alpha", "beta"));
+
+    assertEquals(List.of("alpha"), missing);
   }
 
   @ParameterizedTest

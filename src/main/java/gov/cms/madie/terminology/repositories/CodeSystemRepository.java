@@ -27,6 +27,8 @@ public interface CodeSystemRepository extends MongoRepository<CodeSystem, String
 
   List<CodeSystem> findAllByFullUrl(String url);
 
+  List<CodeSystem> findAllByName(String name);
+
   List<CodeSystem> findAllByFullUrl(String url, Limit limit);
 
   Page<CodeSystem> findAllByTitleContainingIgnoreCase(String title, Pageable pageable);
