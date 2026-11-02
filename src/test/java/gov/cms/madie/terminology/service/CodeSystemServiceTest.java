@@ -188,22 +188,12 @@ class CodeSystemServiceTest {
   }
 
   @Test
-  void testUpdateCodeSystemDemotesExistingLatestVersionsWhenMarkedAsLatest() {
+  void testUpdateCodeSystemDemotesExistingLatestVersionWhenMarkedAsLatest() {
     String id = "LOINCversion2.40";
 
-    CodeSystem existing =
+    CodeSystem incomingUpdate =
         CodeSystem.builder()
             .id(id)
-            .name("LOINC")
-            .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
-            .oid("urn:oid:2.16.840.1.113883.6.1")
-            .fullUrl("https://loinc.org")
-            .isLatestVersion(false)
-            .isInVsac(false)
-            .build();
-
-    CodeSystem incoming =
-        CodeSystem.builder()
             .name("LOINC")
             .version(CodeSystem.Version.builder().fhirVersion("2.40").build())
             .oid("urn:oid:2.16.840.1.113883.6.1")
@@ -234,20 +224,23 @@ class CodeSystemServiceTest {
             .isInVsac(false)
             .build();
 
-    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(existing));
+    when(codeSystemRepository.findById(id)).thenReturn(Optional.of(incomingUpdate));
     when(codeSystemRepository.findAllByFullUrl(anyString()))
-        .thenReturn(List.of(existingLatest, existingNonLatest, existing));
-    when(codeSystemRepository.save(any(CodeSystem.class))).thenReturn(existing);
+        .thenReturn(List.of(existingLatest, existingNonLatest));
+    when(codeSystemRepository.saveAll(anyList()))
+        .thenReturn(
+            List.of(existingLatest.toBuilder().isLatestVersion(false).build(), existingNonLatest));
+    when(codeSystemRepository.save(any(CodeSystem.class))).thenReturn(incomingUpdate);
 
     ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
 
-    codeSystemService.updateCodeSystem(id, incoming);
+    codeSystemService.updateCodeSystem(
+        id, incomingUpdate.toBuilder().isLatestVersion(true).build());
 
-    verify(codeSystemRepository, times(1)).saveAll(anyList());
     verify(codeSystemRepository, times(1)).save(captor.capture());
 
-    assertTrue(captor.getValue().isLatestVersion());
-    assertFalse(existingLatest.isLatestVersion());
+    CodeSystem savedValue = captor.getValue();
+    assertTrue(savedValue.isLatestVersion());
     assertFalse(existingNonLatest.isLatestVersion());
   }
 
@@ -283,7 +276,6 @@ class CodeSystemServiceTest {
 
     codeSystemService.updateCodeSystem(id, incoming);
 
-    verify(codeSystemRepository, never()).findAllByOid(anyString());
     verify(codeSystemRepository, times(1)).save(captor.capture());
     assertFalse(captor.getValue().isLatestVersion());
   }

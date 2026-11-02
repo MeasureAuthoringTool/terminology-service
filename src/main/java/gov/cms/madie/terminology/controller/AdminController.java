@@ -56,7 +56,7 @@ public class AdminController {
     final String username = principal.getName();
     log.info("Admin user [{}] is triggering a manual code system refresh", username);
     UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
-    return ResponseEntity.ok().body(codeSystemSyncService.retrieveAllCodeSystems(umlsUser));
+    return ResponseEntity.ok().body(codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
   }
 
   @PostMapping(
