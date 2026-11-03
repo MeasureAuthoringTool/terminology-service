@@ -81,7 +81,7 @@ public class VsacService {
                     searchCriteria.getProfile(),
                     searchCriteria.getIncludeDraft(),
                     vsParam.getRelease(),
-                    vsParam.getVersion()))
+                    null))
         .collect(Collectors.toList());
   }
 

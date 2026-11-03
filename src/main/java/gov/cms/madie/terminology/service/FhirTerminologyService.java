@@ -27,6 +27,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class FhirTerminologyService {
+  private static final String EXPANSION_ERROR_MESSAGE = "Failed to fetch VSAC value set expansions";
+  private static final String DEFINITION_ERROR_MESSAGE = "Failed to fetch VSAC value sets";
+  private static final String INVALID_URL_ERROR_MESSAGE = "Valueset is not a valid URL format";
+  // A higher meta.versionId is a more recent ValueSet version
+  private static final Comparator<String> VERSION_ID_ORDER =
+      Comparator.nullsFirst(Comparator.comparing(BigInteger::new));
+
   private final FhirContext fhirContext;
   private final FhirTerminologyServiceWebClient fhirTerminologyServiceWebClient;
   private final CodeSystemRepository codeSystemRepository;
@@ -53,40 +60,21 @@ public class FhirTerminologyService {
     return manifestOptions;
   }
 
-  // spin off requests based on values provided in the expansion
+  // spin off requests based on values provided in the expansion. The params must already be
+  // normalized by getValueSets, so batch response entries line up with them by index.
   public List<ValueSet> requestAllValueSetsExpansions(
       List<ValueSet> allValueSets, String apiKey, ValueSetsSearchCriteria valueSetsSearchCriteria) {
     IParser parser = fhirContext.newJsonParser();
     String resource =
-        fhirTerminologyServiceWebClient.getValueSetResources(apiKey, valueSetsSearchCriteria);
+        fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+            apiKey, valueSetsSearchCriteria);
 
     Bundle bundleResource = parser.parseResource(Bundle.class, resource);
     List<Bundle.BundleEntryComponent> bundleEntryComponents = bundleResource.getEntry();
 
     for (int i = 0; i < bundleEntryComponents.size(); i++) {
-      Bundle.BundleEntryComponent bundleEntryComponent = bundleEntryComponents.get(i);
-
-      ValueSet valueSetResource = (ValueSet) bundleEntryComponent.getResource();
-
-      if (valueSetResource == null) {
-        OperationOutcome outcome =
-            (OperationOutcome) bundleEntryComponent.getResponse().getOutcome();
-        log.debug(
-            "VSAC did not return BundleEntryComponent containing ValueSet with ValueSetParams "
-                + "[{}] (at index [{}]) after successfully calling batch value set expansion with "
-                + "ValueSetsSearchCriteria [{}] ",
-            valueSetsSearchCriteria.getValueSetParams().get(i),
-            i,
-            valueSetsSearchCriteria);
-
-        throw new VsacParseBatchValueSetExpansionException(
-            "Failed to fetch VSAC value set expansions",
-            outcome,
-            valueSetsSearchCriteria.getManifestExpansion() != null
-                ? valueSetsSearchCriteria.getManifestExpansion().getFullUrl()
-                : null,
-            valueSetsSearchCriteria.getValueSetParams().get(i).getOid());
-      }
+      ValueSet valueSetResource =
+          getExpandedValueSet(bundleEntryComponents.get(i), i, valueSetsSearchCriteria);
       var expansion = valueSetResource.getExpansion();
       var total = expansion.getTotal(); // total valuesets
 
@@ -115,13 +103,167 @@ public class FhirTerminologyService {
       }
       if (expansion.getOffset() + expansion.getContains().size() < total) {
         ValueSetsSearchCriteria newSearch =
-            buildValueSetsSearchCriteria(valueSetsSearchCriteria, valueSetResource);
+            buildNextPageSearchCriteria(
+                valueSetsSearchCriteria,
+                valueSetsSearchCriteria.getValueSetParams().get(i),
+                valueSetResource);
 
         requestAllValueSetsExpansions(allValueSets, apiKey, newSearch);
       }
     }
 
     return allValueSets;
+  }
+
+  /**
+   * Resolves every value set to a VSAC canonical url. A provided url must be a valid VSAC ValueSet
+   * url without a version, and only when no url is provided is it derived from the OID. Duplicates
+   * are dropped so each batch response entry lines up by index with the params that requested it.
+   */
+  private static ValueSetsSearchCriteria normalizeValueSetParams(
+      ValueSetsSearchCriteria valueSetsSearchCriteria) {
+    List<ValueSetsSearchCriteria.ValueSetParams> valueSetParams =
+        valueSetsSearchCriteria.getValueSetParams();
+    Set<ValueSetsSearchCriteria.ValueSetParams> normalizedParams = new LinkedHashSet<>();
+    for (int i = 0; i < valueSetParams.size(); i++) {
+      String url = resolveValueSetUrl(valueSetParams.get(i), i, valueSetsSearchCriteria);
+      if (url != null) {
+        normalizedParams.add(
+            ValueSetsSearchCriteria.ValueSetParams.builder()
+                .oid(StringUtils.substringAfterLast(url, "/"))
+                .url(url)
+                .build());
+      }
+    }
+    return valueSetsSearchCriteria.toBuilder()
+        .valueSetParams(List.copyOf(normalizedParams))
+        .build();
+  }
+
+  private static String resolveValueSetUrl(
+      ValueSetsSearchCriteria.ValueSetParams valueSetParams,
+      int index,
+      ValueSetsSearchCriteria valueSetsSearchCriteria) {
+    if (valueSetParams == null) {
+      return null;
+    }
+    String url = StringUtils.trimToNull(valueSetParams.getUrl());
+    if (url == null) {
+      String oid =
+          StringUtils.trimToNull(
+              TerminologyServiceUtil.removeUrnOidSubString(
+                  StringUtils.trimToNull(valueSetParams.getOid())));
+      return oid == null ? null : TerminologyServiceUtil.VSAC_VALUE_SET_URL_PREFIX + oid;
+    }
+    if (!TerminologyServiceUtil.isValidValueSetUrl(url)) {
+      throw buildBatchEntryException(
+          INVALID_URL_ERROR_MESSAGE,
+          buildErrorOutcome(
+              OperationOutcome.IssueType.INVALID,
+              "Valueset url ["
+                  + url
+                  + "] is not a valid URL format, expected "
+                  + TerminologyServiceUtil.VSAC_VALUE_SET_URL_PREFIX
+                  + "{oid} without a version"),
+          index,
+          valueSetsSearchCriteria);
+    }
+    return url;
+  }
+
+  private ValueSet getExpandedValueSet(
+      Bundle.BundleEntryComponent bundleEntryComponent,
+      int index,
+      ValueSetsSearchCriteria expansionCriteria) {
+    ValueSet valueSetResource = (ValueSet) bundleEntryComponent.getResource();
+    if (valueSetResource == null) {
+      throw buildBatchEntryException(
+          EXPANSION_ERROR_MESSAGE,
+          (OperationOutcome) bundleEntryComponent.getResponse().getOutcome(),
+          index,
+          expansionCriteria);
+    }
+    return valueSetResource;
+  }
+
+  /**
+   * Each batch response entry holds the search result for one url. The latest match (highest
+   * meta.versionId, as in searchValueSets) is returned, and no match fails the request.
+   */
+  private ValueSet getLatestValueSetDefinition(
+      Bundle.BundleEntryComponent bundleEntryComponent,
+      int index,
+      ValueSetsSearchCriteria definitionCriteria) {
+    Resource resource = bundleEntryComponent.getResource();
+    if (resource == null || resource instanceof OperationOutcome) {
+      OperationOutcome outcome =
+          resource instanceof OperationOutcome operationOutcome
+              ? operationOutcome
+              : (OperationOutcome) bundleEntryComponent.getResponse().getOutcome();
+      throw buildBatchEntryException(DEFINITION_ERROR_MESSAGE, outcome, index, definitionCriteria);
+    }
+    return getSearchMatches(resource).stream()
+        .max(
+            Comparator.comparing(
+                (ValueSet valueSet) -> valueSet.getMeta().getVersionId(), VERSION_ID_ORDER))
+        .orElseThrow(
+            () ->
+                buildBatchEntryException(
+                    DEFINITION_ERROR_MESSAGE,
+                    buildErrorOutcome(
+                        OperationOutcome.IssueType.NOTFOUND,
+                        "No active or draft ValueSet found for url ["
+                            + definitionCriteria.getValueSetParams().get(index).getUrl()
+                            + "]"),
+                    index,
+                    definitionCriteria));
+  }
+
+  private static List<ValueSet> getSearchMatches(Resource resource) {
+    if (resource instanceof ValueSet valueSet) {
+      return List.of(valueSet);
+    }
+    if (resource instanceof Bundle searchSet) {
+      return searchSet.getEntry().stream()
+          .map(Bundle.BundleEntryComponent::getResource)
+          .filter(ValueSet.class::isInstance)
+          .map(ValueSet.class::cast)
+          .toList();
+    }
+    return List.of();
+  }
+
+  private static OperationOutcome buildErrorOutcome(
+      OperationOutcome.IssueType issueType, String diagnostics) {
+    OperationOutcome outcome = new OperationOutcome();
+    outcome
+        .addIssue()
+        .setSeverity(OperationOutcome.IssueSeverity.ERROR)
+        .setCode(issueType)
+        .setDiagnostics(diagnostics);
+    return outcome;
+  }
+
+  private static VsacParseBatchValueSetExpansionException buildBatchEntryException(
+      String errorMessage,
+      OperationOutcome outcome,
+      int index,
+      ValueSetsSearchCriteria valueSetsSearchCriteria) {
+    ValueSetsSearchCriteria.ValueSetParams valueSetParams =
+        valueSetsSearchCriteria.getValueSetParams().get(index);
+    log.debug(
+        "{} for ValueSetParams [{}] (at index [{}]) with ValueSetsSearchCriteria [{}]",
+        errorMessage,
+        valueSetParams,
+        index,
+        valueSetsSearchCriteria);
+    return new VsacParseBatchValueSetExpansionException(
+        errorMessage,
+        outcome,
+        valueSetsSearchCriteria.getManifestExpansion() != null
+            ? valueSetsSearchCriteria.getManifestExpansion().getFullUrl()
+            : null,
+        valueSetParams.getOid());
   }
 
   private boolean containsEntry(
@@ -135,48 +277,82 @@ public class FhirTerminologyService {
                     && Objects.equals(existing.getVersion(), newEntry.getVersion()));
   }
 
-  private ValueSetsSearchCriteria buildValueSetsSearchCriteria(
-      ValueSetsSearchCriteria searchCriteria, ValueSet valueSetResource) {
-    ValueSetsSearchCriteria newSearch =
-        ValueSetsSearchCriteria.builder()
-            .includeDraft(searchCriteria.getIncludeDraft())
-            .manifestExpansion(searchCriteria.getManifestExpansion())
-            .activeOnly(searchCriteria.getActiveOnly())
-            .build();
-
-    ValueSetsSearchCriteria.ValueSetParams newParams =
-        ValueSetsSearchCriteria.ValueSetParams.builder()
+  private ValueSetsSearchCriteria buildNextPageSearchCriteria(
+      ValueSetsSearchCriteria searchCriteria,
+      ValueSetsSearchCriteria.ValueSetParams requestedParams,
+      ValueSet valueSetResource) {
+    ValueSetsSearchCriteria.ValueSetParams nextPageParams =
+        requestedParams.toBuilder()
             .count(1000)
             .offset(valueSetResource.getExpansion().getOffset() + 1000)
-            .oid(valueSetResource.getIdentifier().get(0).getValue().replace("urn:oid:", ""))
             .build();
-    newSearch.setValueSetParams(List.of(newParams));
-    return newSearch;
+    return searchCriteria.toBuilder().valueSetParams(List.of(nextPageParams)).build();
   }
 
-  public List<ValueSet> getValueSetsExpansion(
+  /**
+   * Fetches FHIR ValueSets from VSAC. Expansions are included unless includeExpansion is explicitly
+   * false, in which case the latest ValueSet definitions are returned without expansions.
+   */
+  public List<ValueSet> getValueSets(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
     if (valueSetsSearchCriteria == null
         || CollectionUtils.isEmpty(valueSetsSearchCriteria.getValueSetParams())) {
       return Collections.emptyList();
     }
+    ValueSetsSearchCriteria normalizedCriteria = normalizeValueSetParams(valueSetsSearchCriteria);
+    if (normalizedCriteria.getValueSetParams().isEmpty()) {
+      return Collections.emptyList();
+    }
+    if (Boolean.FALSE.equals(normalizedCriteria.getIncludeExpansion())) {
+      return getValueSetsWithoutExpansion(normalizedCriteria, umlsUser);
+    }
+    return getValueSetsWithExpansion(normalizedCriteria, umlsUser);
+  }
 
-    valueSetsSearchCriteria.setValueSetParams(
-        valueSetsSearchCriteria.getValueSetParams().stream()
-            .map(
-                vsParam -> {
-                  vsParam.setCount(1000);
-                  vsParam.setOffset(0);
-                  return vsParam;
-                })
-            .collect(Collectors.toList()));
+  private List<ValueSet> getValueSetsWithExpansion(
+      ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
+    ValueSetsSearchCriteria firstPageCriteria =
+        valueSetsSearchCriteria.toBuilder()
+            .valueSetParams(
+                valueSetsSearchCriteria.getValueSetParams().stream()
+                    .map(vsParam -> vsParam.toBuilder().count(1000).offset(0).build())
+                    .toList())
+            .build();
     return requestAllValueSetsExpansions(
-        new ArrayList<>(), umlsUser.getApiKey(), valueSetsSearchCriteria);
+        new ArrayList<>(), umlsUser.getApiKey(), firstPageCriteria);
+  }
+
+  private List<ValueSet> getValueSetsWithoutExpansion(
+      ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
+    ValueSetsSearchCriteria definitionCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(false)
+            .valueSetParams(valueSetsSearchCriteria.getValueSetParams())
+            .build();
+
+    IParser parser = fhirContext.newJsonParser();
+    String resource =
+        fhirTerminologyServiceWebClient.getValueSetResourcesWithoutExpansion(
+            umlsUser.getApiKey(), definitionCriteria);
+    List<Bundle.BundleEntryComponent> bundleEntryComponents =
+        parser.parseResource(Bundle.class, resource).getEntry();
+
+    List<ValueSet> valueSets = new ArrayList<>();
+    for (int i = 0; i < bundleEntryComponents.size(); i++) {
+      valueSets.add(
+          getLatestValueSetDefinition(bundleEntryComponents.get(i), i, definitionCriteria));
+    }
+    return valueSets;
   }
 
   public List<QdmValueSet> getValueSetsExpansionsForQdm(
       ValueSetsSearchCriteria valueSetsSearchCriteria, UmlsUser umlsUser) {
-    List<ValueSet> fhirValueSets = getValueSetsExpansion(valueSetsSearchCriteria, umlsUser);
+    if (valueSetsSearchCriteria == null) {
+      return List.of();
+    }
+    // QDM concepts come from the expansion, so it is always requested regardless of the flag
+    List<ValueSet> fhirValueSets =
+        getValueSets(valueSetsSearchCriteria.toBuilder().includeExpansion(true).build(), umlsUser);
 
     return fhirValueSets.stream()
         .map(
@@ -254,9 +430,7 @@ public class FhirTerminologyService {
         });
 
     Comparator<ValueSetForSearch> byVersionId =
-        Comparator.comparing(
-            ValueSetForSearch::getVersionId,
-            Comparator.nullsFirst(Comparator.comparing(BigInteger::new)));
+        Comparator.comparing(ValueSetForSearch::getVersionId, VERSION_ID_ORDER);
     Map<String, ValueSetForSearch> latestValueSets =
         valueSetList.stream()
             .collect(

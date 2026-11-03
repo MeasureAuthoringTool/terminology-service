@@ -52,14 +52,15 @@ public class VsacFhirTerminologyController {
     return ResponseEntity.ok().body(qdmValueSets);
   }
 
-  @PutMapping("/value-sets/expansion/fhir")
-  public ResponseEntity<String> getFhirValueSetsExpansions(
+  // "/value-sets/expansion/fhir" is deprecated, kept only until existing clients move to
+  // "/value-sets/fhir"
+  @PutMapping({"/value-sets/fhir", "/value-sets/expansion/fhir"})
+  public ResponseEntity<String> getFhirValueSets(
       Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     final String username = principal.getName();
-    log.info("User [{}] is attempting to fetch FHIR value sets expansions.", username);
+    log.info("User [{}] is attempting to fetch FHIR value sets.", username);
     UmlsUser umlsUser = vsacService.verifyUmlsAccess(username);
-    List<ValueSet> fhirValueSets =
-        fhirTerminologyService.getValueSetsExpansion(searchCriteria, umlsUser);
+    List<ValueSet> fhirValueSets = fhirTerminologyService.getValueSets(searchCriteria, umlsUser);
     String serializedValueSets =
         fhirValueSets.stream().map(this::serializeFhirValueSet).collect(Collectors.joining(", "));
 

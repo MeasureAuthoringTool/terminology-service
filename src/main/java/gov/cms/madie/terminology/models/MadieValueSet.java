@@ -16,8 +16,7 @@ import java.time.Instant;
  *
  * <ul>
  *   <li>QdmValueSet - for the /value-sets/expansion/qdm endpoint
- *   <li>FHIR ValueSet (org.hl7.fhir.r4.model.ValueSet) - for the /value-sets/expansion/fhir
- *       endpoint
+ *   <li>FHIR ValueSet (org.hl7.fhir.r4.model.ValueSet) - for the /value-sets/fhir endpoint
  * </ul>
  *
  * <p>Field mappings:
