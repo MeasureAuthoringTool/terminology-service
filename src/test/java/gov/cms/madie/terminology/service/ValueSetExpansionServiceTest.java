@@ -529,6 +529,39 @@ class ValueSetExpansionServiceTest {
   }
 
   @Test
+  void updateValueSetDependenciesReturnsNumberOfValueSetsSaved() {
+    // given
+    String manuallyModifiedUrl = "http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6";
+    MadieValueSet manuallyModifiedDependency =
+        MadieValueSet.builder().url(manuallyModifiedUrl).version(VS_VERSION).build();
+    MadieValueSet existingManuallyModifiedValueSet =
+        MadieValueSet.builder()
+            .url(manuallyModifiedUrl)
+            .version(VS_VERSION)
+            .valueSet("{}")
+            .manuallyModified(true)
+            .build();
+    when(implementationGuideManager.getValueSetDependencies())
+        .thenReturn(List.of(madieValueSet, manuallyModifiedDependency));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(txTerminologyServiceWebClient.getValueSetExpansion(manuallyModifiedUrl, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+    when(vseRepo.findByUrlAndVersion(manuallyModifiedUrl, VS_VERSION))
+        .thenReturn(Optional.of(existingManuallyModifiedValueSet));
+
+    // when
+    int savedValueSetCount = valueSetExpansionService.updateValueSetDependencies().join();
+
+    // then
+    assertEquals(1, savedValueSetCount);
+    verify(vseRepo, times(1)).save(argThat(vs -> VS_URL.equals(vs.getUrl())));
+    verify(vseRepo, never()).save(argThat(vs -> manuallyModifiedUrl.equals(vs.getUrl())));
+  }
+
+  @Test
   void updateValueSetDependenciesHandlesVsacValueSetExpansionException() {
     when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))

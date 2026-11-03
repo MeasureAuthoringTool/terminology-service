@@ -105,13 +105,20 @@ public class CodeSystemService {
     }
 
     if (codeSystem.isLatestVersion()) {
-      demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
+      promoteToLatestVersion(existing);
+    } else {
+      existing.setLatestVersion(false);
     }
-    existing.setLatestVersion(codeSystem.isLatestVersion());
 
     CodeSystem updated = codeSystemRepository.save(existing);
     log.info("CodeSystem updated by admin: {}", updated);
     return updated;
+  }
+
+  private void promoteToLatestVersion(CodeSystem codeSystem) {
+    demoteAllLatestVersionsByUrl(codeSystem.getFullUrl());
+    codeSystem.setLatestVersion(true);
+    log.info("CodeSystem promoted to latest version: {}", codeSystem);
   }
 
   private void demoteAllLatestVersionsByUrl(String url) {
