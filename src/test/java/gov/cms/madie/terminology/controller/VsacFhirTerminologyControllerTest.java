@@ -73,7 +73,7 @@ class VsacFhirTerminologyControllerTest {
             .displayName("test-value-set-display-name")
             .build());
     principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
+    lenient().when(principal.getName()).thenReturn(TEST_USER);
   }
 
   @Test
@@ -267,5 +267,19 @@ class VsacFhirTerminologyControllerTest {
     assertThat(response.getBody().contains("\"resourceType\":\"ValueSet\""), is(true));
     assertThat(
         response.getBody().contains("\"url\":\"" + valueSet.get(0).getUrl() + "\""), is(true));
+  }
+
+  @Test
+  void testValidateCodeSystemMapping() {
+    when(fhirTerminologyService.validateCodeSystemMapping(List.of("missing", "present")))
+        .thenReturn(List.of("missing"));
+
+    ResponseEntity<List<String>> response =
+        vsacFhirTerminologyController.validateCodeSystemMapping(
+            principal, List.of("missing", "present"));
+
+    assertThat(response.getStatusCode(), is(equalTo(HttpStatus.OK)));
+    assertEquals(List.of("missing"), response.getBody());
+    verify(fhirTerminologyService).validateCodeSystemMapping(List.of("missing", "present"));
   }
 }

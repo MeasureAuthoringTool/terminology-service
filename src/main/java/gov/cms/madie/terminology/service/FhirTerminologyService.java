@@ -452,4 +452,14 @@ public class FhirTerminologyService {
     code.setStatus(status);
     return code;
   }
+
+  public List<String> validateCodeSystemMapping(List<String> cqlCodes) {
+
+    List<String> missingCodes =
+        cqlCodes.stream()
+            .filter(cqlCode -> codeSystemRepository.findAllByName(cqlCode).isEmpty())
+            .toList();
+
+    return missingCodes; // empty list if all codes are found
+  }
 }
