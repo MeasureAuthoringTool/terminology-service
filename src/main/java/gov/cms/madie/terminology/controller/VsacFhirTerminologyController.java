@@ -111,6 +111,17 @@ public class VsacFhirTerminologyController {
         .body(fhirTerminologyService.retrieveCodesAndCodeSystems(codeList, user.getApiKey()));
   }
 
+  @PutMapping(
+      path = "/validations/code-system-mapping",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<List<String>> validateCodeSystemMapping(
+      Principal principal, @RequestBody List<String> cqlCodes) {
+    List<String> missingCodes = fhirTerminologyService.validateCodeSystemMapping(cqlCodes);
+    log.warn("MISSING CODES: {}", missingCodes);
+
+    return ResponseEntity.ok().body(missingCodes);
+  }
+
   private String serializeFhirValueSet(ValueSet fhirValueSet) {
     return fhirContext.newJsonParser().encodeResourceToString(fhirValueSet);
   }
