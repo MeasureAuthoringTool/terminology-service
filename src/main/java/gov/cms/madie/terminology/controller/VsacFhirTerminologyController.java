@@ -52,9 +52,7 @@ public class VsacFhirTerminologyController {
     return ResponseEntity.ok().body(qdmValueSets);
   }
 
-  // "/value-sets/expansion/fhir" is deprecated, kept only until existing clients move to
-  // "/value-sets/fhir"
-  @PutMapping({"/value-sets/fhir", "/value-sets/expansion/fhir"})
+  @PutMapping({"/value-sets/fhir"})
   public ResponseEntity<String> getFhirValueSets(
       Principal principal, @RequestBody ValueSetsSearchCriteria searchCriteria) {
     final String username = principal.getName();
