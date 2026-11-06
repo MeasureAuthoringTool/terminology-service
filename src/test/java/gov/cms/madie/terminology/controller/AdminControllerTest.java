@@ -1,10 +1,15 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.audit.AdminAuditService;
+import gov.cms.madie.terminology.audit.AdminAuditService.Action;
+import gov.cms.madie.terminology.audit.AuditResource;
+import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
-import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemService;
+import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,12 +48,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AdminControllerTest {
 
-  @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock private CodeSystemService codeSystemService;
+  @Mock private CodeSystemSyncService codeSystemSyncService;
   @Mock private UpdateCodeSystemTask updateCodeSystemTask;
   @Mock private VsacService vsacService;
   @Mock private CacheManager cacheManager;
   @Mock private Cache cache;
   @Mock private CodeSystemExportService codeSystemExportService;
+  @Mock private AdminAuditService adminAuditService;
   @InjectMocks private AdminController adminController;
 
   private static final String TEST_USER = "test.admin.user";
@@ -77,19 +84,21 @@ class AdminControllerTest {
   @Test
   void testCreateCodeSystemSuccessfully() {
     when(principal.getName()).thenReturn(TEST_USER);
-    when(fhirTerminologyService.createCodeSystem(any(CodeSystem.class))).thenReturn(codeSystem);
+    when(codeSystemService.createCodeSystem(any(CodeSystem.class))).thenReturn(codeSystem);
 
     ResponseEntity<CodeSystem> response = adminController.createCodeSystem(principal, codeSystem);
 
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     assertEquals(codeSystem, response.getBody());
-    verify(fhirTerminologyService, times(1)).createCodeSystem(any(CodeSystem.class));
+    verify(codeSystemService, times(1)).createCodeSystem(any(CodeSystem.class));
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.CREATE, AuditResource.from(codeSystem));
   }
 
   @Test
   void testCreateCodeSystemDuplicate() {
     when(principal.getName()).thenReturn(TEST_USER);
-    when(fhirTerminologyService.createCodeSystem(any(CodeSystem.class)))
+    when(codeSystemService.createCodeSystem(any(CodeSystem.class)))
         .thenThrow(
             new DuplicateCodeSystemException(
                 "CodeSystem with oid [urn:oid:2.16.840.1.113883.6.1] and fhir version [2.40] already exists"));
@@ -97,12 +106,13 @@ class AdminControllerTest {
     assertThrows(
         DuplicateCodeSystemException.class,
         () -> adminController.createCodeSystem(principal, codeSystem));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
   void testUpdateCodeSystemSuccessfully() {
     when(principal.getName()).thenReturn(TEST_USER);
-    when(fhirTerminologyService.updateCodeSystem(anyString(), any(CodeSystem.class)))
+    when(codeSystemService.updateCodeSystem(anyString(), any(CodeSystem.class)))
         .thenReturn(codeSystem);
 
     ResponseEntity<CodeSystem> response =
@@ -110,41 +120,47 @@ class AdminControllerTest {
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(codeSystem, response.getBody());
-    verify(fhirTerminologyService, times(1)).updateCodeSystem(anyString(), any(CodeSystem.class));
+    verify(codeSystemService, times(1)).updateCodeSystem(anyString(), any(CodeSystem.class));
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.UPDATE, AuditResource.from(codeSystem));
   }
 
   @Test
   void testUpdateCodeSystemNotFound() {
     when(principal.getName()).thenReturn(TEST_USER);
-    when(fhirTerminologyService.updateCodeSystem(anyString(), any(CodeSystem.class)))
+    when(codeSystemService.updateCodeSystem(anyString(), any(CodeSystem.class)))
         .thenThrow(new CodeSystemNotFoundException("CodeSystem not found for id: nonexistent"));
 
     assertThrows(
         CodeSystemNotFoundException.class,
         () -> adminController.updateCodeSystem(principal, "nonexistent", codeSystem));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
   void testDeleteCodeSystemSuccessfully() {
     when(principal.getName()).thenReturn(TEST_USER);
-    doNothing().when(fhirTerminologyService).deleteCodeSystem(anyString());
+    when(codeSystemService.deleteCodeSystem(anyString())).thenReturn(codeSystem);
 
     ResponseEntity<Void> response = adminController.deleteCodeSystem(principal, codeSystem.getId());
 
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-    verify(fhirTerminologyService, times(1)).deleteCodeSystem(codeSystem.getId());
+    verify(codeSystemService, times(1)).deleteCodeSystem(codeSystem.getId());
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.DELETE, AuditResource.from(codeSystem));
   }
 
   @Test
   void testDeleteCodeSystemNotFound() {
     when(principal.getName()).thenReturn(TEST_USER);
     doThrow(new CodeSystemNotFoundException("CodeSystem not found for id: nonexistent"))
-        .when(fhirTerminologyService)
+        .when(codeSystemService)
         .deleteCodeSystem(anyString());
 
     assertThrows(
         CodeSystemNotFoundException.class,
         () -> adminController.deleteCodeSystem(principal, "nonexistent"));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -167,19 +183,26 @@ class AdminControllerTest {
   void testTriggerCodeSystemRefreshStarted() {
     when(updateCodeSystemTask.startJob()).thenReturn(true);
 
-    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
+    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals("Code system refresh has been started", response.getBody());
 
     verify(updateCodeSystemTask, times(1)).startJob();
+    verify(adminAuditService)
+        .logAdminAction(
+            principal,
+            Action.UPDATE,
+            AuditResource.bulk(
+                ResourceType.CODE_SYSTEM,
+                "Update Code Systems: started job to refresh all code systems from VSAC"));
   }
 
   @Test
   void testTriggerCodeSystemRefreshConflict() {
     when(updateCodeSystemTask.startJob()).thenReturn(false);
 
-    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh();
+    ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
     assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
     assertEquals(
@@ -187,12 +210,13 @@ class AdminControllerTest {
         response.getBody());
 
     verify(updateCodeSystemTask, times(1)).startJob();
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
   void testGetCodeSystemsWithDefaultSort() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
+    when(codeSystemService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
     ResponseEntity<Page<CodeSystem>> response =
         adminController.getCodeSystems(10, 0, null, null, null);
@@ -200,7 +224,7 @@ class AdminControllerTest {
     assertEquals(HttpStatus.OK, response.getStatusCode());
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
+    verify(codeSystemService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -213,12 +237,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithAscendingUrlSort() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
+    when(codeSystemService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
     adminController.getCodeSystems(25, 1, "fullUrl,false", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
+    verify(codeSystemService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -231,12 +255,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithDescendingNameSort() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
+    when(codeSystemService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
     adminController.getCodeSystems(10, 0, "name,true", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
+    verify(codeSystemService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -247,12 +271,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithInvalidSortFieldDefaultsToLastUpdated() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
+    when(codeSystemService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
     adminController.getCodeSystems(10, 0, "badField,false", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
+    verify(codeSystemService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -263,12 +287,12 @@ class AdminControllerTest {
   @Test
   void testGetCodeSystemsWithMalformedSortInfoDefaultsToLastUpdatedDesc() {
     Page<CodeSystem> page = new PageImpl<>(Collections.emptyList());
-    when(fhirTerminologyService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
+    when(codeSystemService.getCodeSystems(any(Pageable.class), any(), any())).thenReturn(page);
 
     adminController.getCodeSystems(10, 0, "url", null, null);
 
     ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-    verify(fhirTerminologyService).getCodeSystems(pageableCaptor.capture(), any(), any());
+    verify(codeSystemService).getCodeSystems(pageableCaptor.capture(), any(), any());
 
     Pageable pageable = pageableCaptor.getValue();
 
@@ -295,13 +319,13 @@ class AdminControllerTest {
   })
   void getCodeSystemsAppliesMappingAndDirectionForAllSortOptions(
       String sortLabel, String expectedField, String descFlag, String expectedDirection) {
-    when(fhirTerminologyService.getCodeSystems(any(), any(), any())).thenReturn(Page.empty());
+    when(codeSystemService.getCodeSystems(any(), any(), any())).thenReturn(Page.empty());
     ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
     int limit = 5;
     int page = 1;
     String sortInfo = sortLabel + "," + descFlag;
     adminController.getCodeSystems(limit, page, sortInfo, null, null);
-    verify(fhirTerminologyService, times(1)).getCodeSystems(captor.capture(), any(), any());
+    verify(codeSystemService, times(1)).getCodeSystems(captor.capture(), any(), any());
     Pageable pageReq = captor.getValue();
     Sort.Order order = pageReq.getSort().getOrderFor(expectedField);
     assertNotNull(order);

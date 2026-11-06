@@ -1,5 +1,9 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.audit.AdminAuditService;
+import gov.cms.madie.terminology.audit.AdminAuditService.Action;
+import gov.cms.madie.terminology.audit.AuditResource;
+import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import gov.cms.madie.terminology.service.ValueSetExpansionService;
@@ -25,7 +29,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ValueSetExpansionAdminController {
 
+  private static final String UPDATE_VSES_DATA_AUDIT_DESCRIPTION =
+      "Update VSES Data: started job to refresh value set expansions from VSAC for ";
+
   private final ValueSetExpansionService vses;
+  private final AdminAuditService adminAuditService;
 
   @GetMapping(
       value = "/implementation-guides/value-sets",
@@ -62,10 +70,26 @@ public class ValueSetExpansionAdminController {
           ig,
           version);
       vses.updateIgValueSetDependencies(ig, version);
+      adminAuditService.logAdminAction(
+          principal,
+          Action.UPDATE,
+          AuditResource.bulk(
+              ResourceType.VALUE_SET,
+              UPDATE_VSES_DATA_AUDIT_DESCRIPTION
+                  + "implementation guide "
+                  + ig
+                  + " version "
+                  + version));
     } else {
       log.info(
           "Admin User [{}] is updating Value Set dependencies for all IGs.", principal.getName());
       vses.updateValueSetDependencies();
+      adminAuditService.logAdminAction(
+          principal,
+          Action.UPDATE,
+          AuditResource.bulk(
+              ResourceType.VALUE_SET,
+              UPDATE_VSES_DATA_AUDIT_DESCRIPTION + "all implementation guides"));
     }
     return ResponseEntity.status(HttpStatus.ACCEPTED).build();
   }
@@ -87,7 +111,9 @@ public class ValueSetExpansionAdminController {
         principal.getName(),
         valueSet.getUrl(),
         valueSet.getVersion());
-    return ResponseEntity.ok().body(vses.upsertValueSet(valueSet));
+    MadieValueSet updated = vses.upsertValueSet(valueSet);
+    adminAuditService.logAdminAction(principal, Action.UPDATE, AuditResource.from(updated));
+    return ResponseEntity.ok().body(updated);
   }
 
   @PostMapping(
@@ -102,14 +128,17 @@ public class ValueSetExpansionAdminController {
         principal.getName(),
         valueSet.getUrl(),
         valueSet.getVersion());
-    return ResponseEntity.status(HttpStatus.CREATED).body(vses.addValueSet(valueSet));
+    MadieValueSet created = vses.addValueSet(valueSet);
+    adminAuditService.logAdminAction(principal, Action.CREATE, AuditResource.from(created));
+    return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @DeleteMapping(value = "/value-set/{id}")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<Void> deleteValueSet(Principal principal, @PathVariable String id) {
     log.info("Admin user [{}] is deleting value set with id: [{}]", principal.getName(), id);
-    vses.deleteValueSet(id);
+    MadieValueSet deleted = vses.deleteValueSet(id);
+    adminAuditService.logAdminAction(principal, Action.DELETE, AuditResource.from(deleted));
     return ResponseEntity.noContent().build();
   }
 

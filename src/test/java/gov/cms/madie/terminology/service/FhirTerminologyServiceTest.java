@@ -17,19 +17,15 @@ import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import org.apache.commons.io.FileUtils;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.ValueSet;
-import org.hl7.fhir.r4.model.CodeSystem;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Meta;
-import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.*;
 
 import gov.cms.madie.terminology.dto.ValueSetSearchResult;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -62,7 +58,8 @@ class FhirTerminologyServiceTest {
   @Mock FhirContext fhirContext;
   @Mock CodeSystemRepository codeSystemRepository;
   @Mock VsacService vsacService;
-  @InjectMocks FhirTerminologyService fhirTerminologyService;
+  FhirTerminologyService fhirTerminologyService;
+  CodeSystemService codeSystemService;
 
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
@@ -136,10 +133,15 @@ class FhirTerminologyServiceTest {
               gov.cms.madie.terminology.models.CodeSystem.Version.builder()
                   .fhirVersion("2.40")
                   .build())
+          .isInVsac(false)
           .build();
 
   @BeforeEach
   public void setUp() throws IOException {
+    codeSystemService = new CodeSystemService(codeSystemRepository);
+    fhirTerminologyService =
+        new FhirTerminologyService(
+            fhirContext, fhirTerminologyServiceWebClient, codeSystemRepository, vsacService);
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     File fileWithCodes = getTestResourceFile("/value-sets/value_set_with_expansion_codes.json");
     File fileWithNoCodes = getTestResourceFile("/value-sets/value_set_with_no_expansions.json");
@@ -208,6 +210,7 @@ class FhirTerminologyServiceTest {
                             .fhirVersion("2022")
                             .vsacVersion("2022-05")
                             .build())
+                    .isInVsac(true)
                     .versionId("vid")
                     .oid("urn:oid:2.16.840.1.113883.6.90")
                     .build()));
@@ -698,6 +701,7 @@ class FhirTerminologyServiceTest {
     c1.setTitle("t1");
     c1.setOid("fakeoid1");
     c1.setFullUrl("http://example.com/cs1");
+    c1.setInVsac(true);
     c1.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("1.0")
@@ -707,6 +711,7 @@ class FhirTerminologyServiceTest {
     c2.setTitle("t2");
     c2.setOid("fakeoid2");
     c2.setFullUrl("http://example.com/cs2");
+    c2.setInVsac(true);
     c2.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("2.0")
@@ -716,11 +721,13 @@ class FhirTerminologyServiceTest {
     c3.setTitle("t3");
     c3.setOid("fakeoid3");
     c3.setFullUrl("http://example.com/cs3");
+    c3.setInVsac(false);
     c3.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
     var c4 = new gov.cms.madie.terminology.models.CodeSystem();
     c4.setTitle("t4");
     c4.setOid("NOT.IN.VSAC");
+    c4.setInVsac(false);
     c4.setFullUrl("http://example.com/cs4");
     c4.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
@@ -730,10 +737,10 @@ class FhirTerminologyServiceTest {
     List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3, c4);
     when(codeSystemRepository.findAll()).thenReturn(codeSystems);
     List<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getAllCodeSystems();
+        codeSystemService.getAllCodeSystems();
 
     verify(codeSystemRepository).findAll();
-    assertEquals(3, result.size());
+    assertEquals(2, result.size());
     assertEquals("t1", result.get(0).getTitle());
     assertEquals("1.0", result.get(0).getVersion().getFhirVersion());
     assertEquals("1", result.get(0).getVersion().getVsacVersion());
@@ -742,10 +749,7 @@ class FhirTerminologyServiceTest {
     assertEquals("2.0", result.get(1).getVersion().getFhirVersion());
     assertEquals("2", result.get(1).getVersion().getVsacVersion());
 
-    // Verify FHIR only Code Systems appear in the result set
-    assertEquals("t3", result.get(2).getTitle());
-    assertEquals("2024", result.get(2).getVersion().getFhirVersion());
-    assertNull(result.get(2).getVersion().getVsacVersion());
+    assertTrue(result.stream().noneMatch(codeSystem -> "t3".equals(codeSystem.getTitle())));
   }
 
   @Test
@@ -754,6 +758,7 @@ class FhirTerminologyServiceTest {
     c1.setTitle("t1");
     c1.setOid("fakeoid1");
     c1.setFullUrl("http://example.com/cs1");
+    c1.setInVsac(true);
     c1.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("1.0")
@@ -763,6 +768,7 @@ class FhirTerminologyServiceTest {
     c2.setTitle("t2");
     c2.setOid("fakeoid2");
     c2.setFullUrl("http://example.com/cs2");
+    c2.setInVsac(true);
     c2.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("2.0")
@@ -772,12 +778,14 @@ class FhirTerminologyServiceTest {
     c3.setTitle("t3");
     c3.setOid("fakeoid3");
     c3.setFullUrl("http://example.com/cs3");
+    c3.setInVsac(false);
     c3.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
     var c4 = new gov.cms.madie.terminology.models.CodeSystem();
     c4.setTitle("t4");
     c4.setOid("NOT.IN.VSAC");
     c4.setFullUrl("http://example.com/cs4");
+    c4.setInVsac(false);
     c4.setVersion(
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()
             .fhirVersion("fhirOnly")
@@ -789,7 +797,7 @@ class FhirTerminologyServiceTest {
 
     PageRequest pageable = PageRequest.of(0, 10);
     Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        fhirTerminologyService.getCodeSystems(pageable, null, null);
+        codeSystemService.getCodeSystems(pageable, null, null);
 
     verify(codeSystemRepository).findAll(pageable);
     assertEquals(4, result.getTotalElements());
@@ -883,6 +891,7 @@ class FhirTerminologyServiceTest {
                     .build())
             .versionId("2084800774")
             .oid("urn:oid:2.16.840.1.113883.6.1")
+            .isInVsac(true)
             .build();
     when(codeSystemRepository.findByNameAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
@@ -947,6 +956,7 @@ class FhirTerminologyServiceTest {
             .lastUpdated(Instant.parse("2024-04-30T20:18:48.706Z"))
             .lastUpdatedUpstream(new Date("Fri Apr 01 00:00:00 EDT 2022"))
             .isLatestVersion(true)
+            .isInVsac(true)
             .build();
 
     when(codeSystemRepository.findAllByOid(anyString())).thenReturn(List.of(codeSystem));
@@ -1114,6 +1124,9 @@ class FhirTerminologyServiceTest {
     Meta m = new Meta();
     m.setLastUpdated(new Date());
     vs1.setMeta(m);
+    vs1.setCompose(new ValueSet.ValueSetComposeComponent());
+    vs1.getCompose()
+        .addInclude(new ValueSet.ConceptSetComponent().setSystem("http://example.com/system"));
 
     Bundle bundle1 = new Bundle();
     bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(vs1));
@@ -1132,6 +1145,133 @@ class FhirTerminologyServiceTest {
     // ensure fetchResourceFromVsac was not called since there is no 'next' link
     verify(fhirTerminologyServiceWebClient, times(0))
         .fetchResourceFromVsac(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void searchValueSetsWithNextLinkFetchesAdditionalPage() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+
+    ValueSet vs1 = new ValueSet();
+    vs1.setId("v1-next");
+    vs1.setTitle("TitleNextOne");
+    vs1.setUrl("http://example.com/ValueSet/v1-next");
+    vs1.setVersion("1.0.0");
+    vs1.setStatus(org.hl7.fhir.r4.model.Enumerations.PublicationStatus.ACTIVE);
+    vs1.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    Meta meta1 = new Meta();
+    meta1.setLastUpdated(new Date());
+    meta1.setVersionId("1");
+    vs1.setMeta(meta1);
+    vs1.setCompose(new ValueSet.ValueSetComposeComponent());
+    vs1.getCompose()
+        .addInclude(new ValueSet.ConceptSetComponent().setSystem("http://example.com/system"));
+
+    ValueSet vs2 = new ValueSet();
+    vs2.setId("v2-next");
+    vs2.setTitle("TitleNextTwo");
+    vs2.setUrl("http://example.com/ValueSet/v2-next");
+    vs2.setVersion("2.0.0");
+    vs2.setStatus(org.hl7.fhir.r4.model.Enumerations.PublicationStatus.ACTIVE);
+    vs2.addIdentifier(new Identifier().setValue("urn:oid:2"));
+    Meta meta2 = new Meta();
+    meta2.setLastUpdated(new Date());
+    meta2.setVersionId("2");
+    vs2.setMeta(meta2);
+    vs2.setCompose(new ValueSet.ValueSetComposeComponent());
+    vs2.getCompose()
+        .addInclude(new ValueSet.ConceptSetComponent().setSystem("http://example.com/system"));
+
+    Bundle bundle1 = new Bundle();
+    bundle1.addEntry(new Bundle.BundleEntryComponent().setResource(vs1));
+    bundle1.addLink(
+        new Bundle.BundleLinkComponent()
+            .setRelation("next")
+            .setUrl("http://example.com/next?page=2"));
+
+    Bundle bundle2 = new Bundle();
+    bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(vs2));
+
+    when(fhirTerminologyServiceWebClient.searchValueSets(anyString(), anyMap()))
+        .thenReturn(parser.encodeResourceToString(bundle1));
+    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+            "https://example.com/next?page=2", TEST_API_KEY, "bundle"))
+        .thenReturn(parser.encodeResourceToString(bundle2));
+
+    ValueSetSearchResult result = fhirTerminologyService.searchValueSets(TEST_API_KEY, Map.of());
+
+    assertEquals(2, result.getValueSets().size());
+    assertEquals("urn:oid:2", result.getValueSets().get(1).getOid());
+    verify(fhirTerminologyServiceWebClient)
+        .fetchResourceFromVsac("https://example.com/next?page=2", TEST_API_KEY, "bundle");
+  }
+
+  @Test
+  void validateCodeSystemMappingReturnsMissingCodesOnly() {
+    when(codeSystemRepository.findAllByName("alpha")).thenReturn(Collections.emptyList());
+    when(codeSystemRepository.findAllByName("beta"))
+        .thenReturn(List.of(new gov.cms.madie.terminology.models.CodeSystem()));
+
+    List<String> missing =
+        fhirTerminologyService.validateCodeSystemMapping(List.of("alpha", "beta"));
+
+    assertEquals(List.of("alpha"), missing);
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "9, 10, Second, false",
+    "10, 9, First, false",
+    "9, 10, Second, true",
+    "10, 9, First, true",
+    ", 10, Second, true",
+    "10, , First, true",
+    ", , First, false",
+    ", , First, true",
+    "10, 10, First, false",
+    "2147483648, 2147483649, Second, false"
+  })
+  void searchValueSetsReturnsOnlyLatestVersion(
+      String firstVersionId, String secondVersionId, String expectedTitle, boolean separatePages) {
+    IParser parser = FhirContext.forR4().newJsonParser();
+    when(fhirContext.newJsonParser()).thenReturn(parser);
+
+    ValueSet first = new ValueSet();
+    first.setTitle("First");
+    first.setVersion("2025-01-01");
+    first.addIdentifier(new Identifier().setValue("urn:oid:1"));
+    first.setMeta(new Meta().setVersionId(firstVersionId).setLastUpdated(new Date()));
+    ValueSet second = first.copy();
+    second.setTitle("Second");
+    second.setVersion("2024-01-01");
+    second.getMeta().setVersionId(secondVersionId);
+    ValueSet unrelated = first.copy();
+    unrelated.addIdentifier(new Identifier().setValue("urn:oid:2"));
+
+    Bundle firstPage = new Bundle();
+    firstPage.addEntry().setResource(first);
+    firstPage.addEntry().setResource(unrelated);
+    if (separatePages) {
+      firstPage.addLink().setRelation("next").setUrl("http://example.com/next?page=2");
+      Bundle secondPage = new Bundle();
+      secondPage.addEntry().setResource(second);
+      when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+              "https://example.com/next?page=2", TEST_API_KEY, "bundle"))
+          .thenReturn(parser.encodeResourceToString(secondPage));
+    } else {
+      firstPage.addEntry().setResource(second);
+    }
+    String response = parser.encodeResourceToString(firstPage);
+    when(fhirTerminologyServiceWebClient.searchValueSets(TEST_API_KEY, Map.of()))
+        .thenReturn(response);
+
+    ValueSetSearchResult result = fhirTerminologyService.searchValueSets(TEST_API_KEY, Map.of());
+
+    assertEquals(2, result.getValueSets().size());
+    assertEquals("urn:oid:1", result.getValueSets().get(0).getOid());
+    assertEquals(expectedTitle, result.getValueSets().get(0).getTitle());
+    assertEquals("urn:oid:2", result.getValueSets().get(1).getOid());
+    assertEquals(response, result.getResultBundle());
   }
 
   /* this test covers searchValueSets() method
@@ -1819,18 +1959,15 @@ class FhirTerminologyServiceTest {
     assertNull(result);
   }
 
-  /* branch coverage for retrieveCode(), line 367:
-   * !codeSystem.isVsacSearchable()
-   */
   @Test
-  void retrieveCodeCodeSystemNotVsacSearchable() {
+  void retrieveCodeCodeSystemNotInVsac() {
     String codeName = "test-code";
     String codeSystemName = "LOINC";
     String version = "2.40";
-    // Mock codeSystem with isVsacSearchable() == false
+    // Mock codeSystem with isInVsac() == false
     gov.cms.madie.terminology.models.CodeSystem codeSystem =
         mock(gov.cms.madie.terminology.models.CodeSystem.class);
-    when(codeSystem.isVsacSearchable()).thenReturn(false);
+    when(codeSystem.isInVsac()).thenReturn(false);
     when(codeSystemRepository.findByNameAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(codeSystem));
     Code result =
@@ -1838,18 +1975,15 @@ class FhirTerminologyServiceTest {
     assertNull(result);
   }
 
-  /* branch coverage for retrieveCode(), line 367:
-   * codeSystem.isVsacSearchable()
-   */
   @Test
-  void retrieveCodeCodeSystemVsacSearchableTrue() {
+  void retrieveCodeCodeSystemInVsac() {
     String codeName = "test-code";
     String codeSystemName = "LOINC";
     String version = "2.40";
-    // Mock codeSystem with isVsacSearchable() == true
+    // Mock codeSystem with isInVsac() == true
     gov.cms.madie.terminology.models.CodeSystem codeSystem =
         mock(gov.cms.madie.terminology.models.CodeSystem.class);
-    when(codeSystem.isVsacSearchable()).thenReturn(true);
+    when(codeSystem.isInVsac()).thenReturn(true);
     // Mock getVersion() to return a valid Version object
     gov.cms.madie.terminology.models.CodeSystem.Version versionObj =
         gov.cms.madie.terminology.models.CodeSystem.Version.builder()

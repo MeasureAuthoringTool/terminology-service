@@ -1,5 +1,9 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.audit.AdminAuditService;
+import gov.cms.madie.terminology.audit.AdminAuditService.Action;
+import gov.cms.madie.terminology.audit.AuditResource;
+import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.exceptions.DuplicateValueSetException;
 import gov.cms.madie.terminology.exceptions.InvalidValueSetException;
@@ -31,6 +35,7 @@ import static org.mockito.Mockito.*;
 class ValueSetExpansionAdminControllerTest {
 
   @Mock private ValueSetExpansionService vses;
+  @Mock private AdminAuditService adminAuditService;
   @InjectMocks private ValueSetExpansionAdminController controller;
 
   private static final String TEST_USER = "test.admin.user";
@@ -76,6 +81,20 @@ class ValueSetExpansionAdminControllerTest {
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(madieValueSet, response.getBody());
     verify(vses, times(1)).upsertValueSet(any(MadieValueSet.class));
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.UPDATE, AuditResource.from(madieValueSet));
+  }
+
+  @Test
+  void testUpsertValueSetNotFoundDoesNotAudit() {
+    when(principal.getName()).thenReturn(TEST_USER);
+    doThrow(new ValueSetNotFoundException("ValueSet not found"))
+        .when(vses)
+        .upsertValueSet(any(MadieValueSet.class));
+
+    assertThrows(
+        ValueSetNotFoundException.class, () -> controller.upsertValueSet(principal, madieValueSet));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -94,6 +113,8 @@ class ValueSetExpansionAdminControllerTest {
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     assertEquals(madieValueSet, response.getBody());
     verify(vses, times(1)).addValueSet(request);
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.CREATE, AuditResource.from(madieValueSet));
   }
 
   @Test
@@ -107,6 +128,7 @@ class ValueSetExpansionAdminControllerTest {
     doThrow(new InvalidValueSetException("bad json")).when(vses).addValueSet(request);
 
     assertThrows(InvalidValueSetException.class, () -> controller.addValueSet(principal, request));
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
@@ -127,12 +149,14 @@ class ValueSetExpansionAdminControllerTest {
   @Test
   void testDeleteValueSetSuccessfully() {
     when(principal.getName()).thenReturn(TEST_USER);
-    doNothing().when(vses).deleteValueSet(anyString());
+    when(vses.deleteValueSet(anyString())).thenReturn(madieValueSet);
 
     ResponseEntity<Void> response = controller.deleteValueSet(principal, madieValueSet.getId());
 
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     verify(vses, times(1)).deleteValueSet(madieValueSet.getId());
+    verify(adminAuditService)
+        .logAdminAction(principal, Action.DELETE, AuditResource.from(madieValueSet));
   }
 
   @Test
@@ -144,6 +168,44 @@ class ValueSetExpansionAdminControllerTest {
 
     assertThrows(
         ValueSetNotFoundException.class, () -> controller.deleteValueSet(principal, "nonexistent"));
+    verifyNoInteractions(adminAuditService);
+  }
+
+  @Test
+  void testUpdateValueSetDependenciesForAllIgsAudits() {
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    ResponseEntity<Void> response = controller.updateValueSetDependencies(null, null, principal);
+
+    assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+    verify(vses, times(1)).updateValueSetDependencies();
+    verify(adminAuditService)
+        .logAdminAction(
+            principal,
+            Action.UPDATE,
+            AuditResource.bulk(
+                ResourceType.VALUE_SET,
+                "Update VSES Data: started job to refresh value set expansions from VSAC"
+                    + " for all implementation guides"));
+  }
+
+  @Test
+  void testUpdateValueSetDependenciesForIgAudits() {
+    when(principal.getName()).thenReturn(TEST_USER);
+
+    ResponseEntity<Void> response =
+        controller.updateValueSetDependencies("qicore", "6.0.0", principal);
+
+    assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+    verify(vses, times(1)).updateIgValueSetDependencies("qicore", "6.0.0");
+    verify(adminAuditService)
+        .logAdminAction(
+            principal,
+            Action.UPDATE,
+            AuditResource.bulk(
+                ResourceType.VALUE_SET,
+                "Update VSES Data: started job to refresh value set expansions from VSAC"
+                    + " for implementation guide qicore version 6.0.0"));
   }
 
   @Test

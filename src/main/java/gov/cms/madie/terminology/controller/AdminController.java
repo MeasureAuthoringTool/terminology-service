@@ -1,7 +1,14 @@
 package gov.cms.madie.terminology.controller;
 
+import gov.cms.madie.terminology.audit.AdminAuditService;
+import gov.cms.madie.terminology.audit.AdminAuditService.Action;
+import gov.cms.madie.terminology.audit.AuditResource;
+import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
+import gov.cms.madie.terminology.service.CodeSystemService;
+import gov.cms.madie.terminology.service.CodeSystemSyncService;
+import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import gov.cms.madie.terminology.util.PagingUtil;
@@ -32,11 +39,17 @@ public class AdminController {
 
   private static final DateTimeFormatter FILENAME_TIMESTAMP =
       DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+  private static final String UPDATE_CODE_SYSTEMS_AUDIT_DESCRIPTION =
+      "Update Code Systems: started job to refresh all code systems from VSAC";
 
   private final UpdateCodeSystemTask updateCodeSystemTask;
+  private final CodeSystemService codeSystemService;
+  private final CodeSystemSyncService codeSystemSyncService;
+  private final VsacService vsacService;
   private final FhirTerminologyService fhirTerminologyService;
   private final CacheManager cacheManager;
   private final CodeSystemExportService codeSystemExportService;
+  private final AdminAuditService adminAuditService;
 
   @PostMapping(
       path = "/code-system",
@@ -53,8 +66,9 @@ public class AdminController {
         codeSystem.getOid(),
         codeSystem.getFullUrl(),
         codeSystem.getVersion());
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(fhirTerminologyService.createCodeSystem(codeSystem));
+    CodeSystem created = codeSystemService.createCodeSystem(codeSystem);
+    adminAuditService.logAdminAction(principal, Action.CREATE, AuditResource.from(created));
+    return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @PutMapping(
@@ -73,14 +87,17 @@ public class AdminController {
         codeSystem.getOid(),
         codeSystem.getFullUrl(),
         codeSystem.getVersion());
-    return ResponseEntity.ok().body(fhirTerminologyService.updateCodeSystem(id, codeSystem));
+    CodeSystem updated = codeSystemService.updateCodeSystem(id, codeSystem);
+    adminAuditService.logAdminAction(principal, Action.UPDATE, AuditResource.from(updated));
+    return ResponseEntity.ok().body(updated);
   }
 
   @DeleteMapping(path = "/code-system/{id}")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<Void> deleteCodeSystem(Principal principal, @PathVariable String id) {
     log.info("Admin user [{}] is deleting code system with id: [{}]", principal.getName(), id);
-    fhirTerminologyService.deleteCodeSystem(id);
+    CodeSystem deleted = codeSystemService.deleteCodeSystem(id);
+    adminAuditService.logAdminAction(principal, Action.DELETE, AuditResource.from(deleted));
     return ResponseEntity.noContent().build();
   }
 
@@ -95,9 +112,13 @@ public class AdminController {
 
   @PostMapping(path = "/trigger-code-system-refresh")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
-  public ResponseEntity<String> triggerCodeSystemRefresh() {
+  public ResponseEntity<String> triggerCodeSystemRefresh(Principal principal) {
 
     if (updateCodeSystemTask.startJob()) {
+      adminAuditService.logAdminAction(
+          principal,
+          Action.UPDATE,
+          AuditResource.bulk(ResourceType.CODE_SYSTEM, UPDATE_CODE_SYSTEMS_AUDIT_DESCRIPTION));
       return ResponseEntity.ok("Code system refresh has been started");
     }
 
@@ -114,8 +135,7 @@ public class AdminController {
       @RequestParam(required = false, name = "searchText") String searchText) {
 
     Pageable pageReq = PagingUtil.buildPageable(page, limit, sortInfo, "title", this::mapSortField);
-    return ResponseEntity.ok(
-        fhirTerminologyService.getCodeSystems(pageReq, filterField, searchText));
+    return ResponseEntity.ok(codeSystemService.getCodeSystems(pageReq, filterField, searchText));
   }
 
   @PutMapping(value = "/codesystems/export", produces = CodeSystemExportService.XLSX_MEDIA_TYPE)

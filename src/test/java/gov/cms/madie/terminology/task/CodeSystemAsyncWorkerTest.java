@@ -2,7 +2,7 @@ package gov.cms.madie.terminology.task;
 
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
-import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CodeSystemAsyncWorkerTest {
 
-  @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock private CodeSystemSyncService codeSystemSyncService;
 
   @InjectMocks private CodeSystemAsyncWorker codeSystemAsyncWorker;
 
@@ -37,12 +37,12 @@ class CodeSystemAsyncWorkerTest {
   void testRunJobAsyncRunsSuccessfully() {
     AtomicBoolean running = new AtomicBoolean(true);
 
-    when(fhirTerminologyService.retrieveAllCodeSystems(any(UmlsUser.class)))
+    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(any(UmlsUser.class)))
         .thenReturn(List.of(new CodeSystem()));
 
     codeSystemAsyncWorker.runJobAsync(running);
 
-    verify(fhirTerminologyService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
+    verify(codeSystemSyncService, times(1)).remoteRetrieveAllCodeSystems(any(UmlsUser.class));
 
     assertFalse(running.get());
   }
@@ -53,20 +53,21 @@ class CodeSystemAsyncWorkerTest {
 
     codeSystemAsyncWorker.runJobAsync(running);
 
-    verify(fhirTerminologyService)
-        .retrieveAllCodeSystems(argThat(user -> user != null && API_KEY.equals(user.getApiKey())));
+    verify(codeSystemSyncService)
+        .remoteRetrieveAllCodeSystems(
+            argThat(user -> user != null && API_KEY.equals(user.getApiKey())));
   }
 
   @Test
   void testRunJobAsyncHandlesExceptionAndResetsRunningFlag() {
     AtomicBoolean running = new AtomicBoolean(true);
 
-    when(fhirTerminologyService.retrieveAllCodeSystems(any(UmlsUser.class)))
+    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(any(UmlsUser.class)))
         .thenThrow(new RuntimeException("failure"));
 
     codeSystemAsyncWorker.runJobAsync(running);
 
-    verify(fhirTerminologyService, times(1)).retrieveAllCodeSystems(any(UmlsUser.class));
+    verify(codeSystemSyncService, times(1)).remoteRetrieveAllCodeSystems(any(UmlsUser.class));
 
     assertFalse(running.get());
   }

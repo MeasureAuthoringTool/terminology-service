@@ -4,8 +4,6 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.*;
-import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
-import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.exceptions.VsacParseBatchValueSetExpansionException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
@@ -16,16 +14,13 @@ import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.time.Instant;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -259,8 +254,22 @@ public class FhirTerminologyService {
           }
         });
 
+    Comparator<ValueSetForSearch> byVersionId =
+        Comparator.comparing(
+            ValueSetForSearch::getVersionId,
+            Comparator.nullsFirst(Comparator.comparing(BigInteger::new)));
+    Map<String, ValueSetForSearch> latestValueSets =
+        valueSetList.stream()
+            .collect(
+                Collectors.toMap(
+                    ValueSetForSearch::getOid,
+                    valueSet -> valueSet,
+                    (existing, candidate) ->
+                        byVersionId.compare(existing, candidate) >= 0 ? existing : candidate,
+                    LinkedHashMap::new));
+
     return ValueSetSearchResult.builder()
-        .valueSets(valueSetList)
+        .valueSets(new ArrayList<>(latestValueSets.values()))
         .resultBundle(responseString)
         .build();
   }
@@ -332,6 +341,7 @@ public class FhirTerminologyService {
               .lastUpdated(vs.getMeta().getLastUpdated().toString())
               .url(vs.getUrl())
               .version(vs.getVersion())
+              .versionId(vs.getMeta().getVersionId())
               .status(vs.getStatus())
               .publisher(vs.getPublisher())
               .purpose(vs.getPurpose())
@@ -393,7 +403,7 @@ public class FhirTerminologyService {
                 codeSystemRepository
                     .findByNameAndVersionVsacVersion(codeSystemName, version)
                     .orElse(null));
-    if (codeSystem == null || !codeSystem.isVsacSearchable()) {
+    if (codeSystem == null || !codeSystem.isInVsac()) {
       return null;
     }
     return retrieveCodes(codeName, codeSystemName, codeSystem, apiKey);
@@ -683,8 +693,7 @@ public class FhirTerminologyService {
 
               if (codeSystemVersion.isEmpty()
                   || StringUtils.isEmpty(codeName)
-                  || StringUtils.isEmpty(codeSystemName)
-                  || !codeSystemVersion.get().isFhir()) {
+                  || StringUtils.isEmpty(codeSystemName)) {
                 return null;
               }
 
@@ -710,17 +719,17 @@ public class FhirTerminologyService {
           codeSystems.stream()
               .filter(
                   codeSystemEntry ->
-                      StringUtils.equals(codeSystemEntry.getOid(), oid)
+                      Strings.CS.equals(codeSystemEntry.getOid(), oid)
                           && codeSystemEntry.isLatestVersion())
               .findFirst();
     } else {
       result =
           codeSystems.stream()
-              .filter(codeSystemEntry -> StringUtils.equals(codeSystemEntry.getOid(), oid))
+              .filter(codeSystemEntry -> Strings.CS.equals(codeSystemEntry.getOid(), oid))
               .filter(
                   codeSystemVersion ->
-                      StringUtils.equals(codeSystemVersion.getVersion().getVsacVersion(), version)
-                          || StringUtils.equals(
+                      Strings.CS.equals(codeSystemVersion.getVersion().getVsacVersion(), version)
+                          || Strings.CS.equals(
                               codeSystemVersion.getVersion().getFhirVersion(), version))
               .findFirst();
     }
@@ -747,5 +756,15 @@ public class FhirTerminologyService {
     CodeStatus status = vsacService.getCodeStatus(code, apiKey);
     code.setStatus(status);
     return code;
+  }
+
+  public List<String> validateCodeSystemMapping(List<String> cqlCodes) {
+
+    List<String> missingCodes =
+        cqlCodes.stream()
+            .filter(cqlCode -> codeSystemRepository.findAllByName(cqlCode).isEmpty())
+            .toList();
+
+    return missingCodes; // empty list if all codes are found
   }
 }

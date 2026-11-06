@@ -9,6 +9,7 @@ import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemService;
 import gov.cms.madie.terminology.service.VsacService;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -40,6 +41,7 @@ class VsacFhirTerminologyControllerTest {
 
   @Mock private VsacService vsacService;
   @Mock private FhirTerminologyService fhirTerminologyService;
+  @Mock private CodeSystemService codeSystemService;
   @Mock private FhirContext fhirContext;
   @InjectMocks private VsacFhirTerminologyController vsacFhirTerminologyController;
   private UmlsUser umlsUser;
@@ -71,7 +73,7 @@ class VsacFhirTerminologyControllerTest {
             .displayName("test-value-set-display-name")
             .build());
     principal = mock(Principal.class);
-    when(principal.getName()).thenReturn(TEST_USER);
+    lenient().when(principal.getName()).thenReturn(TEST_USER);
   }
 
   @Test
@@ -131,7 +133,7 @@ class VsacFhirTerminologyControllerTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build());
-    when(fhirTerminologyService.getAllCodeSystems()).thenReturn(mockCodeSystemsPage);
+    when(codeSystemService.getAllCodeSystems()).thenReturn(mockCodeSystemsPage);
 
     ResponseEntity<List<CodeSystem>> response =
         vsacFhirTerminologyController.getAllCodeSystems(principal);
@@ -265,5 +267,19 @@ class VsacFhirTerminologyControllerTest {
     assertThat(response.getBody().contains("\"resourceType\":\"ValueSet\""), is(true));
     assertThat(
         response.getBody().contains("\"url\":\"" + valueSet.get(0).getUrl() + "\""), is(true));
+  }
+
+  @Test
+  void testValidateCodeSystemMapping() {
+    when(fhirTerminologyService.validateCodeSystemMapping(List.of("missing", "present")))
+        .thenReturn(List.of("missing"));
+
+    ResponseEntity<List<String>> response =
+        vsacFhirTerminologyController.validateCodeSystemMapping(
+            principal, List.of("missing", "present"));
+
+    assertThat(response.getStatusCode(), is(equalTo(HttpStatus.OK)));
+    assertEquals(List.of("missing"), response.getBody());
+    verify(fhirTerminologyService).validateCodeSystemMapping(List.of("missing", "present"));
   }
 }
