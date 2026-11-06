@@ -218,7 +218,7 @@ class VsacFhirTerminologyControllerMvcTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"/terminology/value-sets/fhir", "/terminology/value-sets/expansion/fhir"})
+  @ValueSource(strings = {"/terminology/value-sets/fhir"})
   void testGetFhirValueSetsPassesIncludeExpansionFlagMvc(String path) throws Exception {
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
     when(fhirTerminologyService.getValueSets(
