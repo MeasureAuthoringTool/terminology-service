@@ -13,6 +13,9 @@ import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.service.VsacService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import gov.cms.madie.terminology.config.SecurityConfig;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -212,6 +215,59 @@ class VsacFhirTerminologyControllerMvcTest {
             .andExpect(status().isUnauthorized())
             .andReturn();
     assertThat(result.getResponse().getStatus(), is(equalTo(401)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"/terminology/value-sets/fhir"})
+  void testGetFhirValueSetsPassesIncludeExpansionFlagMvc(String path) throws Exception {
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.getValueSets(
+            any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
+        .thenReturn(List.of());
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.put(path)
+                    .with(user(TEST_USR))
+                    .with(csrf())
+                    .content(
+                        "{\"includeExpansion\": false, \"valueSetParams\": [{\"oid\": \"1.2.3\","
+                            + " \"version\": \"2020\","
+                            + " \"url\": \"http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3\"}]}")
+                    .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isOk())
+            .andReturn();
+    assertThat(result.getResponse().getContentAsString(), is(equalTo("[]")));
+    ArgumentCaptor<ValueSetsSearchCriteria> criteriaCaptor =
+        ArgumentCaptor.forClass(ValueSetsSearchCriteria.class);
+    verify(fhirTerminologyService, times(1))
+        .getValueSets(criteriaCaptor.capture(), any(UmlsUser.class));
+    assertThat(criteriaCaptor.getValue().getIncludeExpansion(), is(false));
+    assertThat(criteriaCaptor.getValue().getValueSetParams().get(0).getOid(), is("1.2.3"));
+    assertThat(
+        criteriaCaptor.getValue().getValueSetParams().get(0).getUrl(),
+        is("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3"));
+  }
+
+  @Test
+  void testGetFhirValueSetsLeavesIncludeExpansionUnsetWhenNotProvidedMvc() throws Exception {
+    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
+    when(fhirTerminologyService.getValueSets(
+            any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
+        .thenReturn(List.of());
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.put("/terminology/value-sets/fhir")
+                .with(user(TEST_USR))
+                .with(csrf())
+                .content("{\"valueSetParams\": [{\"oid\": \"1.2.3\"}]}")
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+        .andExpect(status().isOk());
+    ArgumentCaptor<ValueSetsSearchCriteria> criteriaCaptor =
+        ArgumentCaptor.forClass(ValueSetsSearchCriteria.class);
+    verify(fhirTerminologyService, times(1))
+        .getValueSets(criteriaCaptor.capture(), any(UmlsUser.class));
+    assertThat(criteriaCaptor.getValue().getIncludeExpansion(), is(nullValue()));
   }
 
   @Test
