@@ -9,12 +9,10 @@ import gov.cms.madie.terminology.service.CodeSystemExportService;
 import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.config.SecurityConfig;
-import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemService;
-import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,8 +48,6 @@ class AdminControllerMvcTest {
   private static final String TEST_USR = "FAKE";
 
   @MockitoBean private CodeSystemService codeSystemService;
-  @MockitoBean private CodeSystemSyncService codeSystemSyncService;
-  @MockitoBean private VsacService vsacService;
   @MockitoBean private FhirContext fhirContext;
   @MockitoBean private UpdateCodeSystemTask updateCodeSystemTask;
   @MockitoBean private UserServiceClient userServiceClient;
@@ -76,6 +72,18 @@ class AdminControllerMvcTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build();
+  }
+
+  @Test
+  void removedSynchronousRefreshEndpointIsNotAvailable() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
+                .with(user(TEST_USR).roles("MADIE-ADMIN"))
+                .with(csrf()))
+        .andExpect(status().isNotFound());
+
+    verifyNoInteractions(codeSystemService, updateCodeSystemTask, adminAuditService);
   }
 
   @Test
