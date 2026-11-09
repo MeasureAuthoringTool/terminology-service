@@ -33,6 +33,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -121,25 +122,43 @@ public class FhirTerminologyServiceWebClient {
     return fetchResourceFromVsac(uri.toString(), apiKey, "bundle");
   }
 
-  public String getValueSetResources(String apiKey, ValueSetsSearchCriteria searchCriteria) {
-    return fetchBatchResourcesFromVsac(getUris(searchCriteria), apiKey, "ValueSet");
+  public String getValueSetResourcesWithExpansion(
+      String apiKey, ValueSetsSearchCriteria searchCriteria) {
+    return fetchBatchResourcesFromVsac(
+        getValueSetExpansionUris(searchCriteria), apiKey, "ValueSet");
   }
 
-  public List<String> getUris(ValueSetsSearchCriteria searchCriteria) {
+  public String getValueSetResourcesWithoutExpansion(
+      String apiKey, ValueSetsSearchCriteria searchCriteria) {
+    return fetchBatchResourcesFromVsac(getValueSetSearchUris(searchCriteria), apiKey, "ValueSet");
+  }
+
+  public List<String> getValueSetExpansionUris(ValueSetsSearchCriteria searchCriteria) {
     String profile =
         StringUtils.isNotBlank(searchCriteria.getProfile())
             ? defaultProfile
             : searchCriteria.getProfile();
 
+    return toDistinctUris(
+        searchCriteria,
+        valueSetParam ->
+            TerminologyServiceUtil.buildValueSetExpansionUri(
+                valueSetParam,
+                profile,
+                searchCriteria.getIncludeDraft(),
+                searchCriteria.getActiveOnly(),
+                searchCriteria.getManifestExpansion()));
+  }
+
+  public List<String> getValueSetSearchUris(ValueSetsSearchCriteria searchCriteria) {
+    return toDistinctUris(searchCriteria, TerminologyServiceUtil::buildValueSetSearchUri);
+  }
+
+  private List<String> toDistinctUris(
+      ValueSetsSearchCriteria searchCriteria,
+      Function<ValueSetsSearchCriteria.ValueSetParams, URI> uriBuilder) {
     return searchCriteria.getValueSetParams().stream()
-        .map(
-            valueSetParam ->
-                TerminologyServiceUtil.buildValueSetResourceUri(
-                    valueSetParam,
-                    profile,
-                    searchCriteria.getIncludeDraft(),
-                    searchCriteria.getActiveOnly(),
-                    searchCriteria.getManifestExpansion()))
+        .map(uriBuilder)
         .filter(Objects::nonNull)
         .map(URI::toString)
         .distinct()
