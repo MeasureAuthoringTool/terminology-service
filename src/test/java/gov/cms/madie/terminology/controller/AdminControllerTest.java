@@ -9,8 +9,6 @@ import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.CodeSystemService;
-import gov.cms.madie.terminology.service.CodeSystemSyncService;
-import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,9 +47,7 @@ import static org.mockito.Mockito.*;
 class AdminControllerTest {
 
   @Mock private CodeSystemService codeSystemService;
-  @Mock private CodeSystemSyncService codeSystemSyncService;
   @Mock private UpdateCodeSystemTask updateCodeSystemTask;
-  @Mock private VsacService vsacService;
   @Mock private CacheManager cacheManager;
   @Mock private Cache cache;
   @Mock private CodeSystemExportService codeSystemExportService;

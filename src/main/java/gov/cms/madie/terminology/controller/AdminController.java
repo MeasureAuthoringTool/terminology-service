@@ -7,9 +7,6 @@ import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.CodeSystemService;
-import gov.cms.madie.terminology.service.CodeSystemSyncService;
-import gov.cms.madie.terminology.service.VsacService;
-import gov.cms.madie.terminology.service.FhirTerminologyService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import gov.cms.madie.terminology.util.PagingUtil;
 import jakarta.validation.Valid;
@@ -44,9 +41,6 @@ public class AdminController {
 
   private final UpdateCodeSystemTask updateCodeSystemTask;
   private final CodeSystemService codeSystemService;
-  private final CodeSystemSyncService codeSystemSyncService;
-  private final VsacService vsacService;
-  private final FhirTerminologyService fhirTerminologyService;
   private final CacheManager cacheManager;
   private final CodeSystemExportService codeSystemExportService;
   private final AdminAuditService adminAuditService;
