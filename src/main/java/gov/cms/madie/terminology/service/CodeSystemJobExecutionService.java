@@ -1,0 +1,81 @@
+package gov.cms.madie.terminology.service;
+
+import gov.cms.madie.terminology.models.CodeSystemJobExecution;
+import gov.cms.madie.terminology.models.CodeSystemJobExecution.Status;
+import gov.cms.madie.terminology.repositories.CodeSystemJobExecutionRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class CodeSystemJobExecutionService {
+
+  private final CodeSystemJobExecutionRepository codeSystemJobExecutionRepository;
+
+  // Set before Mongock runs, so a job started by a migration isn't treated as interrupted
+  private final Instant serviceStartedAt = Instant.now();
+
+  public CodeSystemJobExecution start(String triggeredBy) {
+    CodeSystemJobExecution execution =
+        codeSystemJobExecutionRepository.save(
+            CodeSystemJobExecution.builder()
+                .status(Status.RUNNING)
+                .triggeredBy(triggeredBy)
+                .startedAt(Instant.now())
+                .build());
+    log.info(
+        "Code system update job [{}] started by [{}]",
+        execution.getId(),
+        execution.getTriggeredBy());
+    return execution;
+  }
+
+  public void complete(CodeSystemJobExecution execution) {
+    finish(execution, Status.COMPLETED);
+  }
+
+  public void fail(CodeSystemJobExecution execution) {
+    finish(execution, Status.FAILED);
+  }
+
+  private void finish(CodeSystemJobExecution execution, Status status) {
+    Instant completedAt = Instant.now();
+    execution.setStatus(status);
+    execution.setCompletedAt(completedAt);
+    execution.setDurationMs(Duration.between(execution.getStartedAt(), completedAt).toMillis());
+    codeSystemJobExecutionRepository.save(execution);
+    log.info(
+        "Code system update job [{}] {} after {} ms",
+        execution.getId(),
+        status,
+        execution.getDurationMs());
+  }
+
+  /** Marks jobs left RUNNING by a restart as FAILED. Never throws, so it can't block startup */
+  @EventListener(ApplicationReadyEvent.class)
+  public void failInterruptedJobs() {
+    try {
+      List<CodeSystemJobExecution> interrupted =
+          codeSystemJobExecutionRepository.findByStatusAndStartedAtBefore(
+              Status.RUNNING, serviceStartedAt);
+      interrupted.forEach(
+          execution -> {
+            log.warn(
+                "Code system update job [{}] started at [{}] was interrupted. Marking it as failed",
+                execution.getId(),
+                execution.getStartedAt());
+            fail(execution);
+          });
+    } catch (Exception e) {
+      log.error("Unable to mark interrupted code system update jobs as failed", e);
+    }
+  }
+}

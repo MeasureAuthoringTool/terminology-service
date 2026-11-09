@@ -108,7 +108,7 @@ public class AdminController {
   @PreAuthorize("hasRole('MADIE-ADMIN')")
   public ResponseEntity<String> triggerCodeSystemRefresh(Principal principal) {
 
-    if (updateCodeSystemTask.startJob()) {
+    if (updateCodeSystemTask.startJob(principal.getName())) {
       adminAuditService.logAdminAction(
           principal,
           Action.UPDATE,

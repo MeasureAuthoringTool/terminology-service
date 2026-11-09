@@ -277,7 +277,7 @@ class AdminControllerMvcTest {
 
   @Test
   void testTriggerCodeSystemRefreshAuditsWhenJobStarts() throws Exception {
-    when(updateCodeSystemTask.startJob()).thenReturn(true);
+    when(updateCodeSystemTask.startJob(TEST_USR)).thenReturn(true);
 
     mockMvc
         .perform(
@@ -305,7 +305,7 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isForbidden());
 
-    verify(updateCodeSystemTask, never()).startJob();
+    verify(updateCodeSystemTask, never()).startJob(any());
     verifyNoInteractions(adminAuditService);
   }
 }
