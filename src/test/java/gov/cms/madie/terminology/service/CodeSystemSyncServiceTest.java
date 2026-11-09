@@ -2,6 +2,10 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
@@ -17,6 +21,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 
 import java.io.IOException;
@@ -437,6 +442,7 @@ class CodeSystemSyncServiceTest {
 
     // then
     assertEquals(2, result.size());
+    assertTrue(result.stream().allMatch(CodeSystem::isLatestVersion));
     verify(fhirTerminologyServiceWebClient).getCodeSystemsPage(50, 50, TEST_API_KEY);
     verify(fhirTerminologyServiceWebClient)
         .getCodeSystemHistoryPage("title1v1", 0, 50, TEST_API_KEY);
@@ -793,6 +799,9 @@ class CodeSystemSyncServiceTest {
     assertEquals(
         List.of("3", "2", "1"),
         result.stream().map(cs -> cs.getVersion().getFhirVersion()).toList());
+    assertTrue(result.get(0).isLatestVersion());
+    assertFalse(result.get(1).isLatestVersion());
+    assertFalse(result.get(2).isLatestVersion());
     verify(fhirTerminologyServiceWebClient)
         .getCodeSystemHistoryPage("logical-id", 50, 50, TEST_API_KEY);
   }
@@ -818,14 +827,18 @@ class CodeSystemSyncServiceTest {
     List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
-    assertTrue(result.isEmpty());
+    assertEquals(1, result.size());
+    assertEquals("2", result.get(0).getVersion().getFhirVersion());
+    assertTrue(result.get(0).isLatestVersion());
     verify(fhirTerminologyServiceWebClient)
         .getCodeSystemHistoryPage("logical-id", 0, 50, TEST_API_KEY);
-    verifyNoInteractions(codeSystemRepository, codeSystemService);
+    verify(codeSystemRepository)
+        .findByFullUrlAndVersionFhirVersion("http://example.com/system", "2");
+    verify(codeSystemService).createCodeSystem(result.get(0));
   }
 
   @Test
-  void retrieveAllCodeSystemsKeepsNewestRevisionOfEachCanonicalVersion() {
+  void retrieveAllCodeSystemsDeduplicatesBusinessVersionsWithoutComparingRevisions() {
     // given
     var newestRevision = buildFhirCodeSystem("logical-id", "2");
     newestRevision.setMeta(
@@ -840,7 +853,13 @@ class CodeSystemSyncServiceTest {
     var undatedRevision = buildFhirCodeSystem("logical-id", "2");
     var version1 = buildFhirCodeSystem("logical-id", "1");
     version1.setMeta(new Meta().setLastUpdated(Date.from(Instant.parse("2019-01-01T00:00:00Z"))));
-    stubSearchAndHistory(undatedRevision, newestRevision, version1, olderRevision);
+    var version1Correction = version1.copy();
+    version1.setTitle("First historical entry");
+    version1Correction.setTitle("Later historical entry");
+    version1Correction.setMeta(
+        new Meta().setLastUpdated(Date.from(Instant.parse("2025-01-01T00:00:00Z"))));
+    stubSearchAndHistory(
+        undatedRevision, newestRevision, version1, olderRevision, version1Correction);
 
     // when
     List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
@@ -848,7 +867,9 @@ class CodeSystemSyncServiceTest {
     // then
     assertEquals(
         List.of("2", "1"), result.stream().map(cs -> cs.getVersion().getFhirVersion()).toList());
-    assertEquals("new", result.get(0).getVersionId());
+    assertNull(result.get(0).getVersionId());
+    assertNull(result.get(0).getLastUpdatedUpstream());
+    assertEquals("First historical entry", result.get(1).getTitle());
     assertTrue(result.get(0).isLatestVersion());
     assertFalse(result.get(1).isLatestVersion());
     assertTrue(result.stream().allMatch(CodeSystem::isInVsac));
@@ -858,6 +879,88 @@ class CodeSystemSyncServiceTest {
     verify(codeSystemRepository)
         .findByFullUrlAndVersionFhirVersion("http://example.com/system", "1");
     verifyNoMoreInteractions(codeSystemRepository);
+  }
+
+  @Test
+  void retrieveAllCodeSystemsMarksMedrtCurrentBusinessVersionLatestWithoutRevisionMetadata() {
+    // given
+    var current = buildFhirCodeSystem("MEDRT", "2026-09");
+    current.setUrl("http://va.gov/terminology/medrt");
+    current.setName("MEDRT");
+    current.setTitle("Medication Reference Terminology");
+    current.setIdentifier(List.of(new Identifier().setValue("urn:oid:2.16.840.1.113883.6.345")));
+    current.setDateElement(new org.hl7.fhir.r4.model.DateTimeType("2026-10-01T00:00:00-04:00"));
+    var historical = current.copy();
+    historical.setVersion("2026-02");
+    historical.setMeta(
+        new Meta()
+            .setVersionId("18")
+            .setLastUpdated(Date.from(Instant.parse("2026-05-07T05:00:00Z"))));
+    stubSearchAndHistory(current, historical);
+
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(2, result.size());
+    CodeSystem latest = result.get(0);
+    assertEquals("2026-09", latest.getVersion().getFhirVersion());
+    assertTrue(latest.isLatestVersion());
+    assertNull(latest.getVersionId());
+    assertNull(latest.getLastUpdatedUpstream());
+    assertEquals("http://va.gov/terminology/medrt", latest.getFullUrl());
+    assertEquals("MEDRT", latest.getName());
+    assertEquals("Medication Reference Terminology", latest.getTitle());
+    assertEquals("urn:oid:2.16.840.1.113883.6.345", latest.getOid());
+    assertTrue(latest.isInVsac());
+    assertNotNull(latest.getLastUpdated());
+    assertEquals("2026-02", result.get(1).getVersion().getFhirVersion());
+    assertFalse(result.get(1).isLatestVersion());
+    assertEquals("18", result.get(1).getVersionId());
+    assertEquals(historical.getMeta().getLastUpdated(), result.get(1).getLastUpdatedUpstream());
+    verify(codeSystemService).createCodeSystem(latest);
+    verify(codeSystemService).createCodeSystem(result.get(1));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {"2.83", "2026-09", "http://snomed.info/sct/731000124108/version/20260901"})
+  void retrieveAllCodeSystemsUsesSearchVersionRegardlessOfHistoryOrderOrTimestamps(String version) {
+    // given
+    var current = buildFhirCodeSystem("logical-id", version);
+    current.setMeta(
+        new Meta()
+            .setVersionId("search-revision")
+            .setLastUpdated(Date.from(Instant.parse("2020-01-01T00:00:00Z"))));
+    var differentVersion = buildFhirCodeSystem("logical-id", "other-business-version");
+    differentVersion.setMeta(
+        new Meta()
+            .setVersionId("history-revision")
+            .setLastUpdated(Date.from(Instant.parse("2026-01-01T00:00:00Z"))));
+    IParser parser = FhirContext.forR4().newJsonParser();
+    when(mockContext.newJsonParser()).thenReturn(parser);
+    Bundle search = new Bundle();
+    search.addEntry().setResource(current);
+    Bundle history = new Bundle();
+    history.addEntry().setResource(differentVersion);
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, TEST_API_KEY))
+        .thenReturn(parser.encodeResourceToString(search));
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            "logical-id", 0, 50, TEST_API_KEY))
+        .thenReturn(parser.encodeResourceToString(history));
+
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(2, result.size());
+    assertEquals(version, result.get(0).getVersion().getFhirVersion());
+    assertTrue(result.get(0).isLatestVersion());
+    assertEquals("search-revision", result.get(0).getVersionId());
+    assertEquals(current.getMeta().getLastUpdated(), result.get(0).getLastUpdatedUpstream());
+    assertFalse(result.get(1).isLatestVersion());
+    assertEquals("history-revision", result.get(1).getVersionId());
+    verify(codeSystemService, times(2)).createCodeSystem(any(CodeSystem.class));
   }
 
   @Test
@@ -880,6 +983,148 @@ class CodeSystemSyncServiceTest {
   }
 
   @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "missingVersion",
+        "blankVersion",
+        "nullVersion",
+        "missingUrl",
+        "blankUrl",
+        "nullUrl"
+      })
+  void refreshPreservesExistingLatestAndPersistsUsableHistoryWhenCurrentIdentityInvalid(
+      String invalidField) {
+    // given
+    var current = buildFhirCodeSystem("logical-id", "3");
+    switch (invalidField) {
+      case "missingVersion" -> current.setVersion(null);
+      case "blankVersion" -> current.setVersion(" ");
+      case "nullVersion" -> current.setVersion("null");
+      case "missingUrl" -> current.setUrl(null);
+      case "blankUrl" -> current.setUrl(" ");
+      case "nullUrl" -> current.setUrl("null");
+      default -> throw new IllegalArgumentException(invalidField);
+    }
+    var historyLatest = buildFhirCodeSystem("logical-id", "2");
+    historyLatest.setTitle("Updated historical title");
+    historyLatest.setMeta(new Meta().setVersionId("revision-2"));
+    var historyOther = buildFhirCodeSystem("logical-id", "1");
+    var historyNew = buildFhirCodeSystem("logical-id", "new-history-version");
+    stubSearchAndHistory(current, historyLatest, historyOther, historyNew);
+    CodeSystem existingLatest =
+        CodeSystem.builder()
+            .id("existing-latest")
+            .fullUrl("http://example.com/system")
+            .name("Existing")
+            .isLatestVersion(true)
+            .version(CodeSystem.Version.builder().fhirVersion("2").vsacVersion("mapped-2").build())
+            .build();
+    CodeSystem existingOther =
+        existingLatest.toBuilder()
+            .id("existing-other")
+            .isLatestVersion(false)
+            .version(CodeSystem.Version.builder().fhirVersion("1").build())
+            .build();
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion("http://example.com/system", "2"))
+        .thenReturn(Optional.of(existingLatest));
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion("http://example.com/system", "1"))
+        .thenReturn(Optional.of(existingOther));
+    when(codeSystemRepository.findById("existing-latest")).thenReturn(Optional.of(existingLatest));
+    when(codeSystemRepository.findById("existing-other")).thenReturn(Optional.of(existingOther));
+    when(codeSystemRepository.findAllByFullUrl("http://example.com/system"))
+        .thenReturn(List.of(existingLatest, existingOther));
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    CodeSystemSyncService syncWithPersistence =
+        new CodeSystemSyncService(
+            mockContext,
+            fhirTerminologyServiceWebClient,
+            new CodeSystemService(codeSystemRepository),
+            codeSystemRepository);
+    Logger logger = (Logger) LoggerFactory.getLogger(CodeSystemSyncService.class);
+    ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    List<CodeSystem> result;
+
+    // when
+    try {
+      result = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+    } finally {
+      logger.detachAppender(appender);
+      appender.stop();
+    }
+
+    // then
+    assertTrue(existingLatest.isLatestVersion());
+    assertFalse(existingOther.isLatestVersion());
+    assertEquals("Updated historical title", existingLatest.getTitle());
+    assertEquals("revision-2", existingLatest.getVersionId());
+    assertEquals("mapped-2", existingLatest.getVersion().getVsacVersion());
+    CodeSystem newVersion =
+        result.stream()
+            .filter(cs -> "new-history-version".equals(cs.getVersion().getFhirVersion()))
+            .findFirst()
+            .orElseThrow();
+    assertFalse(newVersion.isLatestVersion());
+    verify(codeSystemRepository).save(newVersion);
+    verify(codeSystemRepository, times(3)).save(any(CodeSystem.class));
+    assertTrue(
+        appender.list.stream()
+            .anyMatch(
+                event ->
+                    event.getLevel() == Level.WARN
+                        && event
+                            .getFormattedMessage()
+                            .contains("Current VSAC CodeSystem logical-id")
+                        && event
+                            .getFormattedMessage()
+                            .contains("preserving existing latest flags")));
+  }
+
+  @Test
+  void refreshDemotesExistingLatestForHistoricalUrlWhenCurrentIdentityValid() {
+    // given
+    String oldUrl = "http://example.com/old-system";
+    var current = buildFhirCodeSystem("logical-id", "2");
+    var historical = buildFhirCodeSystem("logical-id", "1");
+    historical.setUrl(oldUrl);
+    stubSearchAndHistory(current, historical);
+    CodeSystem existingOldUrlLatest =
+        CodeSystem.builder()
+            .id("old-url-latest")
+            .fullUrl(oldUrl)
+            .name("Existing")
+            .isLatestVersion(true)
+            .version(CodeSystem.Version.builder().fhirVersion("1").build())
+            .build();
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion("http://example.com/system", "2"))
+        .thenReturn(Optional.empty());
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(oldUrl, "1"))
+        .thenReturn(Optional.of(existingOldUrlLatest));
+    when(codeSystemRepository.findById("old-url-latest"))
+        .thenReturn(Optional.of(existingOldUrlLatest));
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    CodeSystemSyncService syncWithPersistence =
+        new CodeSystemSyncService(
+            mockContext,
+            fhirTerminologyServiceWebClient,
+            new CodeSystemService(codeSystemRepository),
+            codeSystemRepository);
+
+    // when
+    List<CodeSystem> result = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(2, result.size());
+    assertTrue(result.get(0).isLatestVersion());
+    assertFalse(result.get(1).isLatestVersion());
+    assertFalse(existingOldUrlLatest.isLatestVersion());
+    verify(codeSystemRepository).save(existingOldUrlLatest);
+  }
+
+  @ParameterizedTest
   @ValueSource(booleans = {false, true})
   void refreshPersistsHistoryPreservesMappingsAndDemotesPreviousLatest(boolean latestExists) {
     // given
@@ -897,7 +1142,7 @@ class CodeSystemSyncServiceTest {
     CodeSystem existingVersion =
         previousLatest.toBuilder()
             .id("version-1")
-            .isLatestVersion(false)
+            .isLatestVersion(true)
             .version(CodeSystem.Version.builder().fhirVersion("1").vsacVersion("mapped-1").build())
             .build();
     stored.put("0", previousLatest);
@@ -932,10 +1177,7 @@ class CodeSystemSyncServiceTest {
               return saved;
             });
     var version2 = buildFhirCodeSystem("logical-id", "2");
-    version2.setMeta(
-        new Meta()
-            .setVersionId("revision-2")
-            .setLastUpdated(Date.from(Instant.parse("2024-01-01T00:00:00Z"))));
+    version2.setMeta(new Meta().setVersionId("revision-2"));
     var version1 = buildFhirCodeSystem("logical-id", "1");
     version1.setMeta(
         new Meta()
@@ -963,6 +1205,7 @@ class CodeSystemSyncServiceTest {
     assertTrue(stored.get("2").isInVsac());
     assertTrue(stored.get("2").isLatestVersion());
     assertEquals("revision-2", stored.get("2").getVersionId());
+    assertNull(stored.get("2").getLastUpdatedUpstream());
     assertEquals(1, stored.values().stream().filter(CodeSystem::isLatestVersion).count());
     if (latestExists) {
       assertEquals("mapped-2", stored.get("2").getVersion().getVsacVersion());

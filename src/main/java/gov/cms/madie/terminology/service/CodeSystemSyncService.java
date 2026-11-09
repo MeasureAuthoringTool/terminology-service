@@ -23,12 +23,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-
-import static java.util.Comparator.*;
-import static java.util.stream.Collectors.*;
 
 @Service
 @Slf4j
@@ -41,35 +37,41 @@ public class CodeSystemSyncService {
 
   public List<CodeSystem> remoteRetrieveAllCodeSystems(UmlsUser umlsUser) {
     List<CodeSystem> allCodeSystems = new ArrayList<>();
-    // Search discovers logical ids; history supplies all versions, including the latest.
-    retrieveCodeSystemIds(umlsUser)
-        .forEach(id -> retrieveCodeSystemHistory(umlsUser, id, allCodeSystems));
-    List<CodeSystem> codeSystems = latestRevisions(allCodeSystems);
-    markLatestVersion(codeSystems);
-    updateOrInsertRetrievedCodeSystems(codeSystems);
+    Set<String> invalidCurrentIds = new LinkedHashSet<>();
+    // URLs from families whose current entry is invalid keep their existing latest flags.
+    Set<String> preservedLatestUrls = new LinkedHashSet<>();
+    // Search defines current business versions and takes precedence over history duplicates.
+    for (String id : retrieveCurrentCodeSystems(umlsUser, allCodeSystems, invalidCurrentIds)) {
+      List<CodeSystem> history = retrieveCodeSystemHistory(umlsUser, id);
+      if (invalidCurrentIds.contains(id)) {
+        history.forEach(codeSystem -> preservedLatestUrls.add(codeSystem.getFullUrl()));
+      }
+      allCodeSystems.addAll(history);
+    }
+    List<CodeSystem> codeSystems = distinctBusinessVersions(allCodeSystems);
+    codeSystems.stream()
+        .filter(CodeSystem::isLatestVersion)
+        .map(CodeSystem::getFullUrl)
+        .forEach(preservedLatestUrls::remove);
+    updateOrInsertRetrievedCodeSystems(codeSystems, preservedLatestUrls);
     return codeSystems;
   }
 
-  private List<CodeSystem> latestRevisions(List<CodeSystem> allCodeSystems) {
-    Map<CodeSystemVersionKey, CodeSystem> revisions = new LinkedHashMap<>();
+  private List<CodeSystem> distinctBusinessVersions(List<CodeSystem> allCodeSystems) {
+    Map<CodeSystemVersionKey, CodeSystem> versions = new LinkedHashMap<>();
     allCodeSystems.forEach(
         codeSystem ->
-            revisions.merge(
+            versions.putIfAbsent(
                 new CodeSystemVersionKey(
                     codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion()),
-                codeSystem,
-                (existing, incoming) ->
-                    comparing(CodeSystem::getLastUpdatedUpstream, nullsFirst(naturalOrder()))
-                                .compare(existing, incoming)
-                            >= 0
-                        ? existing
-                        : incoming));
-    return new ArrayList<>(revisions.values());
+                codeSystem));
+    return new ArrayList<>(versions.values());
   }
 
   private record CodeSystemVersionKey(String fullUrl, String version) {}
 
-  private Set<String> retrieveCodeSystemIds(UmlsUser umlsUser) {
+  private Set<String> retrieveCurrentCodeSystems(
+      UmlsUser umlsUser, List<CodeSystem> allCodeSystems, Set<String> invalidCurrentIds) {
     Set<String> codeSystemIds = new LinkedHashSet<>();
     PageCursor page = new PageCursor(0, 50);
     do {
@@ -80,6 +82,18 @@ public class CodeSystemSyncService {
           String codeSystemId = codeSystem.getIdElement().getIdPart();
           if (StringUtils.isNotBlank(codeSystemId)) {
             codeSystemIds.add(codeSystemId);
+            CodeSystem currentCodeSystem = toCodeSystem(codeSystem);
+            currentCodeSystem.setLatestVersion(hasValidIdentity(currentCodeSystem));
+            if (!currentCodeSystem.isLatestVersion()) {
+              invalidCurrentIds.add(codeSystemId);
+              log.warn(
+                  "Current VSAC CodeSystem {} has an invalid URL or business version; "
+                      + "skipping this entry, persisting usable history without promoting new "
+                      + "versions, and preserving existing latest flags: {}",
+                  codeSystemId,
+                  currentCodeSystem);
+            }
+            allCodeSystems.add(currentCodeSystem);
           } else {
             log.warn("Skipping history retrieval for CodeSystem with no logical id");
           }
@@ -92,8 +106,8 @@ public class CodeSystemSyncService {
     return codeSystemIds;
   }
 
-  private void retrieveCodeSystemHistory(
-      UmlsUser umlsUser, String codeSystemId, List<CodeSystem> allCodeSystems) {
+  private List<CodeSystem> retrieveCodeSystemHistory(UmlsUser umlsUser, String codeSystemId) {
+    List<CodeSystem> history = new ArrayList<>();
     PageCursor page = new PageCursor(0, 50);
     do {
       log.info(
@@ -107,9 +121,10 @@ public class CodeSystemSyncService {
           .filter(this::isActiveCodeSystemHistoryEntry)
           .map(entry -> (org.hl7.fhir.r4.model.CodeSystem) entry.getResource())
           .map(this::toCodeSystem)
-          .forEach(allCodeSystems::add);
+          .forEach(history::add);
       page = nextPageCursor(historyBundle);
     } while (page != null);
+    return history;
   }
 
   private PageCursor nextPageCursor(Bundle bundle) {
@@ -181,27 +196,6 @@ public class CodeSystemSyncService {
     return parser.parseResource(Bundle.class, responseString);
   }
 
-  private void markLatestVersion(List<CodeSystem> allCodeSystems) {
-    // Group by fullUrl and find the latest version for each group
-    allCodeSystems.stream()
-        .filter(cs -> hasValidIdentity(cs) && Objects.nonNull(cs.getLastUpdatedUpstream()))
-        .collect(
-            groupingBy(
-                CodeSystem::getFullUrl, maxBy(comparing(CodeSystem::getLastUpdatedUpstream))))
-        .values()
-        .forEach(
-            optionalCodeSystem -> {
-              if (optionalCodeSystem.isPresent() && !optionalCodeSystem.get().isLatestVersion()) {
-                CodeSystem latestCodeSystem = optionalCodeSystem.get();
-                latestCodeSystem.setLatestVersion(true);
-                log.info(
-                    "New latest version for CodeSystem with fullUrl: {} and version: {}",
-                    latestCodeSystem.getFullUrl(),
-                    latestCodeSystem.getVersion().getFhirVersion());
-              }
-            });
-  }
-
   private boolean hasValidIdentity(CodeSystem codeSystem) {
     return codeSystem.getVersion() != null
         && StringUtils.isNotBlank(codeSystem.getVersion().getFhirVersion())
@@ -210,7 +204,8 @@ public class CodeSystemSyncService {
         && !Strings.CI.equals(codeSystem.getFullUrl(), "null");
   }
 
-  private void updateOrInsertRetrievedCodeSystems(List<CodeSystem> codeSystemList) {
+  private void updateOrInsertRetrievedCodeSystems(
+      List<CodeSystem> codeSystemList, Set<String> preservedLatestUrls) {
     for (CodeSystem codeSystem : codeSystemList) {
       // Skip any CodeSystem that is missing a FHIR version or fullUrl.
       if (codeSystem.getVersion() == null
@@ -232,8 +227,13 @@ public class CodeSystemSyncService {
           codeSystemService.createCodeSystem(codeSystem);
           log.info("New CodeSystem inserted: {}", codeSystem);
         } else {
-          codeSystemService.updateCodeSystem(existingCodeSystemOptional.get().getId(), codeSystem);
-          log.info("CodeSystem updated: {}", existingCodeSystemOptional.get());
+          if (preservedLatestUrls.contains(codeSystem.getFullUrl())) {
+            codeSystem.setLatestVersion(existingCodeSystemOptional.get().isLatestVersion());
+          }
+          CodeSystem updated =
+              codeSystemService.updateCodeSystem(
+                  existingCodeSystemOptional.get().getId(), codeSystem);
+          log.info("CodeSystem updated: {}", updated);
         }
       } catch (DataAccessException e) {
         log.error(
