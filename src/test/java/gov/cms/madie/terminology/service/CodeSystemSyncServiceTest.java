@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessException;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -371,6 +370,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsPagesThroughSearchAndFetchesHistoryPerId() {
+    // given
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // build first bundle with one CodeSystem and a next link containing _offset and _count
@@ -431,8 +431,11 @@ class CodeSystemSyncServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+
+    // when
     var result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
     assertEquals(2, result.size());
     verify(fhirTerminologyServiceWebClient).getCodeSystemsPage(50, 50, TEST_API_KEY);
     verify(fhirTerminologyServiceWebClient)
@@ -443,6 +446,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsHandlesDataAccessException() {
+    // given
     UmlsUser umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     // Mock repository to throw DataAccessException when save is called
     doThrow(new DataAccessException("Simulated DB error") {})
@@ -456,15 +460,17 @@ class CodeSystemSyncServiceTest {
             anyString(), anyInt(), anyInt(), anyString()))
         .thenReturn(
             "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
-    // Call the method under test
+    // when
     List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
-    // Assert that the result is not empty and the error branch was triggered
+
+    // then
     assertFalse(result.isEmpty());
     assertEquals("LOINC", result.get(0).getName());
   }
 
   @Test
   void retrieveAllCodeSystemsOffsetNullFromNextLinkThrows() {
+    // given
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Build a bundle with a next link containing only _count
@@ -516,13 +522,20 @@ class CodeSystemSyncServiceTest {
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
-    assertThrows(
-        IllegalStateException.class,
-        () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+    // when
+    IllegalStateException error =
+        assertThrows(
+            IllegalStateException.class,
+            () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+
+    // then
+    assertTrue(error.getMessage().contains("missing _offset or _count"));
+    verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
   @Test
   void testRemoteRetrieveAllCodeSystemsCountNullFromNextLinkThrows() {
+    // given
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     // Build a bundle with a next link containing only _offset
@@ -574,9 +587,15 @@ class CodeSystemSyncServiceTest {
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
-    assertThrows(
-        IllegalStateException.class,
-        () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+    // when
+    IllegalStateException error =
+        assertThrows(
+            IllegalStateException.class,
+            () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+
+    // then
+    assertTrue(error.getMessage().contains("missing _offset or _count"));
+    verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
   private Bundle createMockCodeSystemsResource() {
@@ -645,6 +664,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsUsesLogicalIdAndSkipsDeletedHistoryEntries() {
+    // given
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     String currentBundle =
         """
@@ -720,21 +740,22 @@ class CodeSystemSyncServiceTest {
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.empty());
 
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
     assertEquals(
         List.of("2", "1"), result.stream().map(cs -> cs.getVersion().getFhirVersion()).toList());
     verify(fhirTerminologyServiceWebClient)
         .getCodeSystemHistoryPage("logical-id", 0, 50, TEST_API_KEY);
     verify(fhirTerminologyServiceWebClient, never())
         .getCodeSystemHistoryPage(eq("DifferentFriendlyName"), anyInt(), anyInt(), anyString());
-    verify(codeSystemService, times(2))
-        .createCodeSystem(any(gov.cms.madie.terminology.models.CodeSystem.class));
+    verify(codeSystemService, times(2)).createCodeSystem(any(CodeSystem.class));
   }
 
   @Test
   void retrieveAllCodeSystemsPagesThroughCodeSystemHistory() {
+    // given
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     IParser parser = FhirContext.forR4().newJsonParser();
     org.hl7.fhir.r4.model.CodeSystem current = buildFhirCodeSystem("logical-id", "3");
@@ -765,9 +786,10 @@ class CodeSystemSyncServiceTest {
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.empty());
 
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
     assertEquals(
         List.of("3", "2", "1"),
         result.stream().map(cs -> cs.getVersion().getFhirVersion()).toList());
@@ -777,6 +799,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsDeduplicatesIdsAndSkipsInvalidSearchEntries() {
+    // given
     IParser parser = FhirContext.forR4().newJsonParser();
     when(mockContext.newJsonParser()).thenReturn(parser);
     Bundle search = new Bundle().setType(Bundle.BundleType.SEARCHSET);
@@ -791,8 +814,11 @@ class CodeSystemSyncServiceTest {
             "logical-id", 0, 50, TEST_API_KEY))
         .thenReturn("{\"resourceType\":\"Bundle\",\"type\":\"history\"}");
 
-    assertTrue(codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).isEmpty());
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
+    assertTrue(result.isEmpty());
     verify(fhirTerminologyServiceWebClient)
         .getCodeSystemHistoryPage("logical-id", 0, 50, TEST_API_KEY);
     verifyNoInteractions(codeSystemRepository, codeSystemService);
@@ -800,6 +826,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsKeepsNewestRevisionOfEachCanonicalVersion() {
+    // given
     var newestRevision = buildFhirCodeSystem("logical-id", "2");
     newestRevision.setMeta(
         new Meta()
@@ -815,8 +842,10 @@ class CodeSystemSyncServiceTest {
     version1.setMeta(new Meta().setLastUpdated(Date.from(Instant.parse("2019-01-01T00:00:00Z"))));
     stubSearchAndHistory(undatedRevision, newestRevision, version1, olderRevision);
 
+    // when
     List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
     assertEquals(
         List.of("2", "1"), result.stream().map(cs -> cs.getVersion().getFhirVersion()).toList());
     assertEquals("new", result.get(0).getVersionId());
@@ -833,14 +862,17 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsDoesNotLetInvalidVersionSuppressLatest() {
+    // given
     var valid = buildFhirCodeSystem("logical-id", "2");
     valid.setMeta(new Meta().setLastUpdated(Date.from(Instant.parse("2020-01-01T00:00:00Z"))));
     var invalid = buildFhirCodeSystem("logical-id", "null");
     invalid.setMeta(new Meta().setLastUpdated(Date.from(Instant.parse("2024-01-01T00:00:00Z"))));
     stubSearchAndHistory(valid, invalid);
 
+    // when
     List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
     assertTrue(result.get(0).isLatestVersion());
     assertFalse(result.get(1).isLatestVersion());
     verify(codeSystemService).createCodeSystem(result.get(0));
@@ -850,6 +882,7 @@ class CodeSystemSyncServiceTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
   void refreshPersistsHistoryPreservesMappingsAndDemotesPreviousLatest(boolean latestExists) {
+    // given
     String url = "http://example.com/system";
     Map<String, CodeSystem> stored = new LinkedHashMap<>();
     CodeSystem previousLatest =
@@ -916,8 +949,10 @@ class CodeSystemSyncServiceTest {
             new CodeSystemService(codeSystemRepository),
             codeSystemRepository);
 
+    // when
     List<CodeSystem> result = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
     assertEquals(2, result.size());
     assertEquals(3, stored.size());
     assertFalse(previousLatest.isLatestVersion());
@@ -937,6 +972,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void retrieveAllCodeSystemsIteratesThroughThousandsOfSearchAndHistoryPages() {
+    // given
     int pages = 2000;
     IParser parser = mock(IParser.class);
     when(mockContext.newJsonParser()).thenReturn(parser);
@@ -960,8 +996,10 @@ class CodeSystemSyncServiceTest {
               return page;
             });
 
+    // when
     List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
+    // then
     assertEquals(1, result.size());
     verify(fhirTerminologyServiceWebClient, times(pages))
         .getCodeSystemsPage(anyInt(), anyInt(), eq(TEST_API_KEY));
@@ -976,6 +1014,7 @@ class CodeSystemSyncServiceTest {
   @ParameterizedTest
   @ValueSource(strings = {"_count=50", "_offset=50"})
   void retrieveAllCodeSystemsRejectsIncompleteHistoryNextLink(String query) {
+    // given
     IParser parser = FhirContext.forR4().newJsonParser();
     when(mockContext.newJsonParser()).thenReturn(parser);
     Bundle search = new Bundle();
@@ -989,17 +1028,20 @@ class CodeSystemSyncServiceTest {
             "logical-id", 0, 50, TEST_API_KEY))
         .thenReturn(parser.encodeResourceToString(history));
 
+    // when
     IllegalStateException error =
         assertThrows(
             IllegalStateException.class,
             () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
 
+    // then
     assertTrue(error.getMessage().contains("missing _offset or _count"));
     verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
   @Test
   void retrieveAllCodeSystemsDoesNotPersistPartialHistoryWhenRemoteRequestFails() {
+    // given
     IParser parser = FhirContext.forR4().newJsonParser();
     when(mockContext.newJsonParser()).thenReturn(parser);
     Bundle search = new Bundle();
@@ -1020,11 +1062,14 @@ class CodeSystemSyncServiceTest {
             "logical-id", 50, 50, TEST_API_KEY))
         .thenThrow(failure);
 
-    assertSame(
-        failure,
+    // when
+    IllegalStateException error =
         assertThrows(
             IllegalStateException.class,
-            () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser)));
+            () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+
+    // then
+    assertSame(failure, error);
     verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
@@ -1045,25 +1090,37 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
-  void parseOidFromIdentifierReturnsCustomOidForHCPCS() throws Exception {
-    Identifier id = new Identifier();
-    id.setValue("urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285");
-    Method method =
-        CodeSystemSyncService.class.getDeclaredMethod("parseOidFromIdentifier", List.class);
-    method.setAccessible(true);
-    String result = (String) method.invoke(codeSystemSyncService, List.of(id));
-    assertEquals("urn:oid:2.16.840.1.113883.6.285", result);
+  void retrieveAllCodeSystemsReturnsCustomOidForHCPCS() {
+    // given
+    var codeSystem = buildFhirCodeSystem("logical-id", "1");
+    codeSystem.setIdentifier(
+        List.of(
+            new Identifier().setValue("urn:oid:2.16.840.1.113883.6.14,2.16.840.1.113883.6.285")));
+    stubSearchAndHistory(codeSystem);
+
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(1, result.size());
+    assertEquals("urn:oid:2.16.840.1.113883.6.285", result.get(0).getOid());
+    verify(codeSystemService).createCodeSystem(result.get(0));
   }
 
   @Test
-  void parseOidFromIdentifierReturnsEmptyStringWhenValueEmpty() throws Exception {
-    Identifier id = new Identifier();
-    id.setValue("");
-    Method method =
-        CodeSystemSyncService.class.getDeclaredMethod("parseOidFromIdentifier", List.class);
-    method.setAccessible(true);
-    String result = (String) method.invoke(codeSystemSyncService, List.of(id));
-    assertEquals("", result);
+  void retrieveAllCodeSystemsReturnsEmptyOidWhenIdentifierValueEmpty() {
+    // given
+    var codeSystem = buildFhirCodeSystem("logical-id", "1");
+    codeSystem.setIdentifier(List.of(new Identifier().setValue("")));
+    stubSearchAndHistory(codeSystem);
+
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(1, result.size());
+    assertEquals("", result.get(0).getOid());
+    verify(codeSystemService).createCodeSystem(result.get(0));
   }
 
   private org.hl7.fhir.r4.model.CodeSystem buildFhirCodeSystem(String id, String version) {

@@ -76,13 +76,17 @@ class AdminControllerMvcTest {
 
   @Test
   void removedSynchronousRefreshEndpointIsNotAvailable() throws Exception {
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
-                .with(user(TEST_USR).roles("MADIE-ADMIN"))
-                .with(csrf()))
-        .andExpect(status().isNotFound());
+    // given
+    var request =
+        MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
+            .with(user(TEST_USR).roles("MADIE-ADMIN"))
+            .with(csrf());
 
+    // when
+    var result = mockMvc.perform(request);
+
+    // then
+    result.andExpect(status().isNotFound());
     verifyNoInteractions(codeSystemService, updateCodeSystemTask, adminAuditService);
   }
 

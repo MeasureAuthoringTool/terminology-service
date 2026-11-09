@@ -11,10 +11,14 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TerminologyServiceUtilTest {
   @Test
   void buildRetrieveCodeSystemsHistoryUriUsesLogicalId() {
-    URI uri =
-        TerminologyServiceUtil.buildRetrieveCodeSystemsHistoryUri(
-            "/CodeSystem", "logical-id", 0, 50);
+    // given
+    String baseUrl = "/CodeSystem";
+    String logicalId = "logical-id";
 
+    // when
+    URI uri = TerminologyServiceUtil.buildRetrieveCodeSystemsHistoryUri(baseUrl, logicalId, 0, 50);
+
+    // then
     assertEquals("/CodeSystem/logical-id/_history?_offset=0&_count=50", uri.toString());
   }
 
