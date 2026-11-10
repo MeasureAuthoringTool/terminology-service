@@ -1083,6 +1083,113 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
+  void refreshKeepsFirstHistoryLatestWhenCurrentIdentityInvalidAndMultipleLatestExist() {
+    // given
+    String url = "http://example.com/system";
+    var current = buildFhirCodeSystem("logical-id", null);
+    stubSearchAndHistory(
+        current, buildFhirCodeSystem("logical-id", "2"), buildFhirCodeSystem("logical-id", "1"));
+    Map<String, CodeSystem> stored = new LinkedHashMap<>();
+    stored.put("0", storedCodeSystem(url, "0", true, Instant.parse("2026-11-01T00:00:00Z")));
+    stored.put("1", storedCodeSystem(url, "1", true, Instant.parse("2026-10-01T00:00:00Z")));
+    stored.put("2", storedCodeSystem(url, "2", true, Instant.parse("2026-09-01T00:00:00Z")));
+    stored.put("3", storedCodeSystem(url, "3", false, null));
+    CodeSystemSyncService syncWithPersistence = syncWithStoredCodeSystems(url, stored);
+
+    // when
+    syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(
+        List.of("2"),
+        stored.values().stream()
+            .filter(CodeSystem::isLatestVersion)
+            .map(cs -> cs.getVersion().getFhirVersion())
+            .toList());
+  }
+
+  @Test
+  void refreshKeepsMostRecentlyUpdatedLatestWhenCurrentIdentityInvalidAndNoLatestInHistory() {
+    // given
+    String url = "http://example.com/system";
+    var current = buildFhirCodeSystem("logical-id", null);
+    stubSearchAndHistory(current, buildFhirCodeSystem("logical-id", "3"));
+    Map<String, CodeSystem> stored = new LinkedHashMap<>();
+    stored.put("0", storedCodeSystem(url, "0", true, null));
+    stored.put("1", storedCodeSystem(url, "1", true, Instant.parse("2026-11-01T00:00:00Z")));
+    stored.put("2", storedCodeSystem(url, "2", true, Instant.parse("2026-10-01T00:00:00Z")));
+    stored.put("3", storedCodeSystem(url, "3", false, null));
+    CodeSystemSyncService syncWithPersistence = syncWithStoredCodeSystems(url, stored);
+    Logger logger = (Logger) LoggerFactory.getLogger(CodeSystemSyncService.class);
+    ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+
+    // when
+    try {
+      syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+    } finally {
+      logger.detachAppender(appender);
+      appender.stop();
+    }
+
+    // then
+    assertEquals(
+        List.of("1"),
+        stored.values().stream()
+            .filter(CodeSystem::isLatestVersion)
+            .map(cs -> cs.getVersion().getFhirVersion())
+            .toList());
+    assertTrue(
+        appender.list.stream()
+            .anyMatch(
+                event ->
+                    event.getLevel() == Level.WARN
+                        && event
+                            .getFormattedMessage()
+                            .contains("Multiple latest CodeSystem versions found for url")
+                        && event.getFormattedMessage().contains("kept version: 1")));
+  }
+
+  private CodeSystem storedCodeSystem(
+      String url, String version, boolean latest, Instant lastUpdated) {
+    return CodeSystem.builder()
+        .id("version-" + version)
+        .fullUrl(url)
+        .name("Existing")
+        .isLatestVersion(latest)
+        .lastUpdated(lastUpdated)
+        .version(CodeSystem.Version.builder().fhirVersion(version).build())
+        .build();
+  }
+
+  private CodeSystemSyncService syncWithStoredCodeSystems(
+      String url, Map<String, CodeSystem> stored) {
+    when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(eq(url), anyString()))
+        .thenAnswer(invocation -> Optional.ofNullable(stored.get(invocation.getArgument(1))));
+    when(codeSystemRepository.findById(anyString()))
+        .thenAnswer(
+            invocation ->
+                stored.values().stream()
+                    .filter(cs -> cs.getId().equals(invocation.getArgument(0)))
+                    .findFirst());
+    when(codeSystemRepository.findAllByFullUrl(url))
+        .thenAnswer(invocation -> new ArrayList<>(stored.values()));
+    when(codeSystemRepository.save(any(CodeSystem.class)))
+        .thenAnswer(
+            invocation -> {
+              CodeSystem saved = invocation.getArgument(0);
+              stored.put(saved.getVersion().getFhirVersion(), saved);
+              return saved;
+            });
+    return new CodeSystemSyncService(
+        mockContext,
+        fhirTerminologyServiceWebClient,
+        new CodeSystemService(codeSystemRepository),
+        codeSystemRepository);
+  }
+
+  @Test
   void refreshDemotesExistingLatestForHistoricalUrlWhenCurrentIdentityValid() {
     // given
     String oldUrl = "http://example.com/old-system";

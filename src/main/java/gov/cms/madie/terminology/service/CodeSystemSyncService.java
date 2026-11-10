@@ -23,8 +23,14 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+
+import static java.util.Comparator.comparing;
+import static java.util.Comparator.comparingInt;
+import static java.util.Comparator.naturalOrder;
+import static java.util.Comparator.nullsFirst;
 
 @Service
 @Slf4j
@@ -54,6 +60,7 @@ public class CodeSystemSyncService {
         .map(CodeSystem::getFullUrl)
         .forEach(preservedLatestUrls::remove);
     updateOrInsertRetrievedCodeSystems(codeSystems, preservedLatestUrls);
+    preservedLatestUrls.forEach(url -> keepSingleLatestVersion(url, codeSystems));
     return codeSystems;
   }
 
@@ -69,6 +76,56 @@ public class CodeSystemSyncService {
   }
 
   private record CodeSystemVersionKey(String fullUrl, String version) {}
+
+  /**
+   * Resolves multiple latest records for a URL whose current VSAC entry was invalid. Keeps the
+   * latest record listed first in VSAC history, or the most recently updated when none are listed.
+   */
+  private void keepSingleLatestVersion(String url, List<CodeSystem> retrievedCodeSystems) {
+    try {
+      List<CodeSystem> latestVersions =
+          codeSystemRepository.findAllByFullUrl(url).stream()
+              .filter(CodeSystem::isLatestVersion)
+              .toList();
+      if (latestVersions.size() < 2) {
+        return;
+      }
+      List<String> historyVersions =
+          retrievedCodeSystems.stream()
+              .filter(codeSystem -> url.equals(codeSystem.getFullUrl()))
+              .map(CodeSystemSyncService::fhirVersion)
+              .toList();
+      CodeSystem keep =
+          latestVersions.stream()
+              .filter(codeSystem -> historyVersions.contains(fhirVersion(codeSystem)))
+              .min(comparingInt(codeSystem -> historyVersions.indexOf(fhirVersion(codeSystem))))
+              .orElseGet(
+                  () ->
+                      latestVersions.stream()
+                          .max(comparing(CodeSystem::getLastUpdated, nullsFirst(naturalOrder())))
+                          .orElseThrow());
+      List<CodeSystem> demoted =
+          latestVersions.stream()
+              .filter(codeSystem -> !Objects.equals(codeSystem.getId(), keep.getId()))
+              .toList();
+      demoted.forEach(codeSystem -> codeSystem.setLatestVersion(false));
+      codeSystemRepository.saveAll(demoted);
+      log.warn(
+          "Multiple latest CodeSystem versions found for url: {}; kept version: {} and demoted: {}",
+          url,
+          fhirVersion(keep),
+          demoted.stream().map(CodeSystemSyncService::fhirVersion).toList());
+    } catch (DataAccessException e) {
+      log.error(
+          "Database error while resolving latest CodeSystem version for url {}: {}",
+          url,
+          e.getMessage());
+    }
+  }
+
+  private static String fhirVersion(CodeSystem codeSystem) {
+    return codeSystem.getVersion() == null ? null : codeSystem.getVersion().getFhirVersion();
+  }
 
   private Set<String> retrieveCurrentCodeSystems(
       UmlsUser umlsUser, List<CodeSystem> allCodeSystems, Set<String> invalidCurrentIds) {
