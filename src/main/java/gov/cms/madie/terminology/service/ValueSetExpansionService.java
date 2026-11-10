@@ -23,6 +23,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -36,8 +38,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ValueSetExpansionService {
 
-  private static final String VSAC_BULK_EXPAND_URL =
-      "https://cts.nlm.nih.gov/fhir/ValueSet/$expand?url=";
+  private static final String VSAC_URL_PREFIX = "http://cts.nlm.nih.gov/fhir/";
 
   private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;
@@ -87,9 +88,7 @@ public class ValueSetExpansionService {
         version);
 
     Instant now = Instant.now();
-    expandValueSets(madieValueSets);
-    List<MadieValueSet> expandedValueSets =
-        madieValueSets.stream().filter(vs -> vs.getValueSet() != null).toList();
+    List<MadieValueSet> expandedValueSets = expandValueSets(madieValueSets);
 
     log.info(
         "{} Value Set expansions retrieved for IG {}, version {}.",
@@ -112,9 +111,7 @@ public class ValueSetExpansionService {
     log.info("Found {} Value Set dependencies.", madieValueSets.size());
 
     Instant now = Instant.now();
-    expandValueSets(madieValueSets);
-    List<MadieValueSet> expandedValueSets =
-        madieValueSets.stream().filter(vs -> vs.getValueSet() != null).toList();
+    List<MadieValueSet> expandedValueSets = expandValueSets(madieValueSets);
 
     log.info("{} Value Set expansions retrieved.", expandedValueSets.size());
 
@@ -168,15 +165,24 @@ public class ValueSetExpansionService {
     return page.map(this::convertToDisplayDto);
   }
 
-  private void expandValueSets(List<MadieValueSet> madieValueSets) {
+  /** Returns only fresh TX.FHIR expansions without mutating shared IG dependencies. */
+  private List<MadieValueSet> expandValueSets(List<MadieValueSet> madieValueSets) {
+    List<MadieValueSet> expandedValueSets = new ArrayList<>();
     int failedExpansions = 0;
     log.debug("Expanding {} value sets.", madieValueSets.size());
     for (MadieValueSet madieValueSet : madieValueSets) {
+      if (madieValueSet.getUrl().startsWith(VSAC_URL_PREFIX)
+          && shouldSkipVsacValueSet(madieValueSet)) {
+        continue;
+      }
       try {
-        ValueSet valueSet = expandValueSet(madieValueSet);
+        ValueSet valueSet = fetchExpansionFromTxFhir(madieValueSet).orElse(null);
         if (valueSet != null) {
-          madieValueSet.setValueSet(fhirContext.newJsonParser().encodeResourceToString(valueSet));
-          madieValueSet.setLastUpdated(Instant.now());
+          expandedValueSets.add(
+              madieValueSet.toBuilder()
+                  .valueSet(fhirContext.newJsonParser().encodeResourceToString(valueSet))
+                  .lastUpdated(Instant.now())
+                  .build());
         } else {
           log.warn(
               "Failed to expand ValueSet {} version {}.",
@@ -191,11 +197,51 @@ public class ValueSetExpansionService {
     if (failedExpansions > 0) {
       log.warn("{} expansions could not be retrieved", failedExpansions);
     }
+    return expandedValueSets;
   }
 
-  private ValueSet expandValueSet(MadieValueSet madieValueSet) {
-    Optional<ValueSet> expansion = fetchExpansionFromTxFhir(madieValueSet);
-    return expansion.orElseGet(() -> fetchExpansionFromVsac(madieValueSet).orElse(null));
+  /** Skips VSAC-owned definitions and any value set whose existence cannot be confirmed. */
+  private boolean shouldSkipVsacValueSet(MadieValueSet madieValueSet) {
+    UriComponentsBuilder search =
+        UriComponentsBuilder.fromPath("/ValueSet")
+            .queryParam("url", "{url}")
+            .queryParam("_summary", "count");
+    Map<String, String> parameters = new HashMap<>();
+    parameters.put("url", madieValueSet.getUrl());
+    if (StringUtils.isNotBlank(madieValueSet.getVersion())) {
+      search.queryParam("version", "{version}");
+      parameters.put("version", madieValueSet.getVersion());
+    }
+    try {
+      String response =
+          fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+              search.encode().buildAndExpand(parameters).toUriString(),
+              systemVsacApiKey,
+              "ValueSet");
+      if (StringUtils.isBlank(response)) {
+        throw new DataFormatException("VSAC existence search returned an empty response.");
+      }
+      Bundle bundle = fhirContext.newJsonParser().parseResource(Bundle.class, response);
+      if (bundle.getType() != Bundle.BundleType.SEARCHSET
+          || !bundle.hasTotal()
+          || bundle.getTotal() < 0) {
+        throw new DataFormatException("VSAC existence search did not return a valid search total.");
+      }
+      if (bundle.getTotal() == 0) {
+        return false;
+      }
+      log.info(
+          "Skipping ValueSet {} version {} because it exists in VSAC.",
+          madieValueSet.getUrl(),
+          madieValueSet.getVersion());
+    } catch (WebClientException | DataFormatException e) {
+      log.warn(
+          "Skipping ValueSet {} version {}: unable to confirm VSAC existence.",
+          madieValueSet.getUrl(),
+          madieValueSet.getVersion(),
+          e);
+    }
+    return true;
   }
 
   private Optional<ValueSet> fetchExpansionFromTxFhir(MadieValueSet madieValueSet) {
@@ -209,43 +255,12 @@ public class ValueSetExpansionService {
               madieValueSet.getUrl(), madieValueSet.getVersion());
       return parseExpansionResponse(txFhirResult);
     } catch (ResourceNotFoundException e) {
-      // no-op. If not found in TxFHIR, fallback to VSAC.
       log.debug(
           "Value Set not found in TxFHIR, ValueSet {} version {}",
           madieValueSet.getUrl(),
           madieValueSet.getVersion());
     }
     return Optional.empty();
-  }
-
-  private Optional<ValueSet> fetchExpansionFromVsac(MadieValueSet madieValueSet) {
-    return fetchExpansionFromVsac(madieValueSet.getUrl(), madieValueSet.getVersion(), 0);
-  }
-
-  private Optional<ValueSet> fetchExpansionFromVsac(String url, String version, int offset) {
-    log.debug(
-        "Attempting to expand ValueSet {} version {} using VSAC FHIR Terminology Service.",
-        url,
-        version);
-
-    String urlWithVersion =
-        StringUtils.isNotBlank(version) ? url + "&valueSetVersion=" + version : url;
-    String urlWithOffset = offset > 0 ? urlWithVersion + "&offset=" + offset : urlWithVersion;
-    String expandUrl = VSAC_BULK_EXPAND_URL + urlWithOffset;
-
-    String vsacResponse = "";
-    try {
-      vsacResponse =
-          fhirTerminologyServiceWebClient.fetchBatchResourcesFromVsac(
-              List.of(expandUrl), systemVsacApiKey, "ValueSet");
-    } catch (VsacBatchValueSetExpansionException e) {
-      log.warn(
-          "Unable to retrieve expansion from VSAC for Value Set {} version {}: ", url, version, e);
-    }
-
-    return StringUtils.isNotBlank(vsacResponse)
-        ? parseVsacExpansionResponse(vsacResponse)
-        : Optional.empty();
   }
 
   public MadieValueSet upsertValueSet(MadieValueSet valueSet) {
@@ -380,29 +395,6 @@ public class ValueSetExpansionService {
       }
     }
     return Optional.empty();
-  }
-
-  private Optional<ValueSet> parseVsacExpansionResponse(String rawResponse) {
-    if (StringUtils.isBlank(rawResponse)) {
-      return Optional.empty();
-    }
-    Bundle bundle = fhirContext.newJsonParser().parseResource(Bundle.class, rawResponse);
-    ValueSet valueSet = (ValueSet) bundle.getEntry().get(0).getResource();
-
-    if (valueSet != null && valueSet.getExpansion().getTotal() > 1000) {
-      fetchRemainingPages(valueSet);
-    }
-    return Optional.ofNullable(valueSet);
-  }
-
-  private void fetchRemainingPages(ValueSet valueSet) {
-    int offset = valueSet.getExpansion().getOffset();
-    while (offset < valueSet.getExpansion().getTotal()) {
-      fetchExpansionFromVsac(valueSet.getUrl(), valueSet.getVersion(), offset += 1000)
-          .ifPresent(
-              page ->
-                  valueSet.getExpansion().getContains().addAll(page.getExpansion().getContains()));
-    }
   }
 
   public MadieValueSet getValueSet(String url, String version) {
