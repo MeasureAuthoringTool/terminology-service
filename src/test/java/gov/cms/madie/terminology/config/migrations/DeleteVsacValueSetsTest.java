@@ -75,6 +75,60 @@ class DeleteVsacValueSetsTest {
   }
 
   @Test
+  void applySkipsBlankUrlsAndContinuesProcessing() {
+    MadieValueSet blankUrlValueSet =
+        MadieValueSet.builder().id("blank-url").url(" ").valueSet("value-set-blank").build();
+    MadieValueSet inVsacValueSet =
+        MadieValueSet.builder()
+            .id("vsac-2")
+            .url("http://cts.nlm.nih.gov/fhir/ValueSet/999")
+            .valueSet("value-set-999")
+            .build();
+
+    when(environment.getProperty("code-system-refresh-task.terminology-key"))
+        .thenReturn("test-api-key");
+    when(valueSetExpansionRepository.findByUrlStartingWith("http://cts.nlm.nih.gov/fhir/"))
+        .thenReturn(List.of(blankUrlValueSet, inVsacValueSet));
+    when(fhirTerminologyServiceWebClient.searchValueSets(eq("test-api-key"), anyMap()))
+        .thenReturn(bundleJsonFor("http://cts.nlm.nih.gov/fhir/ValueSet/999"));
+
+    migration.apply(
+        valueSetExpansionRepository, fhirTerminologyServiceWebClient, fhirContext, environment);
+
+    verify(valueSetExpansionRepository, times(1)).delete(inVsacValueSet);
+    verify(valueSetExpansionRepository, never()).delete(blankUrlValueSet);
+  }
+
+  @Test
+  void applyDoesNotDeleteWhenVsacVerificationThrows() {
+    MadieValueSet failingValueSet =
+        MadieValueSet.builder()
+            .id("fails-check")
+            .url("http://cts.nlm.nih.gov/fhir/ValueSet/777")
+            .valueSet("value-set-777")
+            .build();
+
+    when(environment.getProperty("code-system-refresh-task.terminology-key"))
+        .thenReturn("test-api-key");
+    when(valueSetExpansionRepository.findByUrlStartingWith("http://cts.nlm.nih.gov/fhir/"))
+        .thenReturn(List.of(failingValueSet));
+    when(fhirTerminologyServiceWebClient.searchValueSets(eq("test-api-key"), anyMap()))
+        .thenThrow(new RuntimeException("VSAC unavailable"));
+
+    migration.apply(
+        valueSetExpansionRepository, fhirTerminologyServiceWebClient, fhirContext, environment);
+
+    verify(valueSetExpansionRepository, never()).delete(failingValueSet);
+  }
+
+  @Test
+  void rollbackDoesNothingWhenNoDeletedValueSetsExist() {
+    migration.rollback(valueSetExpansionRepository);
+
+    verify(valueSetExpansionRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyList());
+  }
+
+  @Test
   void rollbackRestoresDeletedRecords() {
     MadieValueSet deleted =
         MadieValueSet.builder()
