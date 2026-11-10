@@ -255,13 +255,13 @@ class VsacFhirTerminologyControllerTest {
             .map(bundleEntryComponent -> (ValueSet) bundleEntryComponent.getResource())
             .toList();
     when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(fhirTerminologyService.getValueSetsExpansion(
+    when(fhirTerminologyService.getValueSets(
             any(ValueSetsSearchCriteria.class), any(UmlsUser.class)))
         .thenReturn(valueSet);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
     ResponseEntity<String> response =
-        vsacFhirTerminologyController.getFhirValueSetsExpansions(
+        vsacFhirTerminologyController.getFhirValueSets(
             principal, ValueSetsSearchCriteria.builder().build());
     assertThat(response.getStatusCode(), is(equalTo(HttpStatus.OK)));
     assertThat(response.getBody().contains("\"resourceType\":\"ValueSet\""), is(true));

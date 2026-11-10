@@ -59,9 +59,15 @@ class FhirTerminologyServiceWebClientTest {
             .includeDraft(null)
             .activeOnly("false")
             .valueSetParams(
-                List.of(ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build()))
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id")
+                        .build()))
             .build();
-    testValueSetParams = ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build();
+    testValueSetParams =
+        ValueSetsSearchCriteria.ValueSetParams.builder()
+            .url("http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id")
+            .build();
     String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
     String searchValueSetEndpoint =
         String.format("http://localhost:%s/fhir/ValueSet", mockBackEnd.getPort());
@@ -130,13 +136,15 @@ class FhirTerminologyServiceWebClientTest {
             .addHeader("Content-Type", "application/fhir+json"));
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
+        fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+            MOCK_API_KEY, searchCriteria);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertThat(
         recordedRequest.getBody().readUtf8(),
-        containsString("/ValueSet/test-vs-id/$expand?activeOnly=false"));
+        containsString(
+            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id&activeOnly=false"));
   }
 
   @Test
@@ -150,13 +158,15 @@ class FhirTerminologyServiceWebClientTest {
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     searchCriteria.setIncludeDraft("true");
     String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
+        fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+            MOCK_API_KEY, searchCriteria);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertThat(
         recordedRequest.getBody().readUtf8(),
-        containsString("ValueSet/test-vs-id/$expand?activeOnly=false&includeDraft=true"));
+        containsString(
+            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id&includeDraft=true&activeOnly=false"));
   }
 
   @Test
@@ -174,74 +184,41 @@ class FhirTerminologyServiceWebClientTest {
             .fullUrl("https://cts.nlm.nih.gov/fhir/Library/test-manifest-456")
             .build());
     String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
+        fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+            MOCK_API_KEY, searchCriteria);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertThat(
         recordedRequest.getBody().readUtf8(),
         containsString(
-            "/ValueSet/test-vs-id/$expand?manifest=https://cts.nlm.nih.gov/fhir/Library/test-manifest-456"));
-  }
-
-  @Test
-  void getValueSetResourceSuccessfullyWhenValueSetVersionIsProvided()
-      throws IOException, InterruptedException {
-    mockBackEnd.shutdown();
-    mockBackEnd = new MockWebServer();
-    mockBackEnd.start();
-    String baseUrl = String.format("http://localhost:%s", mockBackEnd.getPort());
-    String searchValueSetEndpoint =
-        String.format("http://localhost:%s/fhir/ValueSet", mockBackEnd.getPort());
-    fhirTerminologyServiceWebClient =
-        new FhirTerminologyServiceWebClient(
-            baseUrl,
-            MOCK_MANIFEST_URN,
-            MOCK_CODE_SYSTEM_URN,
-            MOCK_CODE_LOOKUP,
-            DEFAULT_PROFILE,
-            searchValueSetEndpoint,
-            fhirContext);
-    mockBackEnd.enqueue(
-        new MockResponse()
-            .setResponseCode(200)
-            .setBody(MOCK_RESPONSE_STRING)
-            .addHeader("Content-Type", "application/fhir+json"));
-    testValueSetParams.setVersion("test-value-set-version-2024");
-    searchCriteria.setValueSetParams(List.of(testValueSetParams));
-    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-    String actualResponse =
-        fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria);
-    assertNotNull(actualResponse);
-    assertEquals(MOCK_RESPONSE_STRING, actualResponse);
-    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
-    assertThat(
-        recordedRequest.getBody().readUtf8(),
-        containsString("ValueSet/test-vs-id/$expand?valueSetVersion=test-value-set-version-2024"));
+            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id&activeOnly=false"
+                + "&manifest=https://cts.nlm.nih.gov/fhir/Library/test-manifest-456"));
   }
 
   @Test
   void getValueSetResourceReturnsException() throws InterruptedException {
-    testValueSetParams.setVersion("");
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     assertThrows(
         VsacBatchValueSetExpansionException.class,
-        () -> fhirTerminologyServiceWebClient.getValueSetResources(MOCK_API_KEY, searchCriteria));
+        () ->
+            fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+                MOCK_API_KEY, searchCriteria));
     RecordedRequest recordedRequest = mockBackEnd.takeRequest();
     assertThat(
         recordedRequest.getBody().readUtf8(),
-        containsString("/ValueSet/test-vs-id/$expand?activeOnly=false"));
+        containsString(
+            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id&activeOnly=false"));
   }
 
   @Test
-  void getCodeSystemsPageSuccessfullyWhenValueSetVersionIsProvided() throws InterruptedException {
+  void getCodeSystemsPageSuccessfully() throws InterruptedException {
     mockBackEnd.enqueue(
         new MockResponse()
             .setResponseCode(200)
             .setBody(MOCK_RESPONSE_STRING)
             .addHeader("Content-Type", "application/fhir+json"));
-    testValueSetParams.setVersion("test-value-set-version-2024");
     String actualResponse = fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, MOCK_API_KEY);
     assertNotNull(actualResponse);
     assertEquals(MOCK_RESPONSE_STRING, actualResponse);
@@ -343,22 +320,34 @@ class FhirTerminologyServiceWebClientTest {
         searchCriteria.toBuilder()
             .valueSetParams(
                 List.of(
-                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5.6").build(),
-                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5.6").build(),
-                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5.7").build()))
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.6")
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.6")
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.7")
+                        .build()))
             .build();
     // duplicates should be removed and only 2 uris returned
-    List<String> uriList = fhirTerminologyServiceWebClient.getUris(criteria);
+    List<String> uriList = fhirTerminologyServiceWebClient.getValueSetExpansionUris(criteria);
     assertThat(uriList.size(), equalTo(2));
-    assertThat(uriList.get(0), equalTo("/ValueSet/1.2.3.4.5.6/$expand?activeOnly=false"));
-    assertThat(uriList.get(1), equalTo("/ValueSet/1.2.3.4.5.7/$expand?activeOnly=false"));
+    assertThat(
+        uriList.get(0),
+        equalTo(
+            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.6&activeOnly=false"));
+    assertThat(
+        uriList.get(1),
+        equalTo(
+            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.7&activeOnly=false"));
   }
 
-  /* covers getUris() line 130:
+  /* covers getValueSetExpansionUris() line 130:
    * ? defaultProfile
    */
   @Test
-  void getUrisUsesDefaultProfileWhenProfileIsNotBlank() {
+  void getValueSetExpansionUrisUsesDefaultProfileWhenProfileIsNotBlank() {
     ValueSetsSearchCriteria criteria =
         ValueSetsSearchCriteria.builder()
             .profile("defaultProfile")
@@ -366,10 +355,77 @@ class FhirTerminologyServiceWebClientTest {
             .activeOnly("false")
             .manifestExpansion(new ManifestExpansion())
             .valueSetParams(
-                List.of(ValueSetsSearchCriteria.ValueSetParams.builder().oid("test-vs-id").build()))
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id")
+                        .build()))
             .build();
-    List<String> uris = fhirTerminologyServiceWebClient.getUris(criteria);
+    List<String> uris = fhirTerminologyServiceWebClient.getValueSetExpansionUris(criteria);
     assertFalse(uris.get(0).contains("defaultProfile"));
+  }
+
+  @Test
+  void getValueSetResourcesWithoutExpansionSendsDefinitionSearchUris() throws InterruptedException {
+    mockBackEnd.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(MOCK_RESPONSE_STRING)
+            .addHeader("Content-Type", "application/fhir+json"));
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    testValueSetParams.setOffset(0);
+    testValueSetParams.setCount(1000);
+    searchCriteria.setValueSetParams(List.of(testValueSetParams));
+    searchCriteria.setIncludeDraft("true");
+    searchCriteria.setManifestExpansion(
+        ManifestExpansion.builder()
+            .fullUrl("https://cts.nlm.nih.gov/fhir/Library/test-manifest-456")
+            .build());
+
+    String actualResponse =
+        fhirTerminologyServiceWebClient.getValueSetResourcesWithoutExpansion(
+            MOCK_API_KEY, searchCriteria);
+
+    assertEquals(MOCK_RESPONSE_STRING, actualResponse);
+    String requestBody = mockBackEnd.takeRequest().getBody().readUtf8();
+    assertThat(
+        requestBody,
+        containsString(
+            "\"url\":\"/ValueSet?status=active,draft"
+                + "&url=http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id\""));
+    assertFalse(requestBody.contains("$expand"), "ACTUAL BODY: " + requestBody);
+  }
+
+  @Test
+  void getValueSetSearchUrisReturnsDistinctSearchUris() {
+    var criteria =
+        searchCriteria.toBuilder()
+            .includeDraft("true")
+            .manifestExpansion(ManifestExpansion.builder().fullUrl("test-manifest").build())
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.6")
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.6")
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.7")
+                        .offset(0)
+                        .count(1000)
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3.4.5.8").build()))
+            .build();
+
+    List<String> uris = fhirTerminologyServiceWebClient.getValueSetSearchUris(criteria);
+
+    assertThat(
+        uris,
+        equalTo(
+            List.of(
+                "/ValueSet?status=active,draft&url=http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.6",
+                "/ValueSet?status=active,draft"
+                    + "&url=http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5.7")));
   }
 
   /* branch coverage for searchValueSets(), line 95:

@@ -1,21 +1,30 @@
 package gov.cms.madie.terminology.util;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TerminologyServiceUtil {
+
+  public static final String VSAC_VALUE_SET_URL_PREFIX = "http://cts.nlm.nih.gov/fhir/ValueSet/";
+  // The prefix followed by an OID, e.g. http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1
+  private static final Pattern VSAC_VALUE_SET_URL_PATTERN =
+      Pattern.compile(Pattern.quote(VSAC_VALUE_SET_URL_PREFIX) + "[0-2](\\.(0|[1-9]\\d*))+");
+  // Statuses accepted when fetching a ValueSet definition (draft | active | retired | unknown)
+  private static final String VALUE_SET_DEFINITION_STATUSES = "active,draft";
 
   public static URI buildRetrieveMultipleValueSetsUri(
       String baseUrl,
@@ -105,51 +114,72 @@ public class TerminologyServiceUtil {
     return oid;
   }
 
-  // Future stories will add ability to call new FHIR Terminology service
-  // with additional parameters
-  public static URI buildValueSetResourceUri(
+  /**
+   * A valid url is VSAC_VALUE_SET_URL_PREFIX followed by an OID and nothing else, so a "|version"
+   * suffix, a version keyword, or a different domain or structure is rejected.
+   */
+  public static boolean isValidValueSetUrl(String url) {
+    return url != null && VSAC_VALUE_SET_URL_PATTERN.matcher(url).matches();
+  }
+
+  /**
+   * Builds a relative URI that searches for a ValueSet definition without expansion, e.g.
+   * /ValueSet?status=active,draft&url={url}. Paging does not apply here.
+   */
+  public static URI buildValueSetSearchUri(ValueSetsSearchCriteria.ValueSetParams valueSetParams) {
+    if (valueSetParams == null || StringUtils.isBlank(valueSetParams.getUrl())) {
+      return null;
+    }
+    Map<String, String> queryParams = new LinkedHashMap<>();
+    queryParams.put("status", VALUE_SET_DEFINITION_STATUSES);
+    queryParams.put("url", valueSetParams.getUrl());
+    return buildRelativeUri("/ValueSet", queryParams);
+  }
+
+  /**
+   * Builds a relative URI for the VSAC $expand operation, e.g.
+   * /ValueSet/$expand?url={url}&includeDraft=true&activeOnly=true&manifest={manifest}. A
+   * valueSetVersion is never sent.
+   */
+  public static URI buildValueSetExpansionUri(
       ValueSetsSearchCriteria.ValueSetParams valueSetParams,
       String profile,
       String includeDraft,
       String activeOnly,
       ManifestExpansion manifestExpansion) {
-    MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-    String expandValueSetUri;
-    if (valueSetParams == null || StringUtils.isBlank(valueSetParams.getOid())) {
+    if (valueSetParams == null || StringUtils.isBlank(valueSetParams.getUrl())) {
       return null;
     }
-    expandValueSetUri = "/ValueSet/" + valueSetParams.getOid() + "/$expand";
-    Integer offset = valueSetParams.getOffset();
-    Integer count = valueSetParams.getCount();
-    if (offset != null && offset >= 0) {
-      params.put("offset", List.of(String.valueOf(offset)));
-    }
-    if (count != null && count >= 0) {
-      params.put("count", List.of(String.valueOf(count)));
-    }
-    String version = valueSetParams.getVersion();
-    if (StringUtils.isNotBlank(version)) {
-      params.put("valueSetVersion", List.of(version));
-    } else if (manifestExpansion != null) {
-      String manifestUrl = manifestExpansion.getFullUrl();
-      if (StringUtils.isNotBlank(manifestUrl)) {
-        params.put("manifest", List.of(manifestUrl));
-      }
-    } else {
-      if (StringUtils.isNotBlank(activeOnly)) {
-        params.put("activeOnly", List.of(activeOnly));
-      }
-    }
-
+    Map<String, String> queryParams = new LinkedHashMap<>();
+    queryParams.put("url", valueSetParams.getUrl());
     if (StringUtils.isNotBlank(includeDraft)) {
-      params.put("includeDraft", List.of(includeDraft));
+      queryParams.put("includeDraft", includeDraft);
     }
+    if (StringUtils.isNotBlank(activeOnly)) {
+      queryParams.put("activeOnly", activeOnly);
+    }
+    if (manifestExpansion != null && StringUtils.isNotBlank(manifestExpansion.getFullUrl())) {
+      queryParams.put("manifest", manifestExpansion.getFullUrl());
+    }
+    if (valueSetParams.getOffset() != null && valueSetParams.getOffset() >= 0) {
+      queryParams.put("offset", String.valueOf(valueSetParams.getOffset()));
+    }
+    if (valueSetParams.getCount() != null && valueSetParams.getCount() >= 0) {
+      queryParams.put("count", String.valueOf(valueSetParams.getCount()));
+    }
+    return buildRelativeUri("/ValueSet/$expand", queryParams);
+  }
 
+  // Encodes only characters that are invalid in a query value (e.g. "|"), so urls stay readable
+  private static URI buildRelativeUri(String path, Map<String, String> queryParams) {
     String query =
-        params.entrySet().stream()
-            .flatMap(e -> e.getValue().stream().map(v -> e.getKey() + "=" + v))
-            .reduce((a, b) -> a + "&" + b)
-            .orElse("");
-    return URI.create(expandValueSetUri + (query.isEmpty() ? "" : "?" + query));
+        queryParams.entrySet().stream()
+            .map(
+                param ->
+                    param.getKey()
+                        + "="
+                        + UriUtils.encodeQueryParam(param.getValue(), StandardCharsets.UTF_8))
+            .collect(Collectors.joining("&"));
+    return URI.create(path + "?" + query);
   }
 }

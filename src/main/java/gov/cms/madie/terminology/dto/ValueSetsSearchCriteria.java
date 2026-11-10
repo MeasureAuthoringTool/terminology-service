@@ -19,15 +19,16 @@ public class ValueSetsSearchCriteria {
   private String activeOnly;
   private ManifestExpansion manifestExpansion;
   private List<ValueSetParams> valueSetParams;
+  private Boolean includeExpansion;
 
   @Data
   @AllArgsConstructor
-  @Builder
+  @Builder(toBuilder = true)
   @NoArgsConstructor
   public static class ValueSetParams {
     private String oid;
+    private String url;
     private String release;
-    private String version;
     private Integer count;
     private Integer offset;
   }

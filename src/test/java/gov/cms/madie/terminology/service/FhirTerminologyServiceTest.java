@@ -24,6 +24,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -108,6 +111,7 @@ class FhirTerminologyServiceTest {
         ]
       }
       """;
+
   private String mockValueSetResourceWithCodes;
   private String mockValueSetResourceWithNoCodes;
   private String mockValueSetWithNoResource;
@@ -175,7 +179,7 @@ class FhirTerminologyServiceTest {
                     .id("ecqm-update-2022-05-05")
                     .build())
             .build();
-    when(fhirTerminologyServiceWebClient.getValueSetResources(anyString(), any()))
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(anyString(), any()))
         .thenReturn(mockValueSetResourceWithCodes);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
@@ -227,7 +231,7 @@ class FhirTerminologyServiceTest {
                     .build())
             .build();
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
-    when(fhirTerminologyServiceWebClient.getValueSetResources(
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
             anyString(), any(ValueSetsSearchCriteria.class)))
         .thenReturn(mockValueSetResourceWithNoCodes);
     List<QdmValueSet> result =
@@ -258,7 +262,7 @@ class FhirTerminologyServiceTest {
                     .id("ecqm-update-2022-05-05")
                     .build())
             .build();
-    when(fhirTerminologyServiceWebClient.getValueSetResources(anyString(), any()))
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(anyString(), any()))
         .thenReturn(mockValueSetWithNoResource);
     when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
@@ -291,6 +295,529 @@ class FhirTerminologyServiceTest {
   void getsValueSetsExpansionsForQdmIfSearchCriteriaIsNull() {
     List<QdmValueSet> result = fhirTerminologyService.getValueSetsExpansionsForQdm(null, umlsUser);
     assertEquals(0, result.size());
+  }
+
+  @Test
+  void getsValueSetsExpansionsForQdmAlwaysIncludesExpansion() {
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(false)
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("2.16.840.1.113883.3.464.1003.113.11.1090")
+                        .build()))
+            .build();
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(mockValueSetResourceWithNoCodes);
+
+    List<QdmValueSet> result =
+        fhirTerminologyService.getValueSetsExpansionsForQdm(valueSetsSearchCriteria, umlsUser);
+
+    assertEquals(1, result.size());
+    verify(fhirTerminologyServiceWebClient, never())
+        .getValueSetResourcesWithoutExpansion(anyString(), any(ValueSetsSearchCriteria.class));
+  }
+
+  @Test
+  void getValueSetsReturnsEmptyListIfSearchCriteriaIsNullOrHasNoValueSetParams() {
+    assertTrue(fhirTerminologyService.getValueSets(null, umlsUser).isEmpty());
+    assertTrue(
+        fhirTerminologyService
+            .getValueSets(
+                ValueSetsSearchCriteria.builder().includeExpansion(false).build(), umlsUser)
+            .isEmpty());
+    verifyNoInteractions(fhirTerminologyServiceWebClient);
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(booleans = true)
+  void getValueSetsIncludesPaginatedExpansionUnlessExplicitlyDisabled(Boolean includeExpansion) {
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(includeExpansion)
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("2.16.840.1.113883.3.464.1003.113.11.1090")
+                        .build()))
+            .build();
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(mockValueSetResourceWithCodes);
+
+    List<ValueSet> result = fhirTerminologyService.getValueSets(valueSetsSearchCriteria, umlsUser);
+
+    assertEquals(1, result.size());
+    assertEquals(10, result.get(0).getExpansion().getContains().size());
+    ArgumentCaptor<ValueSetsSearchCriteria> criteriaCaptor =
+        ArgumentCaptor.forClass(ValueSetsSearchCriteria.class);
+    verify(fhirTerminologyServiceWebClient)
+        .getValueSetResourcesWithExpansion(eq(TEST_API_KEY), criteriaCaptor.capture());
+    ValueSetsSearchCriteria.ValueSetParams sentParams =
+        criteriaCaptor.getValue().getValueSetParams().get(0);
+    assertEquals(1000, sentParams.getCount());
+    assertEquals(0, sentParams.getOffset());
+    verify(fhirTerminologyServiceWebClient, never())
+        .getValueSetResourcesWithoutExpansion(anyString(), any(ValueSetsSearchCriteria.class));
+  }
+
+  @Test
+  void getValueSetsWithoutExpansionReturnsLatestDefinitionPerUrl() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    Bundle batchResponse = new Bundle().setType(Bundle.BundleType.BATCHRESPONSE);
+    batchResponse
+        .addEntry()
+        .setResource(searchSetOf(valueSetDefinition("1.2.3", "20230217", "3", "FirstValueSet")));
+    batchResponse
+        .addEntry()
+        .setResource(
+            searchSetOf(
+                valueSetDefinition("4.5.6", "20240101", "5", "ActiveVersion"),
+                valueSetDefinition("4.5.6", "20250101", "12", "DraftVersion")));
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithoutExpansion(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(FhirContext.forR4().newJsonParser().encodeResourceToString(batchResponse));
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(false)
+            .includeDraft("true")
+            .activeOnly("true")
+            .manifestExpansion(
+                ManifestExpansion.builder()
+                    .fullUrl("https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05")
+                    .build())
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url(" http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3 ")
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("1.2.3")
+                        .offset(0)
+                        .count(1000)
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("4.5.6").build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid(" ").build()))
+            .build();
+
+    List<ValueSet> result = fhirTerminologyService.getValueSets(valueSetsSearchCriteria, umlsUser);
+
+    assertEquals(2, result.size());
+    assertEquals("FirstValueSet", result.get(0).getName());
+    assertEquals("DraftVersion", result.get(1).getName());
+    assertFalse(result.get(1).hasExpansion());
+    ArgumentCaptor<ValueSetsSearchCriteria> criteriaCaptor =
+        ArgumentCaptor.forClass(ValueSetsSearchCriteria.class);
+    verify(fhirTerminologyServiceWebClient, times(1))
+        .getValueSetResourcesWithoutExpansion(eq(TEST_API_KEY), criteriaCaptor.capture());
+    ValueSetsSearchCriteria definitionCriteria = criteriaCaptor.getValue();
+    assertEquals(
+        List.of(
+            ValueSetsSearchCriteria.ValueSetParams.builder()
+                .oid("1.2.3")
+                .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3")
+                .build(),
+            ValueSetsSearchCriteria.ValueSetParams.builder()
+                .oid("4.5.6")
+                .url("http://cts.nlm.nih.gov/fhir/ValueSet/4.5.6")
+                .build()),
+        definitionCriteria.getValueSetParams());
+    assertNull(definitionCriteria.getManifestExpansion());
+    verify(fhirTerminologyServiceWebClient, never())
+        .getValueSetResourcesWithExpansion(anyString(), any(ValueSetsSearchCriteria.class));
+  }
+
+  @Test
+  void getValueSetsWithoutExpansionThrowsExceptionWithFailedOidWhenVsacReturnsNoValueSet() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue().setDiagnostics("ValueSet 4.5.6 not found");
+    Bundle batchResponse = new Bundle().setType(Bundle.BundleType.BATCHRESPONSE);
+    batchResponse
+        .addEntry()
+        .setResource(searchSetOf(valueSetDefinition("1.2.3", "20230217", "3", "Found")));
+    batchResponse
+        .addEntry()
+        .setResponse(
+            new Bundle.BundleEntryResponseComponent()
+                .setStatus("400 Bad Request")
+                .setOutcome(outcome));
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithoutExpansion(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(FhirContext.forR4().newJsonParser().encodeResourceToString(batchResponse));
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(false)
+            .manifestExpansion(
+                ManifestExpansion.builder()
+                    .fullUrl("https://cts.nlm.nih.gov/fhir/Library/ecqm-update-2022-05-05")
+                    .build())
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3").build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("1.2.3").build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("4.5.6").build()))
+            .build();
+
+    VsacParseBatchValueSetExpansionException ex =
+        assertThrows(
+            VsacParseBatchValueSetExpansionException.class,
+            () -> fhirTerminologyService.getValueSets(valueSetsSearchCriteria, umlsUser));
+
+    assertEquals("Failed to fetch VSAC value sets", ex.getMessage());
+    assertEquals("4.5.6", ex.getOid());
+    assertNull(ex.getManifestExpansionFullUrl());
+    assertEquals(
+        "ValueSet 4.5.6 not found", ex.getOperationOutcome().getIssueFirstRep().getDiagnostics());
+  }
+
+  @Test
+  void getValueSetsWithoutExpansionThrowsExceptionWhenNoActiveOrDraftDefinitionIsFound() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    Bundle batchResponse = new Bundle().setType(Bundle.BundleType.BATCHRESPONSE);
+    batchResponse.addEntry().setResource(searchSetOf());
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithoutExpansion(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(FhirContext.forR4().newJsonParser().encodeResourceToString(batchResponse));
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(false)
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.4.5.6")
+                        .build()))
+            .build();
+
+    VsacParseBatchValueSetExpansionException ex =
+        assertThrows(
+            VsacParseBatchValueSetExpansionException.class,
+            () -> fhirTerminologyService.getValueSets(valueSetsSearchCriteria, umlsUser));
+
+    assertEquals("Failed to fetch VSAC value sets", ex.getMessage());
+    assertEquals("1.4.5.6", ex.getOid());
+    assertEquals(
+        "No active or draft ValueSet found for url [http://cts.nlm.nih.gov/fhir/ValueSet/1.4.5.6]",
+        ex.getOperationOutcome().getIssueFirstRep().getDiagnostics());
+  }
+
+  @Test
+  void getValueSetsWithoutExpansionReturnsEmptyListWhenNoUrlOrOidIsProvided() {
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(false)
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder().build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder().oid("").url(" ").build()))
+            .build();
+
+    assertTrue(fhirTerminologyService.getValueSets(valueSetsSearchCriteria, umlsUser).isEmpty());
+    verifyNoInteractions(fhirTerminologyServiceWebClient);
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1046.265|20230201",
+        "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1046.265' version '20230201",
+        "https://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1046.265",
+        "http://example.com/fhir/ValueSet/2.16.840.1.113762.1.4.1046.265"
+      })
+  void getValueSetsRejectsInvalidUrlBeforeCallingVsac(String invalidUrl) {
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .manifestExpansion(
+                ManifestExpansion.builder()
+                    .fullUrl("http://cts.nlm.nih.gov/fhir/Library/ecqm-update-2026-05-14")
+                    .build())
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3")
+                        .build(),
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("2.16.840.1.113762.1.4.1046.265")
+                        .url(invalidUrl)
+                        .build()))
+            .build();
+
+    VsacParseBatchValueSetExpansionException ex =
+        assertThrows(
+            VsacParseBatchValueSetExpansionException.class,
+            () -> fhirTerminologyService.getValueSets(valueSetsSearchCriteria, umlsUser));
+
+    assertEquals("Valueset is not a valid URL format", ex.getMessage());
+    assertEquals("2.16.840.1.113762.1.4.1046.265", ex.getOid());
+    assertEquals(
+        "http://cts.nlm.nih.gov/fhir/Library/ecqm-update-2026-05-14",
+        ex.getManifestExpansionFullUrl());
+    assertEquals(
+        "Valueset url ["
+            + invalidUrl
+            + "] is not a valid URL format, expected "
+            + "http://cts.nlm.nih.gov/fhir/ValueSet/{oid} without a version",
+        ex.getOperationOutcome().getIssueFirstRep().getDiagnostics());
+    verifyNoInteractions(fhirTerminologyServiceWebClient);
+  }
+
+  @Test
+  void getValueSetsWithoutExpansionRejectsInvalidUrlBeforeCallingVsac() {
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .includeExpansion(false)
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url(
+                            "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1046.265"
+                                + "|20230201")
+                        .build()))
+            .build();
+
+    VsacParseBatchValueSetExpansionException ex =
+        assertThrows(
+            VsacParseBatchValueSetExpansionException.class,
+            () -> fhirTerminologyService.getValueSets(valueSetsSearchCriteria, umlsUser));
+
+    assertEquals("Valueset is not a valid URL format", ex.getMessage());
+    assertNull(ex.getOid());
+    verifyNoInteractions(fhirTerminologyServiceWebClient);
+  }
+
+  @Test
+  void getsValueSetsExpansionsForQdmRejectsInvalidUrlBeforeCallingVsac() {
+    var valueSetsSearchCriteria =
+        ValueSetsSearchCriteria.builder()
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .oid("2.16.840.1.113762.1.4.1046.265")
+                        .url(
+                            "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1046.265"
+                                + "|20230201")
+                        .build()))
+            .build();
+
+    VsacParseBatchValueSetExpansionException ex =
+        assertThrows(
+            VsacParseBatchValueSetExpansionException.class,
+            () ->
+                fhirTerminologyService.getValueSetsExpansionsForQdm(
+                    valueSetsSearchCriteria, umlsUser));
+
+    assertEquals("Valueset is not a valid URL format", ex.getMessage());
+    assertEquals("2.16.840.1.113762.1.4.1046.265", ex.getOid());
+    verifyNoInteractions(fhirTerminologyServiceWebClient);
+  }
+
+  @Test
+  void getValueSetsRequestsNextExpansionPageWithTheSameUrl() {
+    when(fhirContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
+    IParser parser = FhirContext.forR4().newJsonParser();
+    Bundle firstPage = new Bundle().setType(Bundle.BundleType.BATCHRESPONSE);
+    firstPage.addEntry().setResource(expandedValueSetPage("1.2.3", 0, "A"));
+    Bundle secondPage = new Bundle().setType(Bundle.BundleType.BATCHRESPONSE);
+    secondPage.addEntry().setResource(expandedValueSetPage("1.2.3", 1000, "B"));
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
+            anyString(), any(ValueSetsSearchCriteria.class)))
+        .thenReturn(
+            parser.encodeResourceToString(firstPage), parser.encodeResourceToString(secondPage));
+    ManifestExpansion manifestExpansion =
+        ManifestExpansion.builder()
+            .fullUrl("http://cts.nlm.nih.gov/fhir/Library/ecqm-update-2026-05-14")
+            .build();
+    ValueSetsSearchCriteria search =
+        ValueSetsSearchCriteria.builder()
+            .includeDraft("true")
+            .activeOnly("true")
+            .manifestExpansion(manifestExpansion)
+            .valueSetParams(
+                List.of(
+                    ValueSetsSearchCriteria.ValueSetParams.builder()
+                        .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3")
+                        .build()))
+            .build();
+
+    List<ValueSet> result = fhirTerminologyService.getValueSets(search, umlsUser);
+
+    assertEquals(1, result.size());
+    assertEquals(2, result.get(0).getExpansion().getContains().size());
+    ArgumentCaptor<ValueSetsSearchCriteria> criteriaCaptor =
+        ArgumentCaptor.forClass(ValueSetsSearchCriteria.class);
+    verify(fhirTerminologyServiceWebClient, times(2))
+        .getValueSetResourcesWithExpansion(eq(TEST_API_KEY), criteriaCaptor.capture());
+    assertEquals(
+        List.of(
+            ValueSetsSearchCriteria.ValueSetParams.builder()
+                .oid("1.2.3")
+                .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3")
+                .offset(0)
+                .count(1000)
+                .build()),
+        criteriaCaptor.getAllValues().get(0).getValueSetParams());
+    ValueSetsSearchCriteria nextPageCriteria = criteriaCaptor.getAllValues().get(1);
+    assertEquals(
+        List.of(
+            ValueSetsSearchCriteria.ValueSetParams.builder()
+                .oid("1.2.3")
+                .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3")
+                .offset(1000)
+                .count(1000)
+                .build()),
+        nextPageCriteria.getValueSetParams());
+    assertEquals("true", nextPageCriteria.getIncludeDraft());
+    assertEquals("true", nextPageCriteria.getActiveOnly());
+    assertEquals(manifestExpansion, nextPageCriteria.getManifestExpansion());
+  }
+
+  private static Bundle searchSetOf(ValueSet... valueSets) {
+    Bundle searchSet = new Bundle().setType(Bundle.BundleType.SEARCHSET);
+    Arrays.stream(valueSets).forEach(valueSet -> searchSet.addEntry().setResource(valueSet));
+    return searchSet;
+  }
+
+  private static ValueSet valueSetDefinition(
+      String oid, String version, String metaVersionId, String name) {
+    ValueSet valueSet = new ValueSet();
+    valueSet.setId(oid);
+    valueSet.setUrl("http://cts.nlm.nih.gov/fhir/ValueSet/" + oid);
+    valueSet.setVersion(version);
+    valueSet.setName(name);
+    valueSet.getMeta().setVersionId(metaVersionId);
+    return valueSet;
+  }
+
+  private static ValueSet expandedValueSetPage(String oid, int offset, String code) {
+    ValueSet valueSet = new ValueSet();
+    valueSet.setId(oid);
+    valueSet.getExpansion().setTotal(2).setOffset(offset).addContains().setCode(code);
+    return valueSet;
+  }
+
+  @Test
+  void testGetAllCodeSystems() {
+    var c1 = new gov.cms.madie.terminology.models.CodeSystem();
+    c1.setTitle("t1");
+    c1.setOid("fakeoid1");
+    c1.setFullUrl("http://example.com/cs1");
+    c1.setInVsac(true);
+    c1.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("1.0")
+            .vsacVersion("1")
+            .build());
+    var c2 = new gov.cms.madie.terminology.models.CodeSystem();
+    c2.setTitle("t2");
+    c2.setOid("fakeoid2");
+    c2.setFullUrl("http://example.com/cs2");
+    c2.setInVsac(true);
+    c2.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("2.0")
+            .vsacVersion("2")
+            .build());
+    var c3 = new gov.cms.madie.terminology.models.CodeSystem();
+    c3.setTitle("t3");
+    c3.setOid("fakeoid3");
+    c3.setFullUrl("http://example.com/cs3");
+    c3.setInVsac(false);
+    c3.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
+    var c4 = new gov.cms.madie.terminology.models.CodeSystem();
+    c4.setTitle("t4");
+    c4.setOid("NOT.IN.VSAC");
+    c4.setInVsac(false);
+    c4.setFullUrl("http://example.com/cs4");
+    c4.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("fhirOnly")
+            .build());
+
+    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3, c4);
+    when(codeSystemRepository.findAll()).thenReturn(codeSystems);
+    List<gov.cms.madie.terminology.models.CodeSystem> result =
+        codeSystemService.getAllCodeSystems();
+
+    verify(codeSystemRepository).findAll();
+    assertEquals(2, result.size());
+    assertEquals("t1", result.get(0).getTitle());
+    assertEquals("1.0", result.get(0).getVersion().getFhirVersion());
+    assertEquals("1", result.get(0).getVersion().getVsacVersion());
+
+    assertEquals("t2", result.get(1).getTitle());
+    assertEquals("2.0", result.get(1).getVersion().getFhirVersion());
+    assertEquals("2", result.get(1).getVersion().getVsacVersion());
+
+    assertTrue(result.stream().noneMatch(codeSystem -> "t3".equals(codeSystem.getTitle())));
+  }
+
+  @Test
+  void testGetCodeSystems() {
+    var c1 = new gov.cms.madie.terminology.models.CodeSystem();
+    c1.setTitle("t1");
+    c1.setOid("fakeoid1");
+    c1.setFullUrl("http://example.com/cs1");
+    c1.setInVsac(true);
+    c1.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("1.0")
+            .vsacVersion("1")
+            .build());
+    var c2 = new gov.cms.madie.terminology.models.CodeSystem();
+    c2.setTitle("t2");
+    c2.setOid("fakeoid2");
+    c2.setFullUrl("http://example.com/cs2");
+    c2.setInVsac(true);
+    c2.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("2.0")
+            .vsacVersion("2")
+            .build());
+    var c3 = new gov.cms.madie.terminology.models.CodeSystem();
+    c3.setTitle("t3");
+    c3.setOid("fakeoid3");
+    c3.setFullUrl("http://example.com/cs3");
+    c3.setInVsac(false);
+    c3.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
+    var c4 = new gov.cms.madie.terminology.models.CodeSystem();
+    c4.setTitle("t4");
+    c4.setOid("NOT.IN.VSAC");
+    c4.setFullUrl("http://example.com/cs4");
+    c4.setInVsac(false);
+    c4.setVersion(
+        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
+            .fhirVersion("fhirOnly")
+            .build());
+
+    Page<gov.cms.madie.terminology.models.CodeSystem> codeSystems =
+        new PageImpl<>(Arrays.asList(c1, c2, c3, c4));
+    when(codeSystemRepository.findAll(any(Pageable.class))).thenReturn(codeSystems);
+
+    PageRequest pageable = PageRequest.of(0, 10);
+    Page<gov.cms.madie.terminology.models.CodeSystem> result =
+        codeSystemService.getCodeSystems(pageable, null, null);
+
+    verify(codeSystemRepository).findAll(pageable);
+    assertEquals(4, result.getTotalElements());
+    assertEquals("t1", result.getContent().get(0).getTitle());
+    assertEquals("1.0", result.getContent().get(0).getVersion().getFhirVersion());
+    assertEquals("1", result.getContent().get(0).getVersion().getVsacVersion());
+
+    assertEquals("t2", result.getContent().get(1).getTitle());
+    assertEquals("2.0", result.getContent().get(1).getVersion().getFhirVersion());
+    assertEquals("2", result.getContent().get(1).getVersion().getVsacVersion());
+
+    // Verify FHIR only Code Systems appear in the result set
+    assertEquals("t3", result.getContent().get(2).getTitle());
+    assertEquals("2024", result.getContent().get(2).getVersion().getFhirVersion());
+    assertNull(result.getContent().get(2).getVersion().getVsacVersion());
   }
 
   @Test
@@ -524,7 +1051,7 @@ class FhirTerminologyServiceTest {
     Bundle bundle2 = new Bundle();
     bundle2.addEntry(new Bundle.BundleEntryComponent().setResource(vsFromSecond));
 
-    when(fhirTerminologyServiceWebClient.getValueSetResources(
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
             anyString(), any(ValueSetsSearchCriteria.class)))
         .thenReturn(parser.encodeResourceToString(bundle1), parser.encodeResourceToString(bundle2));
 
@@ -541,7 +1068,7 @@ class FhirTerminologyServiceTest {
 
     // ensure web client was invoked at least twice (initial + recursive)
     verify(fhirTerminologyServiceWebClient, atLeast(2))
-        .getValueSetResources(anyString(), any(ValueSetsSearchCriteria.class));
+        .getValueSetResourcesWithExpansion(anyString(), any(ValueSetsSearchCriteria.class));
   }
 
   /* this test is for branch testing on requestAllValueSetsExpansions() method when
@@ -563,7 +1090,7 @@ class FhirTerminologyServiceTest {
     bundle.addEntry(entry);
     String bundleJson = parser.encodeResourceToString(bundle);
 
-    when(fhirTerminologyServiceWebClient.getValueSetResources(
+    when(fhirTerminologyServiceWebClient.getValueSetResourcesWithExpansion(
             anyString(), any(ValueSetsSearchCriteria.class)))
         .thenReturn(bundleJson);
 
@@ -829,10 +1356,6 @@ class FhirTerminologyServiceTest {
         .fetchResourceFromVsac(
             eq("https://example.com/next?page=3"), eq(TEST_API_KEY), eq("bundle"));
   }
-
-  /* this test covers paging through the CodeSystem search via the "next" link
-   * and fetching history for each discovered code system id.
-   */
 
   /* this branch coverage is for retrieveCodesAndCodeSystems() method, line 487
    * when codeSystemVersion.isEmpty(), it should: return null;
@@ -1254,10 +1777,6 @@ class FhirTerminologyServiceTest {
     assertEquals("2026-03-15", valueSetList.get(0).getEffectiveDate());
   }
 
-  /* coverage for DataAccessException, lines 463-467
-   * when doing updateOrInsertAllCodeSystems(),
-   */
-
   /* branch coverage for retrieveCode(), line 367:
    * codeSystem != null
    */
@@ -1325,9 +1844,4 @@ class FhirTerminologyServiceTest {
         fhirTerminologyService.retrieveCode(codeName, codeSystemName, version, TEST_API_KEY);
     assertNotNull(result);
   }
-
-  /* next link missing _offset should fail rather than silently stop paging */
-
-  /* next link missing _count should fail rather than silently stop paging */
-
 }
