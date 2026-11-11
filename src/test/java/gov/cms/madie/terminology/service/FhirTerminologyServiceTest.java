@@ -15,11 +15,7 @@ import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import org.apache.commons.io.FileUtils;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.ValueSet;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Meta;
-import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.*;
 
 import gov.cms.madie.terminology.dto.ValueSetSearchResult;
 
@@ -39,10 +35,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +54,6 @@ class FhirTerminologyServiceTest {
   @Mock CodeSystemRepository codeSystemRepository;
   @Mock VsacService vsacService;
   FhirTerminologyService fhirTerminologyService;
-  CodeSystemService codeSystemService;
 
   private UmlsUser umlsUser;
   private static final String TEST_HARP_ID = "te$tHarpId";
@@ -137,7 +128,6 @@ class FhirTerminologyServiceTest {
 
   @BeforeEach
   public void setUp() throws IOException {
-    codeSystemService = new CodeSystemService(codeSystemRepository);
     fhirTerminologyService =
         new FhirTerminologyService(
             fhirContext, fhirTerminologyServiceWebClient, codeSystemRepository, vsacService);
@@ -708,126 +698,6 @@ class FhirTerminologyServiceTest {
     valueSet.setId(oid);
     valueSet.getExpansion().setTotal(2).setOffset(offset).addContains().setCode(code);
     return valueSet;
-  }
-
-  @Test
-  void testGetAllCodeSystems() {
-    var c1 = new gov.cms.madie.terminology.models.CodeSystem();
-    c1.setTitle("t1");
-    c1.setOid("fakeoid1");
-    c1.setFullUrl("http://example.com/cs1");
-    c1.setInVsac(true);
-    c1.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-            .fhirVersion("1.0")
-            .vsacVersion("1")
-            .build());
-    var c2 = new gov.cms.madie.terminology.models.CodeSystem();
-    c2.setTitle("t2");
-    c2.setOid("fakeoid2");
-    c2.setFullUrl("http://example.com/cs2");
-    c2.setInVsac(true);
-    c2.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-            .fhirVersion("2.0")
-            .vsacVersion("2")
-            .build());
-    var c3 = new gov.cms.madie.terminology.models.CodeSystem();
-    c3.setTitle("t3");
-    c3.setOid("fakeoid3");
-    c3.setFullUrl("http://example.com/cs3");
-    c3.setInVsac(false);
-    c3.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
-    var c4 = new gov.cms.madie.terminology.models.CodeSystem();
-    c4.setTitle("t4");
-    c4.setOid("NOT.IN.VSAC");
-    c4.setInVsac(false);
-    c4.setFullUrl("http://example.com/cs4");
-    c4.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-            .fhirVersion("fhirOnly")
-            .build());
-
-    List<gov.cms.madie.terminology.models.CodeSystem> codeSystems = Arrays.asList(c1, c2, c3, c4);
-    when(codeSystemRepository.findAll()).thenReturn(codeSystems);
-    List<gov.cms.madie.terminology.models.CodeSystem> result =
-        codeSystemService.getAllCodeSystems();
-
-    verify(codeSystemRepository).findAll();
-    assertEquals(2, result.size());
-    assertEquals("t1", result.get(0).getTitle());
-    assertEquals("1.0", result.get(0).getVersion().getFhirVersion());
-    assertEquals("1", result.get(0).getVersion().getVsacVersion());
-
-    assertEquals("t2", result.get(1).getTitle());
-    assertEquals("2.0", result.get(1).getVersion().getFhirVersion());
-    assertEquals("2", result.get(1).getVersion().getVsacVersion());
-
-    assertTrue(result.stream().noneMatch(codeSystem -> "t3".equals(codeSystem.getTitle())));
-  }
-
-  @Test
-  void testGetCodeSystems() {
-    var c1 = new gov.cms.madie.terminology.models.CodeSystem();
-    c1.setTitle("t1");
-    c1.setOid("fakeoid1");
-    c1.setFullUrl("http://example.com/cs1");
-    c1.setInVsac(true);
-    c1.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-            .fhirVersion("1.0")
-            .vsacVersion("1")
-            .build());
-    var c2 = new gov.cms.madie.terminology.models.CodeSystem();
-    c2.setTitle("t2");
-    c2.setOid("fakeoid2");
-    c2.setFullUrl("http://example.com/cs2");
-    c2.setInVsac(true);
-    c2.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-            .fhirVersion("2.0")
-            .vsacVersion("2")
-            .build());
-    var c3 = new gov.cms.madie.terminology.models.CodeSystem();
-    c3.setTitle("t3");
-    c3.setOid("fakeoid3");
-    c3.setFullUrl("http://example.com/cs3");
-    c3.setInVsac(false);
-    c3.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder().fhirVersion("2024").build());
-    var c4 = new gov.cms.madie.terminology.models.CodeSystem();
-    c4.setTitle("t4");
-    c4.setOid("NOT.IN.VSAC");
-    c4.setFullUrl("http://example.com/cs4");
-    c4.setInVsac(false);
-    c4.setVersion(
-        gov.cms.madie.terminology.models.CodeSystem.Version.builder()
-            .fhirVersion("fhirOnly")
-            .build());
-
-    Page<gov.cms.madie.terminology.models.CodeSystem> codeSystems =
-        new PageImpl<>(Arrays.asList(c1, c2, c3, c4));
-    when(codeSystemRepository.findAll(any(Pageable.class))).thenReturn(codeSystems);
-
-    PageRequest pageable = PageRequest.of(0, 10);
-    Page<gov.cms.madie.terminology.models.CodeSystem> result =
-        codeSystemService.getCodeSystems(pageable, null, null);
-
-    verify(codeSystemRepository).findAll(pageable);
-    assertEquals(4, result.getTotalElements());
-    assertEquals("t1", result.getContent().get(0).getTitle());
-    assertEquals("1.0", result.getContent().get(0).getVersion().getFhirVersion());
-    assertEquals("1", result.getContent().get(0).getVersion().getVsacVersion());
-
-    assertEquals("t2", result.getContent().get(1).getTitle());
-    assertEquals("2.0", result.getContent().get(1).getVersion().getFhirVersion());
-    assertEquals("2", result.getContent().get(1).getVersion().getVsacVersion());
-
-    // Verify FHIR only Code Systems appear in the result set
-    assertEquals("t3", result.getContent().get(2).getTitle());
-    assertEquals("2024", result.getContent().get(2).getVersion().getFhirVersion());
-    assertNull(result.getContent().get(2).getVersion().getVsacVersion());
   }
 
   @Test
