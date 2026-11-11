@@ -9,13 +9,10 @@ import gov.cms.madie.terminology.service.CodeSystemExportService;
 import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.config.SecurityConfig;
-import gov.cms.madie.terminology.models.UmlsUser;
-import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemService;
-import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +29,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Date;
-import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -52,8 +48,6 @@ class AdminControllerMvcTest {
   private static final String TEST_USR = "FAKE";
 
   @MockitoBean private CodeSystemService codeSystemService;
-  @MockitoBean private CodeSystemSyncService codeSystemSyncService;
-  @MockitoBean private VsacService vsacService;
   @MockitoBean private FhirContext fhirContext;
   @MockitoBean private UpdateCodeSystemTask updateCodeSystemTask;
   @MockitoBean private UserServiceClient userServiceClient;
@@ -78,35 +72,6 @@ class AdminControllerMvcTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build();
-  }
-
-  @Test
-  void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
-    UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USR).build();
-    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(any(UmlsUser.class)))
-        .thenReturn(List.of(codeSystem));
-
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
-                .with(user(TEST_USR).roles("MADIE-ADMIN"))
-                .with(csrf()))
-        .andExpect(status().isOk());
-
-    verify(codeSystemSyncService, times(1)).remoteRetrieveAllCodeSystems(any(UmlsUser.class));
-  }
-
-  @Test
-  void testRetrieveAndUpdateCodeSystemsForbiddenWithoutAdminRole() throws Exception {
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
-                .with(user(TEST_USR))
-                .with(csrf()))
-        .andExpect(status().isForbidden());
-
-    verify(codeSystemSyncService, never()).remoteRetrieveAllCodeSystems(any());
   }
 
   @Test
@@ -312,7 +277,7 @@ class AdminControllerMvcTest {
 
   @Test
   void testTriggerCodeSystemRefreshAuditsWhenJobStarts() throws Exception {
-    when(updateCodeSystemTask.startJob()).thenReturn(true);
+    when(updateCodeSystemTask.startJob(TEST_USR)).thenReturn(true);
 
     mockMvc
         .perform(
@@ -340,7 +305,7 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isForbidden());
 
-    verify(updateCodeSystemTask, never()).startJob();
+    verify(updateCodeSystemTask, never()).startJob(any());
     verifyNoInteractions(adminAuditService);
   }
 }

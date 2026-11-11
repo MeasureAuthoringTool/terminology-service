@@ -6,13 +6,9 @@ import gov.cms.madie.terminology.audit.AuditResource;
 import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
-import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
 import gov.cms.madie.terminology.models.CodeSystem;
-import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.CodeSystemService;
-import gov.cms.madie.terminology.service.CodeSystemSyncService;
-import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,9 +47,7 @@ import static org.mockito.Mockito.*;
 class AdminControllerTest {
 
   @Mock private CodeSystemService codeSystemService;
-  @Mock private CodeSystemSyncService codeSystemSyncService;
   @Mock private UpdateCodeSystemTask updateCodeSystemTask;
-  @Mock private VsacService vsacService;
   @Mock private CacheManager cacheManager;
   @Mock private Cache cache;
   @Mock private CodeSystemExportService codeSystemExportService;
@@ -81,33 +75,6 @@ class AdminControllerTest {
             .lastUpdated(Instant.now())
             .lastUpdatedUpstream(new Date())
             .build();
-  }
-
-  @Test
-  void testRetrieveAndUpdateCodeSystemsSuccessfully() {
-    when(principal.getName()).thenReturn(TEST_USER);
-    UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USER).build();
-    when(vsacService.verifyUmlsAccess(TEST_USER)).thenReturn(umlsUser);
-    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser))
-        .thenReturn(List.of(codeSystem));
-
-    ResponseEntity<List<CodeSystem>> response =
-        adminController.retrieveAndUpdateCodeSystems(principal);
-
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(List.of(codeSystem), response.getBody());
-  }
-
-  @Test
-  void testRetrieveAndUpdateCodeSystemsUnauthorizedUmlsUser() {
-    when(principal.getName()).thenReturn(TEST_USER);
-    doThrow(new VsacUnauthorizedException("Please login to UMLS before proceeding"))
-        .when(vsacService)
-        .verifyUmlsAccess(anyString());
-
-    assertThrows(
-        VsacUnauthorizedException.class,
-        () -> adminController.retrieveAndUpdateCodeSystems(principal));
   }
 
   @Test
@@ -210,14 +177,15 @@ class AdminControllerTest {
 
   @Test
   void testTriggerCodeSystemRefreshStarted() {
-    when(updateCodeSystemTask.startJob()).thenReturn(true);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(updateCodeSystemTask.startJob(TEST_USER)).thenReturn(true);
 
     ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals("Code system refresh has been started", response.getBody());
 
-    verify(updateCodeSystemTask, times(1)).startJob();
+    verify(updateCodeSystemTask, times(1)).startJob(TEST_USER);
     verify(adminAuditService)
         .logAdminAction(
             principal,
@@ -229,7 +197,8 @@ class AdminControllerTest {
 
   @Test
   void testTriggerCodeSystemRefreshConflict() {
-    when(updateCodeSystemTask.startJob()).thenReturn(false);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(updateCodeSystemTask.startJob(TEST_USER)).thenReturn(false);
 
     ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
@@ -238,7 +207,7 @@ class AdminControllerTest {
         "Update Code System is already running. We have NOT started the job again",
         response.getBody());
 
-    verify(updateCodeSystemTask, times(1)).startJob();
+    verify(updateCodeSystemTask, times(1)).startJob(TEST_USER);
     verifyNoInteractions(adminAuditService);
   }
 
