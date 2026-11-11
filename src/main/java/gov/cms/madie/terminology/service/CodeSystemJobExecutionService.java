@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.service;
 
+import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
 import gov.cms.madie.terminology.models.CodeSystemJobExecution;
 import gov.cms.madie.terminology.models.CodeSystemJobExecution.Status;
 import gov.cms.madie.terminology.repositories.CodeSystemJobExecutionRepository;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -57,6 +59,22 @@ public class CodeSystemJobExecutionService {
         execution.getId(),
         status,
         execution.getDurationMs());
+  }
+
+  /** RUNNING if any job is running, otherwise the most recently finished job */
+  public Optional<CodeSystemJobStatus> getLatestJobStatus() {
+    if (codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)) {
+      return Optional.of(new CodeSystemJobStatus(Status.RUNNING, null));
+    }
+    return codeSystemJobExecutionRepository
+        .findFirstByStatusInOrderByCompletedAtDesc(List.of(Status.COMPLETED, Status.FAILED))
+        .map(CodeSystemJobStatus::from);
+  }
+
+  public Optional<CodeSystemJobStatus> getLastCompletedJob() {
+    return codeSystemJobExecutionRepository
+        .findFirstByStatusOrderByCompletedAtDesc(Status.COMPLETED)
+        .map(CodeSystemJobStatus::from);
   }
 
   /** Marks jobs left RUNNING by a restart as FAILED. Never throws, so it can't block startup */

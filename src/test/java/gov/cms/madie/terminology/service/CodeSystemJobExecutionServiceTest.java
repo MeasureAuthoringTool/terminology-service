@@ -1,10 +1,13 @@
 package gov.cms.madie.terminology.service;
 
+import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
 import gov.cms.madie.terminology.models.CodeSystemJobExecution;
 import gov.cms.madie.terminology.models.CodeSystemJobExecution.Status;
 import gov.cms.madie.terminology.repositories.CodeSystemJobExecutionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -14,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +40,10 @@ class CodeSystemJobExecutionServiceTest {
         .triggeredBy(HARP_ID)
         .startedAt(startedAt)
         .build();
+  }
+
+  private CodeSystemJobExecution finishedExecution(Status status, Instant completedAt) {
+    return CodeSystemJobExecution.builder().status(status).completedAt(completedAt).build();
   }
 
   @Test
@@ -145,5 +153,58 @@ class CodeSystemJobExecutionServiceTest {
         .thenThrow(new RuntimeException("Mongo is down"));
 
     assertDoesNotThrow(() -> codeSystemJobExecutionService.failInterruptedJobs());
+  }
+
+  @Test
+  void testGetLatestJobStatusReturnsRunningWhenAJobIsRunning() {
+    when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(true);
+
+    Optional<CodeSystemJobStatus> jobStatus = codeSystemJobExecutionService.getLatestJobStatus();
+
+    assertEquals(new CodeSystemJobStatus(Status.RUNNING, null), jobStatus.orElseThrow());
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Status.class,
+      names = {"COMPLETED", "FAILED"})
+  void testGetLatestJobStatusReturnsMostRecentlyFinishedJob(Status status) {
+    Instant completedAt = Instant.now();
+    when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(false);
+    when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(
+            List.of(Status.COMPLETED, Status.FAILED)))
+        .thenReturn(Optional.of(finishedExecution(status, completedAt)));
+
+    Optional<CodeSystemJobStatus> jobStatus = codeSystemJobExecutionService.getLatestJobStatus();
+
+    assertEquals(new CodeSystemJobStatus(status, completedAt), jobStatus.orElseThrow());
+  }
+
+  @Test
+  void testGetLatestJobStatusIsEmptyWhenNoJobHasRun() {
+    when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(false);
+    when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(any()))
+        .thenReturn(Optional.empty());
+
+    assertTrue(codeSystemJobExecutionService.getLatestJobStatus().isEmpty());
+  }
+
+  @Test
+  void testGetLastCompletedJobReturnsMostRecentCompletedJob() {
+    Instant completedAt = Instant.now();
+    when(codeSystemJobExecutionRepository.findFirstByStatusOrderByCompletedAtDesc(Status.COMPLETED))
+        .thenReturn(Optional.of(finishedExecution(Status.COMPLETED, completedAt)));
+
+    Optional<CodeSystemJobStatus> jobStatus = codeSystemJobExecutionService.getLastCompletedJob();
+
+    assertEquals(new CodeSystemJobStatus(Status.COMPLETED, completedAt), jobStatus.orElseThrow());
+  }
+
+  @Test
+  void testGetLastCompletedJobIsEmptyWhenNoJobHasCompleted() {
+    when(codeSystemJobExecutionRepository.findFirstByStatusOrderByCompletedAtDesc(Status.COMPLETED))
+        .thenReturn(Optional.empty());
+
+    assertTrue(codeSystemJobExecutionService.getLastCompletedJob().isEmpty());
   }
 }

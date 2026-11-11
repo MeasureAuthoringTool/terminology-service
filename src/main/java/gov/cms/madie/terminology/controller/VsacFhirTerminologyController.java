@@ -3,12 +3,14 @@ package gov.cms.madie.terminology.controller;
 import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetSearchResult;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import gov.cms.madie.terminology.service.CodeSystemService;
 import gov.cms.madie.terminology.service.VsacService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
 public class VsacFhirTerminologyController {
   private final FhirTerminologyService fhirTerminologyService;
   private final CodeSystemService codeSystemService;
+  private final CodeSystemJobExecutionService codeSystemJobExecutionService;
   private final VsacService vsacService;
   private final FhirContext fhirContext;
 
@@ -70,6 +73,14 @@ public class VsacFhirTerminologyController {
     final String username = principal.getName();
     log.info("Retrieving list of codeSystems for user: {}", username);
     return ResponseEntity.ok().body(codeSystemService.getAllCodeSystems());
+  }
+
+  @GetMapping(path = "/code-systems/last-updated", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<CodeSystemJobStatus> getCodeSystemsLastUpdated() {
+    return codeSystemJobExecutionService
+        .getLastCompletedJob()
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
   @GetMapping(path = "/search-value-sets", produces = MediaType.APPLICATION_JSON_VALUE)

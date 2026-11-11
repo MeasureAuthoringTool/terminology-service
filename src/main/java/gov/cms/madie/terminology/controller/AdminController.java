@@ -4,8 +4,10 @@ import gov.cms.madie.terminology.audit.AdminAuditService;
 import gov.cms.madie.terminology.audit.AdminAuditService.Action;
 import gov.cms.madie.terminology.audit.AuditResource;
 import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
+import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
+import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import gov.cms.madie.terminology.service.CodeSystemService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import gov.cms.madie.terminology.util.PagingUtil;
@@ -44,6 +46,7 @@ public class AdminController {
   private final CacheManager cacheManager;
   private final CodeSystemExportService codeSystemExportService;
   private final AdminAuditService adminAuditService;
+  private final CodeSystemJobExecutionService codeSystemJobExecutionService;
 
   @PostMapping(
       path = "/code-system",
@@ -118,6 +121,15 @@ public class AdminController {
 
     return ResponseEntity.status(HttpStatus.CONFLICT)
         .body("Update Code System is already running. We have NOT started the job again");
+  }
+
+  @GetMapping("/code-system-job-status")
+  @PreAuthorize("hasRole('MADIE-ADMIN')")
+  public ResponseEntity<CodeSystemJobStatus> getCodeSystemJobStatus() {
+    return codeSystemJobExecutionService
+        .getLatestJobStatus()
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
   @GetMapping("/codesystems")
