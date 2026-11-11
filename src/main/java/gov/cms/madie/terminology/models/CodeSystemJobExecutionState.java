@@ -15,7 +15,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @Document
-public class CodeSystemJobExecution {
+public class CodeSystemJobExecutionState {
   @Id private String id;
   private Status status;
   private String triggeredBy; // HARP ID, or SYSTEM for scheduled runs

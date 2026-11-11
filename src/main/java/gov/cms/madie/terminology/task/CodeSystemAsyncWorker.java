@@ -1,6 +1,6 @@
 package gov.cms.madie.terminology.task;
 
-import gov.cms.madie.terminology.models.CodeSystemJobExecution;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import gov.cms.madie.terminology.service.CodeSystemSyncService;
@@ -23,7 +23,7 @@ public class CodeSystemAsyncWorker {
   private String apiKey;
 
   @Async
-  public void runJobAsync(AtomicBoolean running, CodeSystemJobExecution execution) {
+  public void runJobAsync(AtomicBoolean running, CodeSystemJobExecutionState execution) {
     try {
       log.info("Starting async code system update.");
 

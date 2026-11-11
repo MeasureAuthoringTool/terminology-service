@@ -1,8 +1,8 @@
 package gov.cms.madie.terminology.service;
 
 import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
-import gov.cms.madie.terminology.models.CodeSystemJobExecution;
-import gov.cms.madie.terminology.models.CodeSystemJobExecution.Status;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.repositories.CodeSystemJobExecutionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +25,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CodeSystemJobExecutionServiceTest {
+class CodeSystemJobExecutionStateServiceTest {
 
   private static final String HARP_ID = "test-harp-id";
 
@@ -33,8 +33,8 @@ class CodeSystemJobExecutionServiceTest {
 
   @InjectMocks private CodeSystemJobExecutionService codeSystemJobExecutionService;
 
-  private CodeSystemJobExecution runningExecution(Instant startedAt) {
-    return CodeSystemJobExecution.builder()
+  private CodeSystemJobExecutionState runningExecution(Instant startedAt) {
+    return CodeSystemJobExecutionState.builder()
         .id("job-1")
         .status(Status.RUNNING)
         .triggeredBy(HARP_ID)
@@ -42,22 +42,22 @@ class CodeSystemJobExecutionServiceTest {
         .build();
   }
 
-  private CodeSystemJobExecution finishedExecution(Status status, Instant completedAt) {
-    return CodeSystemJobExecution.builder().status(status).completedAt(completedAt).build();
+  private CodeSystemJobExecutionState finishedExecution(Status status, Instant completedAt) {
+    return CodeSystemJobExecutionState.builder().status(status).completedAt(completedAt).build();
   }
 
   @Test
   void testStartSavesNewRunningRecord() {
-    when(codeSystemJobExecutionRepository.save(any(CodeSystemJobExecution.class)))
+    when(codeSystemJobExecutionRepository.save(any(CodeSystemJobExecutionState.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
     Instant before = Instant.now();
 
-    CodeSystemJobExecution execution = codeSystemJobExecutionService.start(HARP_ID);
+    CodeSystemJobExecutionState execution = codeSystemJobExecutionService.start(HARP_ID);
 
-    ArgumentCaptor<CodeSystemJobExecution> captor =
-        ArgumentCaptor.forClass(CodeSystemJobExecution.class);
+    ArgumentCaptor<CodeSystemJobExecutionState> captor =
+        ArgumentCaptor.forClass(CodeSystemJobExecutionState.class);
     verify(codeSystemJobExecutionRepository).save(captor.capture());
-    CodeSystemJobExecution saved = captor.getValue();
+    CodeSystemJobExecutionState saved = captor.getValue();
     assertNull(saved.getId());
     assertEquals(Status.RUNNING, saved.getStatus());
     assertEquals(HARP_ID, saved.getTriggeredBy());
@@ -71,7 +71,7 @@ class CodeSystemJobExecutionServiceTest {
   @Test
   void testCompleteUpdatesRecordWithCompletionTimeAndDuration() {
     Instant startedAt = Instant.now().minusSeconds(90);
-    CodeSystemJobExecution execution = runningExecution(startedAt);
+    CodeSystemJobExecutionState execution = runningExecution(startedAt);
 
     codeSystemJobExecutionService.complete(execution);
 
@@ -90,7 +90,7 @@ class CodeSystemJobExecutionServiceTest {
   @Test
   void testFailUpdatesRecordWithCompletionTimeAndDuration() {
     Instant startedAt = Instant.now().minusSeconds(30);
-    CodeSystemJobExecution execution = runningExecution(startedAt);
+    CodeSystemJobExecutionState execution = runningExecution(startedAt);
 
     codeSystemJobExecutionService.fail(execution);
 
@@ -104,8 +104,8 @@ class CodeSystemJobExecutionServiceTest {
 
   @Test
   void testFailInterruptedJobsMarksRunningRecordsFailed() {
-    CodeSystemJobExecution first = runningExecution(Instant.now().minusSeconds(600));
-    CodeSystemJobExecution second =
+    CodeSystemJobExecutionState first = runningExecution(Instant.now().minusSeconds(600));
+    CodeSystemJobExecutionState second =
         runningExecution(Instant.now().minusSeconds(60)).toBuilder().id("job-2").build();
     when(codeSystemJobExecutionRepository.findByStatusAndStartedAtBefore(
             eq(Status.RUNNING), any(Instant.class)))

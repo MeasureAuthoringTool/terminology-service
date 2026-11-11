@@ -6,7 +6,7 @@ import gov.cms.madie.terminology.audit.AdminAuditService.Action;
 import gov.cms.madie.terminology.audit.AuditResource;
 import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
 import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
-import gov.cms.madie.terminology.models.CodeSystemJobExecution.Status;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import tools.jackson.databind.ObjectMapper;

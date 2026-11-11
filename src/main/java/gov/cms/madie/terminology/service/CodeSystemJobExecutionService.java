@@ -1,8 +1,8 @@
 package gov.cms.madie.terminology.service;
 
 import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
-import gov.cms.madie.terminology.models.CodeSystemJobExecution;
-import gov.cms.madie.terminology.models.CodeSystemJobExecution.Status;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.repositories.CodeSystemJobExecutionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,10 +25,10 @@ public class CodeSystemJobExecutionService {
   // Set before Mongock runs, so a job started by a migration isn't treated as interrupted
   private final Instant serviceStartedAt = Instant.now();
 
-  public CodeSystemJobExecution start(String triggeredBy) {
-    CodeSystemJobExecution execution =
+  public CodeSystemJobExecutionState start(String triggeredBy) {
+    CodeSystemJobExecutionState execution =
         codeSystemJobExecutionRepository.save(
-            CodeSystemJobExecution.builder()
+            CodeSystemJobExecutionState.builder()
                 .status(Status.RUNNING)
                 .triggeredBy(triggeredBy)
                 .startedAt(Instant.now())
@@ -40,15 +40,15 @@ public class CodeSystemJobExecutionService {
     return execution;
   }
 
-  public void complete(CodeSystemJobExecution execution) {
+  public void complete(CodeSystemJobExecutionState execution) {
     finish(execution, Status.COMPLETED);
   }
 
-  public void fail(CodeSystemJobExecution execution) {
+  public void fail(CodeSystemJobExecutionState execution) {
     finish(execution, Status.FAILED);
   }
 
-  private void finish(CodeSystemJobExecution execution, Status status) {
+  private void finish(CodeSystemJobExecutionState execution, Status status) {
     Instant completedAt = Instant.now();
     execution.setStatus(status);
     execution.setCompletedAt(completedAt);
@@ -81,7 +81,7 @@ public class CodeSystemJobExecutionService {
   @EventListener(ApplicationReadyEvent.class)
   public void failInterruptedJobs() {
     try {
-      List<CodeSystemJobExecution> interrupted =
+      List<CodeSystemJobExecutionState> interrupted =
           codeSystemJobExecutionRepository.findByStatusAndStartedAtBefore(
               Status.RUNNING, serviceStartedAt);
       interrupted.forEach(

@@ -1,6 +1,6 @@
 package gov.cms.madie.terminology.task;
 
-import gov.cms.madie.terminology.models.CodeSystemJobExecution;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
 import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ public class UpdateCodeSystemTask {
     }
 
     try {
-      CodeSystemJobExecution execution = codeSystemJobExecutionService.start(triggeredBy);
+      CodeSystemJobExecutionState execution = codeSystemJobExecutionService.start(triggeredBy);
       codeSystemAsyncWorker.runJobAsync(running, execution);
     } catch (RuntimeException e) {
       // Release the flag, or every later run would be rejected
