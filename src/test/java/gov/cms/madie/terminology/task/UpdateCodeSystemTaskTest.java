@@ -26,7 +26,8 @@ class UpdateCodeSystemTaskTest {
 
   @Test
   void testStartJobRunsSuccessfully() {
-    CodeSystemJobExecutionState execution = CodeSystemJobExecutionState.builder().id("job-1").build();
+    CodeSystemJobExecutionState execution =
+        CodeSystemJobExecutionState.builder().id("job-1").build();
     when(codeSystemJobExecutionService.start(HARP_ID)).thenReturn(execution);
 
     boolean result = updateCodeSystemTask.startJob(HARP_ID);

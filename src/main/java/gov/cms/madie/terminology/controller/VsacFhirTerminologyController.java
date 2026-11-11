@@ -75,7 +75,7 @@ public class VsacFhirTerminologyController {
     return ResponseEntity.ok().body(codeSystemService.getAllCodeSystems());
   }
 
-  @GetMapping(path = "/code-systems/last-updated", produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(path = "/code-system-job/last-updated", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<CodeSystemJobStatus> getCodeSystemsLastUpdated() {
     return codeSystemJobExecutionService
         .getLastCompletedJob()

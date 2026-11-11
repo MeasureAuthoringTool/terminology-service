@@ -322,7 +322,7 @@ class VsacFhirTerminologyControllerMvcTest {
     MvcResult result =
         mockMvc
             .perform(
-                MockMvcRequestBuilders.get("/terminology/code-systems/last-updated")
+                MockMvcRequestBuilders.get("/terminology/code-system-job/last-updated")
                     .with(user(TEST_USR)))
             .andExpect(status().isOk())
             .andReturn();
@@ -338,7 +338,7 @@ class VsacFhirTerminologyControllerMvcTest {
 
     mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/terminology/code-systems/last-updated")
+            MockMvcRequestBuilders.get("/terminology/code-system-job/last-updated")
                 .with(user(TEST_USR)))
         .andExpect(status().isNoContent());
   }

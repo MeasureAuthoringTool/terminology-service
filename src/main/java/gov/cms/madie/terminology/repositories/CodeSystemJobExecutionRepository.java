@@ -12,7 +12,7 @@ public interface CodeSystemJobExecutionRepository
     extends MongoRepository<CodeSystemJobExecutionState, String> {
 
   List<CodeSystemJobExecutionState> findByStatusAndStartedAtBefore(
-          CodeSystemJobExecutionState.Status status, Instant startedAt);
+      CodeSystemJobExecutionState.Status status, Instant startedAt);
 
   boolean existsByStatus(CodeSystemJobExecutionState.Status status);
 
