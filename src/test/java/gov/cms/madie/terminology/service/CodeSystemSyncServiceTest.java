@@ -1363,7 +1363,7 @@ class CodeSystemSyncServiceTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"_count=50", "_offset=50"})
-  void retrieveAllCodeSystemsRejectsIncompleteHistoryNextLink(String query) {
+  void retrieveAllCodeSystemsSkipsCodeSystemWithIncompleteHistoryNextLink(String query) {
     // given
     IParser parser = FhirContext.forR4().newJsonParser();
     when(mockContext.newJsonParser()).thenReturn(parser);
@@ -1379,47 +1379,103 @@ class CodeSystemSyncServiceTest {
         .thenReturn(parser.encodeResourceToString(history));
 
     // when
-    IllegalStateException error =
-        assertThrows(
-            IllegalStateException.class,
-            () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
-    assertTrue(error.getMessage().contains("missing _offset or _count"));
+    assertTrue(result.isEmpty());
     verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
-  @Test
-  void retrieveAllCodeSystemsDoesNotPersistPartialHistoryWhenRemoteRequestFails() {
+  @ParameterizedTest
+  @ValueSource(strings = {"firstPage", "laterPage", "malformedResponse"})
+  void refreshPersistsOtherCodeSystemsWhenOneHistoryFails(String failureType) {
     // given
     IParser parser = FhirContext.forR4().newJsonParser();
     when(mockContext.newJsonParser()).thenReturn(parser);
     Bundle search = new Bundle();
-    search.addEntry().setResource(buildFhirCodeSystem("logical-id", "2"));
-    Bundle history = new Bundle();
-    history.addEntry().setResource(buildFhirCodeSystem("logical-id", "2"));
-    history
-        .addLink()
-        .setRelation("next")
-        .setUrl("http://example.com/_history?_offset=50&_count=50");
+    for (String id : List.of("before", "failed", "after")) {
+      var current = buildFhirCodeSystem(id, "2");
+      current.setUrl("http://example.com/" + id);
+      search.addEntry().setResource(current);
+      if (!"failed".equals(id)) {
+        Bundle history = new Bundle();
+        history.addEntry().setResource(current);
+        when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(id, 0, 50, TEST_API_KEY))
+            .thenReturn(parser.encodeResourceToString(history));
+      }
+    }
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, TEST_API_KEY))
         .thenReturn(parser.encodeResourceToString(search));
-    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
-            "logical-id", 0, 50, TEST_API_KEY))
-        .thenReturn(parser.encodeResourceToString(history));
-    IllegalStateException failure = new IllegalStateException("VSAC unavailable");
-    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
-            "logical-id", 50, 50, TEST_API_KEY))
-        .thenThrow(failure);
+    if ("firstPage".equals(failureType)) {
+      when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("failed", 0, 50, TEST_API_KEY))
+          .thenThrow(new IllegalStateException("VSAC unavailable"));
+    } else if ("malformedResponse".equals(failureType)) {
+      when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("failed", 0, 50, TEST_API_KEY))
+          .thenReturn("not FHIR JSON");
+    } else {
+      Bundle partialHistory = new Bundle();
+      partialHistory.addEntry().setResource(buildFhirCodeSystem("failed", "1"));
+      partialHistory
+          .addLink()
+          .setRelation("next")
+          .setUrl("http://example.com/_history?_offset=50&_count=50");
+      when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("failed", 0, 50, TEST_API_KEY))
+          .thenReturn(parser.encodeResourceToString(partialHistory));
+      when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("failed", 50, 50, TEST_API_KEY))
+          .thenThrow(new IllegalStateException("VSAC unavailable"));
+    }
+    Logger logger = (Logger) LoggerFactory.getLogger(CodeSystemSyncService.class);
+    ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    List<CodeSystem> result;
 
     // when
-    IllegalStateException error =
-        assertThrows(
-            IllegalStateException.class,
-            () -> codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser));
+    try {
+      result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    } finally {
+      logger.detachAppender(appender);
+      appender.stop();
+    }
 
     // then
-    assertSame(failure, error);
+    assertEquals(
+        List.of("http://example.com/before", "http://example.com/after"),
+        result.stream().map(CodeSystem::getFullUrl).toList());
+    verify(codeSystemService, times(2)).createCodeSystem(argThat(CodeSystem::isLatestVersion));
+    verify(codeSystemRepository, never())
+        .findByFullUrlAndVersionFhirVersion(eq("http://example.com/failed"), anyString());
+    verifyNoMoreInteractions(codeSystemService);
+    assertTrue(
+        appender.list.stream()
+            .anyMatch(
+                event ->
+                    event.getLevel() == Level.WARN
+                        && event.getFormattedMessage().contains("left unchanged: [failed]")));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void refreshDoesNotUpdateOrCleanUpFailedCodeSystemWithInvalidCurrentIdentity(boolean missingUrl) {
+    // given
+    var current = buildFhirCodeSystem("failed", missingUrl ? "2" : null);
+    if (missingUrl) {
+      current.setUrl(null);
+    }
+    IParser parser = FhirContext.forR4().newJsonParser();
+    when(mockContext.newJsonParser()).thenReturn(parser);
+    Bundle search = new Bundle();
+    search.addEntry().setResource(current);
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, TEST_API_KEY))
+        .thenReturn(parser.encodeResourceToString(search));
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("failed", 0, 50, TEST_API_KEY))
+        .thenThrow(new IllegalStateException("VSAC unavailable"));
+
+    // when
+    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertTrue(result.isEmpty());
     verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
