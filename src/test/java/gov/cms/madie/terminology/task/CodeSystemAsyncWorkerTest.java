@@ -1,6 +1,6 @@
 package gov.cms.madie.terminology.task;
 
-import gov.cms.madie.terminology.models.CodeSystemJobExecution;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import gov.cms.madie.terminology.service.CodeSystemSyncService;
@@ -30,8 +30,8 @@ class CodeSystemAsyncWorkerTest {
 
   private static final String API_KEY = "abc-test";
 
-  private final CodeSystemJobExecution execution =
-      CodeSystemJobExecution.builder().id("job-1").build();
+  private final CodeSystemJobExecutionState execution =
+      CodeSystemJobExecutionState.builder().id("job-1").build();
 
   @BeforeEach
   void setup() {

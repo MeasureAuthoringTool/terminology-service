@@ -1,6 +1,6 @@
 package gov.cms.madie.terminology.task;
 
-import gov.cms.madie.terminology.models.CodeSystemJobExecution;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
 import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +26,8 @@ class UpdateCodeSystemTaskTest {
 
   @Test
   void testStartJobRunsSuccessfully() {
-    CodeSystemJobExecution execution = CodeSystemJobExecution.builder().id("job-1").build();
+    CodeSystemJobExecutionState execution =
+        CodeSystemJobExecutionState.builder().id("job-1").build();
     when(codeSystemJobExecutionService.start(HARP_ID)).thenReturn(execution);
 
     boolean result = updateCodeSystemTask.startJob(HARP_ID);

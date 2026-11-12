@@ -5,7 +5,10 @@ import gov.cms.madie.terminology.audit.AdminAuditService;
 import gov.cms.madie.terminology.audit.AdminAuditService.Action;
 import gov.cms.madie.terminology.audit.AuditResource;
 import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
+import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
+import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.config.SecurityConfig;
@@ -29,9 +32,11 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -53,6 +58,7 @@ class AdminControllerMvcTest {
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean private CodeSystemExportService codeSystemExportService;
   @MockitoBean private AdminAuditService adminAuditService;
+  @MockitoBean private CodeSystemJobExecutionService codeSystemJobExecutionService;
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
 
@@ -307,5 +313,47 @@ class AdminControllerMvcTest {
 
     verify(updateCodeSystemTask, never()).startJob(any());
     verifyNoInteractions(adminAuditService);
+  }
+
+  @Test
+  void testGetCodeSystemJobStatusReturnsLatestStatus() throws Exception {
+    when(codeSystemJobExecutionService.getLatestJobStatus())
+        .thenReturn(
+            Optional.of(
+                new CodeSystemJobStatus(Status.COMPLETED, Instant.parse("2026-11-09T15:04:05Z"))));
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/terminology/admin/code-system-job-status")
+                    .with(user(TEST_USR).roles("MADIE-ADMIN")))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String content = result.getResponse().getContentAsString();
+    assertThat(content, containsString("\"status\":\"COMPLETED\""));
+    assertThat(content, containsString("\"completedAt\":\"2026-11-09T15:04:05Z\""));
+  }
+
+  @Test
+  void testGetCodeSystemJobStatusReturnsNoContentWhenNoJobHasRun() throws Exception {
+    when(codeSystemJobExecutionService.getLatestJobStatus()).thenReturn(Optional.empty());
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/terminology/admin/code-system-job-status")
+                .with(user(TEST_USR).roles("MADIE-ADMIN")))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  void testGetCodeSystemJobStatusForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/terminology/admin/code-system-job-status")
+                .with(user(TEST_USR)))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(codeSystemJobExecutionService);
   }
 }
