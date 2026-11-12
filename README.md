@@ -29,7 +29,7 @@ The service listens on port `8081`. The health actuator endpoint is available at
 
 ## VSES terminology ingestion
 
-**Automated ingestion populates and refreshes VSES data only with expansions retrieved from TX.FHIR. Expansions retrieved from VSAC are not saved to VSES by this flow.** VSAC is used only to check whether a value set is available before deciding whether to request its expansion from TX.FHIR.
+**VSAC is the source of truth for VSAC-prefixed value sets.** Automated ingestion stores only TX.FHIR expansions in VSES, using them temporarily when VSAC confirms a value set is unavailable. Once VSAC supports it, the matching VSES record is removed.
 
 ### Refresh triggers
 
@@ -46,14 +46,18 @@ The scheduled refresh processes all loaded IGs using the same flow. By default, 
 
 ### Ingestion flow
 
-1. Collect the value set dependencies for the selected IG/version or all loaded IGs.
-2. For canonical URLs beginning with `http://cts.nlm.nih.gov/fhir/`, check VSAC for the matching URL and, when provided, version using a `ValueSet` search with `_summary=count`. **This is an availability check, not an expansion request.**
-   - If VSAC contains the value set, delete any VSES record matching the dependency's URL and version (including `manuallyModified` records), then skip it without requesting an expansion or saving it to VSES. Other versions remain untouched.
-   - If VSAC confirms no match, request the expansion from TX.FHIR.
-   - If VSAC returns an error or invalid response, log the issue and skip the value set without deleting existing VSES data.
-3. For other canonical URLs, request the expansion directly from TX.FHIR, without checking VSAC.
-4. Save only successful TX.FHIR expansions to VSES, inserting new records or updating existing records matched by URL and version. Existing records marked `manuallyModified` are not overwritten. Failed or missing expansions are not saved, and there is no VSAC expansion fallback.
+Collect the value set dependencies for the selected IG/version or all loaded IGs, then process each value set:
+
+| Condition | Action |
+| --- | --- |
+| URL starts with `http://cts.nlm.nih.gov/fhir/` | Check VSAC availability by URL and, when nonblank, version. This is a count-only search, not an expansion request. |
+| Available in VSAC | Delete the VSES record with the dependency's exact URL/version, if present, including manually modified records. Otherwise, no cleanup is needed. Skip TX.FHIR; other versions remain untouched. |
+| Confirmed absent from VSAC | Request its expansion from TX.FHIR. |
+| VSAC lookup fails or returns an invalid response | Log the issue and skip the value set, preserving existing VSES data. |
+| URL does not have the VSAC prefix | Request its expansion directly from TX.FHIR. |
+
+Save successful TX.FHIR expansions to VSES by URL/version: insert new records or update existing ones unless marked `manuallyModified`. Missing or failed expansions are logged and not saved; existing data is retained. There is no VSAC expansion fallback. An admin may need to add the value set manually through the UI if an expansion cannot be retrieved.
 
 ### Manual data maintenance
 
-Separately, admins can create records with `POST /api/terminology/admin/value-set` or update existing records with `PUT /api/terminology/admin/value-set`. These APIs validate and save the supplied value set payload; they do not retrieve expansions from TX.FHIR or VSAC. Records saved through these APIs are marked `manuallyModified` and protected from automated overwrites, but are still deleted when a refresh confirms the matching VSAC-prefixed value set exists in VSAC, the source of truth.
+Admins can create records with `POST /api/terminology/admin/value-set` or update them with `PUT /api/terminology/admin/value-set`. These APIs validate and save the supplied payload without fetching expansions. Records are marked `manuallyModified`: automated refreshes cannot overwrite them, but still delete them when the matching VSAC-prefixed value set becomes available in VSAC.
