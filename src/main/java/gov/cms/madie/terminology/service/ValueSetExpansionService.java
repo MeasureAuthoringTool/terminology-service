@@ -165,7 +165,7 @@ public class ValueSetExpansionService {
     return page.map(this::convertToDisplayDto);
   }
 
-  /** Returns only fresh TX.FHIR expansions without mutating shared IG dependencies. */
+  /** Removes VSAC-owned VSES records and returns only fresh TX.FHIR expansions. */
   private List<MadieValueSet> expandValueSets(List<MadieValueSet> madieValueSets) {
     List<MadieValueSet> expandedValueSets = new ArrayList<>();
     int failedExpansions = 0;
@@ -200,7 +200,17 @@ public class ValueSetExpansionService {
     return expandedValueSets;
   }
 
-  /** Skips VSAC-owned definitions and any value set whose existence cannot be confirmed. */
+  /**
+   * Checks VSAC availability by URL and, when nonblank, version for a VSAC-prefixed dependency.
+   * VSAC is the source of truth: a confirmed match deletes any VSES record with the dependency's
+   * exact URL/version, including manually modified records, and skips TX.FHIR processing.
+   *
+   * <p>Confirmed absence permits TX.FHIR fallback. Failed or invalid VSAC lookups are logged and
+   * skip processing without deleting existing VSES data.
+   *
+   * @param madieValueSet the VSAC-prefixed dependency to check
+   * @return {@code false} only when VSAC confirms absence; {@code true} otherwise
+   */
   private boolean shouldSkipVsacValueSet(MadieValueSet madieValueSet) {
     UriComponentsBuilder search =
         UriComponentsBuilder.fromPath("/ValueSet")
@@ -230,6 +240,17 @@ public class ValueSetExpansionService {
       if (bundle.getTotal() == 0) {
         return false;
       }
+      vseRepo
+          .findByUrlAndVersion(madieValueSet.getUrl(), madieValueSet.getVersion())
+          .ifPresent(
+              existing -> {
+                vseRepo.deleteById(existing.getId());
+                log.info(
+                    "Deleted VSES ValueSet {} version {} with id {} because it exists in VSAC.",
+                    existing.getUrl(),
+                    existing.getVersion(),
+                    existing.getId());
+              });
       log.info(
           "Skipping ValueSet {} version {} because it exists in VSAC.",
           madieValueSet.getUrl(),

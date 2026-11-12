@@ -543,10 +543,9 @@ class ValueSetExpansionServiceTest {
     verify(vseRepo, never()).save(any());
   }
 
-  /** Existing VSAC definitions are skipped even when a previous run cached an expansion. */
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void skipsVsacValueSetAndContinues(boolean allIgs) {
+  void deletesCachedVsacValueSetAndContinues(boolean allIgs) {
     MadieValueSet vsac =
         MadieValueSet.builder()
             .url(VSAC_URL)
@@ -558,6 +557,8 @@ class ValueSetExpansionServiceTest {
             VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
         .thenReturn(VSAC_PRESENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
+    MadieValueSet existing = vsac.toBuilder().id("cached-vsac-id").build();
+    when(vseRepo.findByUrlAndVersion(VSAC_URL, VS_VERSION)).thenReturn(Optional.of(existing));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
 
@@ -565,11 +566,55 @@ class ValueSetExpansionServiceTest {
 
     verify(txTerminologyServiceWebClient, never()).getValueSetExpansion(VSAC_URL, VS_VERSION);
     verify(vseRepo).save(argThat(vs -> VS_URL.equals(vs.getUrl())));
-    verify(vseRepo, never()).findByUrlAndVersion(VSAC_URL, VS_VERSION);
-    verify(vseRepo, never()).deleteById(anyString());
+    verify(vseRepo).findByUrlAndVersion(VSAC_URL, VS_VERSION);
+    verify(vseRepo).deleteById("cached-vsac-id");
+    verify(vseRepo, never()).save(argThat(vs -> VSAC_URL.equals(vs.getUrl())));
+    assertEquals("old VSAC content", vsac.getValueSet());
     verify(fhirTerminologyServiceWebClient)
         .fetchResourceFromVsac(VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet");
     verifyNoMoreInteractions(fhirTerminologyServiceWebClient);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void skipsConfirmedVsacValueSetWhenNotInVses(boolean allIgs) {
+    mockDependencies(
+        allIgs, List.of(MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build()));
+    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+        .thenReturn(VSAC_PRESENT);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+
+    refreshDependencies(allIgs);
+
+    verify(vseRepo).findByUrlAndVersion(VSAC_URL, VS_VERSION);
+    verifyNoMoreInteractions(vseRepo);
+    verifyNoInteractions(txTerminologyServiceWebClient);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void deletesManuallyModifiedValueSetWhenVsacBecomesAvailable(boolean allIgs) {
+    MadieValueSet vsac = MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build();
+    MadieValueSet existing =
+        vsac.toBuilder().id("manual-vsac-id").manuallyModified(true).build();
+    mockDependencies(allIgs, List.of(vsac));
+    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+        .thenReturn(VSAC_PRESENT);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VSAC_URL, VS_VERSION)).thenReturn(Optional.of(existing));
+
+    refreshDependencies(allIgs);
+
+    var order = inOrder(fhirTerminologyServiceWebClient, vseRepo);
+    order
+        .verify(fhirTerminologyServiceWebClient)
+        .fetchResourceFromVsac(VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet");
+    order.verify(vseRepo).findByUrlAndVersion(VSAC_URL, VS_VERSION);
+    order.verify(vseRepo).deleteById("manual-vsac-id");
+    verifyNoMoreInteractions(vseRepo);
+    verifyNoInteractions(txTerminologyServiceWebClient);
   }
 
   /** Confirmed VSAC absence permits only the TX.FHIR response to be persisted. */
@@ -602,6 +647,7 @@ class ValueSetExpansionServiceTest {
             .getIdElement()
             .getIdPart());
     assertNotNull(captor.getValue().getLastUpdated());
+    verify(vseRepo, never()).deleteById(anyString());
     verifyNoMoreInteractions(fhirTerminologyServiceWebClient);
   }
 
@@ -640,10 +686,15 @@ class ValueSetExpansionServiceTest {
             VSAC_SEARCH, SYSTEM_API_KEY, "ValueSet"))
         .thenReturn(VSAC_PRESENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
+    MadieValueSet existing = vsac.toBuilder().id("unversioned-vsac-id").build();
+    when(vseRepo.findByUrlAndVersion(VSAC_URL, version)).thenReturn(Optional.of(existing));
 
     refreshDependencies(true);
 
-    verifyNoInteractions(txTerminologyServiceWebClient, vseRepo);
+    verifyNoInteractions(txTerminologyServiceWebClient);
+    verify(vseRepo).findByUrlAndVersion(VSAC_URL, version);
+    verify(vseRepo).deleteById("unversioned-vsac-id");
+    verifyNoMoreInteractions(vseRepo);
     verify(fhirTerminologyServiceWebClient)
         .fetchResourceFromVsac(VSAC_SEARCH, SYSTEM_API_KEY, "ValueSet");
   }
@@ -673,6 +724,8 @@ class ValueSetExpansionServiceTest {
 
     verify(txTerminologyServiceWebClient, never()).getValueSetExpansion(VSAC_URL, VS_VERSION);
     verify(vseRepo).save(argThat(vs -> VS_URL.equals(vs.getUrl())));
+    verify(vseRepo, never()).findByUrlAndVersion(VSAC_URL, VS_VERSION);
+    verify(vseRepo, never()).deleteById(anyString());
   }
 
   /** VSAC HTTP failures skip only the affected value set, including an endpoint-level 404. */
@@ -693,6 +746,8 @@ class ValueSetExpansionServiceTest {
 
     verify(txTerminologyServiceWebClient, never()).getValueSetExpansion(VSAC_URL, VS_VERSION);
     verify(vseRepo).save(argThat(vs -> VS_URL.equals(vs.getUrl())));
+    verify(vseRepo, never()).findByUrlAndVersion(VSAC_URL, VS_VERSION);
+    verify(vseRepo, never()).deleteById(anyString());
   }
 
   /** Transport failures must not permit unverified VSAC data through TX.FHIR. */
@@ -716,6 +771,8 @@ class ValueSetExpansionServiceTest {
 
     verify(txTerminologyServiceWebClient, never()).getValueSetExpansion(VSAC_URL, VS_VERSION);
     verify(vseRepo).save(argThat(vs -> VS_URL.equals(vs.getUrl())));
+    verify(vseRepo, never()).findByUrlAndVersion(VSAC_URL, VS_VERSION);
+    verify(vseRepo, never()).deleteById(anyString());
   }
 
   /** Only the exact HTTP VSAC prefix triggers an existence check. */
@@ -783,7 +840,9 @@ class ValueSetExpansionServiceTest {
 
     verify(fhirTerminologyServiceWebClient)
         .fetchResourceFromVsac(search, SYSTEM_API_KEY, "ValueSet");
-    verifyNoInteractions(txTerminologyServiceWebClient, vseRepo);
+    verifyNoInteractions(txTerminologyServiceWebClient);
+    verify(vseRepo).findByUrlAndVersion(VSAC_URL, version);
+    verifyNoMoreInteractions(vseRepo);
   }
 
   /**
@@ -839,7 +898,9 @@ class ValueSetExpansionServiceTest {
       if (total == 0) {
         verify(vseRepo).save(argThat(vs -> vs.getValueSet().contains("test-vs")));
       } else {
-        verifyNoInteractions(txTerminologyServiceWebClient, vseRepo);
+        verifyNoInteractions(txTerminologyServiceWebClient);
+        verify(vseRepo).findByUrlAndVersion(VSAC_URL, VS_VERSION);
+        verifyNoMoreInteractions(vseRepo);
       }
     }
   }
