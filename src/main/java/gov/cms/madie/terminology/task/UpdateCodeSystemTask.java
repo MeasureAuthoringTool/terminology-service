@@ -27,6 +27,12 @@ public class UpdateCodeSystemTask {
     }
 
     try {
+      if (codeSystemJobExecutionService.isJobRunning()) {
+        log.warn("Code system update already running according to the database.");
+        running.set(false);
+        return false;
+      }
+
       CodeSystemJobExecutionState execution = codeSystemJobExecutionService.start(triggeredBy);
       codeSystemAsyncWorker.runJobAsync(running, execution);
     } catch (RuntimeException e) {
