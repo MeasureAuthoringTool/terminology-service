@@ -60,6 +60,37 @@ class UpdateCodeSystemTaskTest {
   }
 
   @Test
+  void testStartJobReturnsFalseWhenDatabaseReportsRunningJob() {
+    when(codeSystemJobExecutionService.isJobRunning()).thenReturn(true);
+
+    assertFalse(updateCodeSystemTask.startJob(HARP_ID));
+
+    assertFalse(updateCodeSystemTask.isRunning());
+    verify(codeSystemJobExecutionService, never()).start(anyString());
+    verifyNoInteractions(codeSystemAsyncWorker);
+  }
+
+  @Test
+  void testStartJobSucceedsOnceDatabaseJobHasFinished() {
+    when(codeSystemJobExecutionService.isJobRunning()).thenReturn(true, false);
+
+    assertFalse(updateCodeSystemTask.startJob(HARP_ID));
+    assertTrue(updateCodeSystemTask.startJob(HARP_ID));
+
+    verify(codeSystemJobExecutionService, times(1)).start(HARP_ID);
+  }
+
+  @Test
+  void testScheduledRunIsSkippedWhenDatabaseReportsRunningJob() {
+    when(codeSystemJobExecutionService.isJobRunning()).thenReturn(true);
+
+    updateCodeSystemTask.updateCodeSystems();
+
+    verify(codeSystemJobExecutionService, never()).start(anyString());
+    verifyNoInteractions(codeSystemAsyncWorker);
+  }
+
+  @Test
   void testStartJobReleasesFlagWhenRecordCannotBeCreated() {
     when(codeSystemJobExecutionService.start(HARP_ID))
         .thenThrow(new RuntimeException("Mongo is down"));

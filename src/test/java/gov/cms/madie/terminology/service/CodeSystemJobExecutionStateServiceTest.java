@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -153,6 +154,14 @@ class CodeSystemJobExecutionStateServiceTest {
         .thenThrow(new RuntimeException("Mongo is down"));
 
     assertDoesNotThrow(() -> codeSystemJobExecutionService.failInterruptedJobs());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testIsJobRunningReflectsRunningRecordInDatabase(boolean running) {
+    when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(running);
+
+    assertEquals(running, codeSystemJobExecutionService.isJobRunning());
   }
 
   @Test

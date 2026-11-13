@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminController.class)
@@ -300,6 +301,21 @@ class AdminControllerMvcTest {
                 AuditResource.bulk(
                     ResourceType.CODE_SYSTEM,
                     "Update Code Systems: started job to refresh all code systems from VSAC")));
+  }
+
+  @Test
+  void testTriggerCodeSystemRefreshConflictWhenJobAlreadyRunning() throws Exception {
+    when(updateCodeSystemTask.startJob(TEST_USR)).thenReturn(false);
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.post("/terminology/admin/trigger-code-system-refresh")
+                .with(user(TEST_USR).roles("MADIE-ADMIN"))
+                .with(csrf()))
+        .andExpect(status().isConflict())
+        .andExpect(content().string("Code System update Job already running."));
+
+    verifyNoInteractions(adminAuditService);
   }
 
   @Test
