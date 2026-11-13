@@ -43,6 +43,18 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- Override transitive Jackson 3 version used by spring boot to resolve critical sec vuln-->
+      <dependency>
+      	<groupId>tools.jackson.core</groupId>
+      	<artifactId>jackson-databind</artifactId>
+      	<version>3.1.8</version>
+      </dependency>
+      <!-- Override transitive Jackson 2 version used by okta and hapi-fhir to resolve critical sec vuln-->
+      <dependency>
+      	<groupId>com.fasterxml.jackson.core</groupId>
+      	<artifactId>jackson-databind</artifactId>
+      	<version>2.21.8</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
