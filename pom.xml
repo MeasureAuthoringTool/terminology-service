@@ -153,13 +153,13 @@
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-java-models</artifactId>
-      <version>0.10.31-SNAPSHOT</version>
+      <version>0.10.36-SNAPSHOT</version>
     </dependency>
 
     <dependency>
       <groupId>gov.cms.madie</groupId>
       <artifactId>madie-translator-commons</artifactId>
-      <version>3.12.2</version>
+      <version>3.12.4</version>
       <exclusions>
         <exclusion>
           <groupId>org.jetbrains.kotlinx</groupId>
