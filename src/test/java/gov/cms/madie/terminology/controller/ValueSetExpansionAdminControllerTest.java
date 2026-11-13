@@ -185,7 +185,7 @@ class ValueSetExpansionAdminControllerTest {
             Action.UPDATE,
             AuditResource.bulk(
                 ResourceType.VALUE_SET,
-                "Update VSES Data: started job to refresh value set expansions from VSAC"
+                "Update VSES Data: started job to refresh value set expansions from TX.FHIR"
                     + " for all implementation guides"));
   }
 
@@ -204,7 +204,7 @@ class ValueSetExpansionAdminControllerTest {
             Action.UPDATE,
             AuditResource.bulk(
                 ResourceType.VALUE_SET,
-                "Update VSES Data: started job to refresh value set expansions from VSAC"
+                "Update VSES Data: started job to refresh value set expansions from TX.FHIR"
                     + " for implementation guide qicore version 6.0.0"));
   }
 

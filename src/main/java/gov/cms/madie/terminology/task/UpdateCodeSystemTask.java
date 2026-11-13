@@ -1,5 +1,7 @@
 package gov.cms.madie.terminology.task;
 
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
+import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,24 +13,34 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class UpdateCodeSystemTask {
 
+  static final String SCHEDULED_TRIGGERED_BY = "SYSTEM";
+
   private final CodeSystemAsyncWorker codeSystemAsyncWorker;
+  private final CodeSystemJobExecutionService codeSystemJobExecutionService;
 
   private final AtomicBoolean running = new AtomicBoolean(false);
 
-  public boolean startJob() {
+  public boolean startJob(String triggeredBy) {
     if (!running.compareAndSet(false, true)) {
       log.warn("Code system update already running.");
       return false;
     }
 
-    codeSystemAsyncWorker.runJobAsync(running);
+    try {
+      CodeSystemJobExecutionState execution = codeSystemJobExecutionService.start(triggeredBy);
+      codeSystemAsyncWorker.runJobAsync(running, execution);
+    } catch (RuntimeException e) {
+      // Release the flag, or every later run would be rejected
+      running.set(false);
+      throw e;
+    }
 
     return true;
   }
 
   @Scheduled(cron = "${code-system-refresh-task.code-system-cron-date-time}")
   public void updateCodeSystems() {
-    if (!startJob()) {
+    if (!startJob(SCHEDULED_TRIGGERED_BY)) {
       log.warn("Code system update already running. Skipping scheduled execution.");
     }
   }
