@@ -11,8 +11,8 @@ import java.time.Instant;
  * A unified ValueSet model that serves as an intermediary storage for value set expansions.
  * Designed for local database storage with easy conversion to both QdmValueSet and FHIR ValueSet.
  *
- * <p>This model stores expansion data retrieved from the VSAC FHIR Terminology Server and can be
- * converted to:
+ * <p>IG ingestion stores expansion data retrieved only from TX.FHIR. Existing records and manual
+ * overrides may have other origins. This model can be converted to:
  *
  * <ul>
  *   <li>QdmValueSet - for the /value-sets/expansion/qdm endpoint

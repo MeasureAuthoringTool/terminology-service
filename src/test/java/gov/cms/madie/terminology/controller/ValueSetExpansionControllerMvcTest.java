@@ -196,7 +196,7 @@ class ValueSetExpansionAdminControllerMvcTest {
             eq(
                 AuditResource.bulk(
                     ResourceType.VALUE_SET,
-                    "Update VSES Data: started job to refresh value set expansions from VSAC"
+                    "Update VSES Data: started job to refresh value set expansions from TX.FHIR"
                         + " for all implementation guides")));
   }
 
@@ -223,7 +223,7 @@ class ValueSetExpansionAdminControllerMvcTest {
             eq(
                 AuditResource.bulk(
                     ResourceType.VALUE_SET,
-                    "Update VSES Data: started job to refresh value set expansions from VSAC"
+                    "Update VSES Data: started job to refresh value set expansions from TX.FHIR"
                         + " for implementation guide "
                         + IG_NAME
                         + " version "
