@@ -6,10 +6,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ValueSetExpansionRepository extends MongoRepository<MadieValueSet, String> {
   MadieValueSet findByUrlAndVersionIsNull(String url);
+
+  List<MadieValueSet> findByUrlStartingWith(String urlPrefix);
 
   Page<MadieValueSet> findByUrlContainingIgnoreCase(String searchTerm, Pageable pageable);
 
