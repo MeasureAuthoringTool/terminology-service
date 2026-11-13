@@ -41,6 +41,7 @@ public class CodeSystemSyncService {
   private final CodeSystemService codeSystemService;
   private final CodeSystemRepository codeSystemRepository;
 
+  /** Attempts to save every code system, then throws if any of them could not be saved */
   public List<CodeSystem> remoteRetrieveAllCodeSystems(UmlsUser umlsUser) {
     List<CodeSystem> allCodeSystems = new ArrayList<>();
     List<CodeSystem> historyCodeSystems = new ArrayList<>();
@@ -281,6 +282,7 @@ public class CodeSystemSyncService {
 
   private void updateOrInsertRetrievedCodeSystems(
       List<CodeSystem> codeSystemList, Set<String> preservedLatestUrls) {
+    int failedSaveCount = 0;
     for (CodeSystem codeSystem : codeSystemList) {
       // Skip any CodeSystem that is missing a FHIR version or fullUrl.
       if (codeSystem.getVersion() == null
@@ -311,11 +313,15 @@ public class CodeSystemSyncService {
           log.info("CodeSystem updated: {}", updated);
         }
       } catch (DataAccessException e) {
+        failedSaveCount++;
         log.error(
             "Database error while updating/inserting CodeSystem {}: {}",
             codeSystem.getName(),
             e.getMessage());
       }
+    }
+    if (failedSaveCount > 0) {
+      throw new IllegalStateException(failedSaveCount + " code system(s) failed to save");
     }
   }
 }

@@ -30,7 +30,7 @@ import java.util.List;
 public class ValueSetExpansionAdminController {
 
   private static final String UPDATE_VSES_DATA_AUDIT_DESCRIPTION =
-      "Update VSES Data: started job to refresh value set expansions from VSAC for ";
+      "Update VSES Data: started job to refresh value set expansions from TX.FHIR for ";
 
   private final ValueSetExpansionService vses;
   private final AdminAuditService adminAuditService;

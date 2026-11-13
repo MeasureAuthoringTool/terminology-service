@@ -177,14 +177,15 @@ class AdminControllerTest {
 
   @Test
   void testTriggerCodeSystemRefreshStarted() {
-    when(updateCodeSystemTask.startJob()).thenReturn(true);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(updateCodeSystemTask.startJob(TEST_USER)).thenReturn(true);
 
     ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals("Code system refresh has been started", response.getBody());
 
-    verify(updateCodeSystemTask, times(1)).startJob();
+    verify(updateCodeSystemTask, times(1)).startJob(TEST_USER);
     verify(adminAuditService)
         .logAdminAction(
             principal,
@@ -196,7 +197,8 @@ class AdminControllerTest {
 
   @Test
   void testTriggerCodeSystemRefreshConflict() {
-    when(updateCodeSystemTask.startJob()).thenReturn(false);
+    when(principal.getName()).thenReturn(TEST_USER);
+    when(updateCodeSystemTask.startJob(TEST_USER)).thenReturn(false);
 
     ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
@@ -205,7 +207,7 @@ class AdminControllerTest {
         "Update Code System is already running. We have NOT started the job again",
         response.getBody());
 
-    verify(updateCodeSystemTask, times(1)).startJob();
+    verify(updateCodeSystemTask, times(1)).startJob(TEST_USER);
     verifyNoInteractions(adminAuditService);
   }
 

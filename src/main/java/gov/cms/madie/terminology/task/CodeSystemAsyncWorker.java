@@ -1,6 +1,8 @@
 package gov.cms.madie.terminology.task;
 
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
 import gov.cms.madie.terminology.models.UmlsUser;
+import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +17,13 @@ import org.springframework.stereotype.Service;
 public class CodeSystemAsyncWorker {
 
   private final CodeSystemSyncService codeSystemSyncService;
+  private final CodeSystemJobExecutionService codeSystemJobExecutionService;
 
   @Value("${code-system-refresh-task.terminology-key}")
   private String apiKey;
 
   @Async
-  public void runJobAsync(AtomicBoolean running) {
+  public void runJobAsync(AtomicBoolean running, CodeSystemJobExecutionState execution) {
     try {
       log.info("Starting async code system update.");
 
@@ -28,10 +31,12 @@ public class CodeSystemAsyncWorker {
       user.setApiKey(apiKey);
 
       codeSystemSyncService.remoteRetrieveAllCodeSystems(user);
+      codeSystemJobExecutionService.complete(execution);
 
       log.info("Code system update completed.");
     } catch (Exception ex) {
       log.error("Error during code system update", ex);
+      codeSystemJobExecutionService.fail(execution);
     } finally {
       running.set(false);
     }

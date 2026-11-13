@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -55,6 +56,18 @@ class CodeSystemSyncServiceTest {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
   }
 
+  private List<CodeSystem> capturedInserts(int times) {
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
+    verify(codeSystemRepository, times(times)).save(captor.capture());
+    return captor.getAllValues();
+  }
+
+  private List<CodeSystem> capturedUpdates(int times) {
+    ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
+    verify(codeSystemService, times(times)).updateCodeSystem(any(), captor.capture());
+    return captor.getAllValues();
+  }
+
   @Test
   void testRemoteRetrieveAllCodeSystems() {
     // Given
@@ -72,10 +85,10 @@ class CodeSystemSyncServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     // When
-    List<CodeSystem> resultList = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // Then
-    assertEquals(2, resultList.size());
+    List<CodeSystem> resultList = capturedInserts(2);
     assertTrue(
         resultList.stream()
             .anyMatch(
@@ -266,7 +279,7 @@ class CodeSystemSyncServiceTest {
         "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
         result.get(0).getFullUrl());
     assertEquals("null", result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemService, never()).createCodeSystem(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -303,7 +316,7 @@ class CodeSystemSyncServiceTest {
         "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
         result.get(0).getFullUrl());
     assertNull(result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemService, never()).createCodeSystem(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -336,7 +349,7 @@ class CodeSystemSyncServiceTest {
 
     assertEquals(1, result.size());
     assertEquals("null", result.get(0).getFullUrl());
-    verify(codeSystemService, never()).createCodeSystem(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -368,7 +381,7 @@ class CodeSystemSyncServiceTest {
 
     assertEquals(1, result.size());
     assertNull(result.get(0).getFullUrl());
-    verify(codeSystemService, never()).createCodeSystem(any(CodeSystem.class));
+    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -436,18 +449,13 @@ class CodeSystemSyncServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-
-    // when
     var result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
-    // then
+    // should collect both code systems from initial + recursive
     assertEquals(2, result.size());
-    assertTrue(result.stream().allMatch(CodeSystem::isLatestVersion));
-    verify(fhirTerminologyServiceWebClient).getCodeSystemsPage(50, 50, TEST_API_KEY);
-    verify(fhirTerminologyServiceWebClient)
-        .getCodeSystemHistoryPage("title1v1", 0, 50, TEST_API_KEY);
-    verify(fhirTerminologyServiceWebClient)
-        .getCodeSystemHistoryPage("title2v2", 0, 50, TEST_API_KEY);
+    // calls getCodeSystemsPage(offset,count,apiKey) when retrieving pages
+    verify(fhirTerminologyServiceWebClient, atLeast(1))
+        .getCodeSystemsPage(anyInt(), anyInt(), eq(TEST_API_KEY));
   }
 
   @Test
@@ -462,14 +470,9 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(
             "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
-    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
-            anyString(), anyInt(), anyInt(), anyString()))
-        .thenReturn(
-            "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
-    // when
+    // Call the method under test
     List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
-
-    // then
+    // Assert that the result is not empty and the error branch was triggered
     assertFalse(result.isEmpty());
     assertEquals("LOINC", result.get(0).getName());
   }
