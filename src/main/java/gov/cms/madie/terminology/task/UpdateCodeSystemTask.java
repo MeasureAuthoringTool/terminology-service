@@ -26,12 +26,16 @@ public class UpdateCodeSystemTask {
       return false;
     }
 
+    CodeSystemJobExecutionState execution = null;
     try {
-      CodeSystemJobExecutionState execution = codeSystemJobExecutionService.start(triggeredBy);
+      execution = codeSystemJobExecutionService.start(triggeredBy);
       codeSystemAsyncWorker.runJobAsync(running, execution);
     } catch (RuntimeException e) {
       // Release the flag, or every later run would be rejected
       running.set(false);
+      if (execution != null) {
+        codeSystemJobExecutionService.fail(execution, e);
+      }
       throw e;
     }
 

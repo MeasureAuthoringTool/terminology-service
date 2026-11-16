@@ -2,9 +2,12 @@ package gov.cms.madie.terminology.service;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import gov.cms.madie.terminology.dto.CodeSystemRefreshResult;
 import gov.cms.madie.terminology.models.CodeSystem;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.CodeSystemFailure;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
+import gov.cms.madie.terminology.util.PageCursor;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,18 +15,23 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Identifier;
-import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
-import static java.util.Comparator.*;
-import static java.util.stream.Collectors.*;
+import static java.util.Comparator.comparing;
+import static java.util.Comparator.comparingInt;
+import static java.util.Comparator.naturalOrder;
+import static java.util.Comparator.nullsFirst;
 
 @Service
 @Slf4j
@@ -34,52 +42,218 @@ public class CodeSystemSyncService {
   private final CodeSystemService codeSystemService;
   private final CodeSystemRepository codeSystemRepository;
 
-  /** Attempts to save every code system, then throws if any of them could not be saved */
-  public void remoteRetrieveAllCodeSystems(UmlsUser umlsUser) {
+  /**
+   * Attempts every code system, then reports successes, failures (retrieval, persistence, cleanup),
+   * and skipped invalid upstream entries (missing id, version, or URL).
+   */
+  public CodeSystemRefreshResult remoteRetrieveAllCodeSystems(UmlsUser umlsUser) {
     List<CodeSystem> allCodeSystems = new ArrayList<>();
-    recursiveRemoteRetrieveCodeSystems(umlsUser, 0, 50, allCodeSystems);
-    markLatestVersion(allCodeSystems);
-    updateOrInsertRetrievedCodeSystems(allCodeSystems);
+    List<CodeSystem> historyCodeSystems = new ArrayList<>();
+    List<CodeSystemFailure> failures = new ArrayList<>();
+    List<CodeSystemFailure> skipped = new ArrayList<>();
+    Set<String> invalidCurrentIds = new LinkedHashSet<>();
+    // URLs from families whose current entry is invalid keep their existing latest flags.
+    Set<String> preservedLatestUrls = new LinkedHashSet<>();
+    for (var currentCodeSystem :
+        retrieveCurrentCodeSystems(umlsUser, invalidCurrentIds, skipped).entrySet()) {
+      String id = currentCodeSystem.getKey();
+      List<CodeSystem> history;
+      try {
+        history = retrieveCodeSystemHistory(umlsUser, id);
+      } catch (RuntimeException e) {
+        // A family without complete history is left unchanged in the database.
+        CodeSystem current = currentCodeSystem.getValue();
+        failures.add(
+            new CodeSystemFailure(
+                id, current.getFullUrl(), fhirVersion(current), "HISTORY", e.toString()));
+        log.error("History retrieval failed for CodeSystem {}; skipping this CodeSystem", id, e);
+        continue;
+      }
+      allCodeSystems.add(currentCodeSystem.getValue());
+      if (invalidCurrentIds.contains(id)) {
+        history.forEach(codeSystem -> preservedLatestUrls.add(codeSystem.getFullUrl()));
+      }
+      historyCodeSystems.addAll(history);
+    }
+    // Search defines current business versions and takes precedence over history duplicates.
+    allCodeSystems.addAll(historyCodeSystems);
+    List<CodeSystem> codeSystems = distinctBusinessVersions(allCodeSystems);
+    codeSystems.stream()
+        .filter(CodeSystem::isLatestVersion)
+        .map(CodeSystem::getFullUrl)
+        .forEach(preservedLatestUrls::remove);
+    List<CodeSystem> updatedCodeSystems =
+        updateOrInsertRetrievedCodeSystems(codeSystems, preservedLatestUrls, failures, skipped);
+    preservedLatestUrls.forEach(url -> keepSingleLatestVersion(url, codeSystems, failures));
+    Set<String> failedCleanupUrls = new LinkedHashSet<>();
+    failures.stream()
+        .filter(failure -> "LATEST_VERSION_CLEANUP".equals(failure.stage()))
+        .map(CodeSystemFailure::fullUrl)
+        .forEach(failedCleanupUrls::add);
+    updatedCodeSystems.removeIf(codeSystem -> failedCleanupUrls.contains(codeSystem.getFullUrl()));
+    return new CodeSystemRefreshResult(updatedCodeSystems, failures, skipped);
   }
 
-  private void recursiveRemoteRetrieveCodeSystems(
-      UmlsUser umlsUser, Integer offset, Integer count, List<CodeSystem> allCodeSystems) {
-    log.info("requesting page offset: {} count: {}", offset, count);
-    Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, offset, count);
-    List<CodeSystem> codeSystemsPage = new ArrayList<>();
-    codeSystemBundle
-        .getEntry()
-        .forEach(
-            entry -> {
-              var codeSystem = (org.hl7.fhir.r4.model.CodeSystem) entry.getResource();
-              codeSystemsPage.add(
-                  CodeSystem.builder()
-                      .fullUrl(codeSystem.getUrl())
-                      .title(codeSystem.getTitle())
-                      .name(codeSystem.getName())
-                      .version(
-                          CodeSystem.Version.builder().fhirVersion(codeSystem.getVersion()).build())
-                      .versionId(codeSystem.getMeta().getVersionId())
-                      .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
-                      .isInVsac(true)
-                      .lastUpdated(Instant.now())
-                      .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
-                      .build());
-            });
-    allCodeSystems.addAll(codeSystemsPage);
-    var links = codeSystemBundle.getLink();
-    links.forEach(
-        link -> {
-          if (link.getRelation().equals("next")) {
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(link.getUrl());
-            String newOffset = builder.build().getQueryParams().getFirst("_offset");
-            String newCount = builder.build().getQueryParams().getFirst("_count");
-            assert newOffset != null;
-            assert newCount != null;
-            recursiveRemoteRetrieveCodeSystems(
-                umlsUser, Integer.parseInt(newOffset), Integer.parseInt(newCount), allCodeSystems);
+  private List<CodeSystem> distinctBusinessVersions(List<CodeSystem> allCodeSystems) {
+    Map<CodeSystemVersionKey, CodeSystem> versions = new LinkedHashMap<>();
+    allCodeSystems.forEach(
+        codeSystem ->
+            versions.putIfAbsent(
+                new CodeSystemVersionKey(
+                    codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion()),
+                codeSystem));
+    return new ArrayList<>(versions.values());
+  }
+
+  private record CodeSystemVersionKey(String fullUrl, String version) {}
+
+  /**
+   * Resolves multiple latest records for a URL whose current VSAC entry was invalid. Keeps the
+   * latest record listed first in VSAC history, or the most recently updated when none are listed.
+   */
+  private void keepSingleLatestVersion(
+      String url, List<CodeSystem> retrievedCodeSystems, List<CodeSystemFailure> failures) {
+    try {
+      List<CodeSystem> latestVersions =
+          codeSystemRepository.findAllByFullUrl(url).stream()
+              .filter(CodeSystem::isLatestVersion)
+              .toList();
+      if (latestVersions.size() < 2) {
+        return;
+      }
+      List<String> historyVersions =
+          retrievedCodeSystems.stream()
+              .filter(codeSystem -> url.equals(codeSystem.getFullUrl()))
+              .map(CodeSystemSyncService::fhirVersion)
+              .toList();
+      CodeSystem keep =
+          latestVersions.stream()
+              .filter(codeSystem -> historyVersions.contains(fhirVersion(codeSystem)))
+              .min(comparingInt(codeSystem -> historyVersions.indexOf(fhirVersion(codeSystem))))
+              .orElseGet(
+                  () ->
+                      latestVersions.stream()
+                          .max(comparing(CodeSystem::getLastUpdated, nullsFirst(naturalOrder())))
+                          .orElseThrow());
+      List<CodeSystem> demoted =
+          latestVersions.stream()
+              .filter(codeSystem -> !Objects.equals(codeSystem.getId(), keep.getId()))
+              .toList();
+      demoted.forEach(codeSystem -> codeSystem.setLatestVersion(false));
+      codeSystemRepository.saveAll(demoted);
+      log.warn(
+          "Multiple latest CodeSystem versions found for url: {}; kept version: {} and demoted: {}",
+          url,
+          fhirVersion(keep),
+          demoted.stream().map(CodeSystemSyncService::fhirVersion).toList());
+    } catch (RuntimeException e) {
+      failures.add(new CodeSystemFailure(null, url, null, "LATEST_VERSION_CLEANUP", e.toString()));
+      log.error("Error while resolving latest CodeSystem version for url {}", url, e);
+    }
+  }
+
+  private static String fhirVersion(CodeSystem codeSystem) {
+    return codeSystem.getVersion() == null ? null : codeSystem.getVersion().getFhirVersion();
+  }
+
+  private Map<String, CodeSystem> retrieveCurrentCodeSystems(
+      UmlsUser umlsUser, Set<String> invalidCurrentIds, List<CodeSystemFailure> skipped) {
+    Map<String, CodeSystem> currentCodeSystems = new LinkedHashMap<>();
+    PageCursor page = new PageCursor(0, 50);
+    do {
+      log.info("requesting page offset: {} count: {}", page.offset(), page.count());
+      Bundle codeSystemBundle = retrieveCodeSystemsPage(umlsUser, page.offset(), page.count());
+      for (Bundle.BundleEntryComponent entry : codeSystemBundle.getEntry()) {
+        if (entry.getResource() instanceof org.hl7.fhir.r4.model.CodeSystem codeSystem) {
+          String codeSystemId = codeSystem.getIdElement().getIdPart();
+          if (StringUtils.isNotBlank(codeSystemId)) {
+            CodeSystem currentCodeSystem = toCodeSystem(codeSystem);
+            currentCodeSystem.setLatestVersion(hasValidIdentity(currentCodeSystem));
+            if (!currentCodeSystem.isLatestVersion()) {
+              invalidCurrentIds.add(codeSystemId);
+              log.warn(
+                  "Current VSAC CodeSystem {} has an invalid URL or business version; "
+                      + "skipping this entry and preserving existing latest flags: {}",
+                  codeSystemId,
+                  currentCodeSystem);
+            }
+            currentCodeSystems.putIfAbsent(codeSystemId, currentCodeSystem);
+          } else {
+            skipped.add(
+                new CodeSystemFailure(
+                    null,
+                    codeSystem.getUrl(),
+                    codeSystem.getVersion(),
+                    "SEARCH",
+                    "CodeSystem is missing a logical id"));
+            log.warn("Skipping history retrieval for CodeSystem with no logical id");
           }
-        });
+        } else {
+          log.warn("Skipping search entry without a CodeSystem resource");
+        }
+      }
+      page = nextPageCursor(codeSystemBundle);
+    } while (page != null);
+    return currentCodeSystems;
+  }
+
+  private List<CodeSystem> retrieveCodeSystemHistory(UmlsUser umlsUser, String codeSystemId) {
+    List<CodeSystem> history = new ArrayList<>();
+    PageCursor page = new PageCursor(0, 50);
+    do {
+      log.info(
+          "requesting CodeSystem {} history page offset: {} count: {}",
+          codeSystemId,
+          page.offset(),
+          page.count());
+      Bundle historyBundle =
+          retrieveCodeSystemHistoryPage(umlsUser, codeSystemId, page.offset(), page.count());
+      historyBundle.getEntry().stream()
+          .filter(this::isActiveCodeSystemHistoryEntry)
+          .map(entry -> (org.hl7.fhir.r4.model.CodeSystem) entry.getResource())
+          .map(this::toCodeSystem)
+          .forEach(history::add);
+      page = nextPageCursor(historyBundle);
+    } while (page != null);
+    return history;
+  }
+
+  private PageCursor nextPageCursor(Bundle bundle) {
+    Optional<String> nextUrl =
+        bundle.getLink().stream()
+            .filter(link -> "next".equals(link.getRelation()))
+            .map(Bundle.BundleLinkComponent::getUrl)
+            .findFirst();
+    if (nextUrl.isEmpty()) {
+      return null;
+    }
+    var queryParams = UriComponentsBuilder.fromUriString(nextUrl.get()).build().getQueryParams();
+    String newOffset = queryParams.getFirst("_offset");
+    String newCount = queryParams.getFirst("_count");
+    if (newOffset == null || newCount == null) {
+      throw new IllegalStateException(
+          "Bundle next link is missing _offset or _count: " + nextUrl.get());
+    }
+    return new PageCursor(Integer.parseInt(newOffset), Integer.parseInt(newCount));
+  }
+
+  private boolean isActiveCodeSystemHistoryEntry(Bundle.BundleEntryComponent entry) {
+    return entry.getResource() instanceof org.hl7.fhir.r4.model.CodeSystem
+        && (!entry.hasRequest() || entry.getRequest().getMethod() != Bundle.HTTPVerb.DELETE);
+  }
+
+  private CodeSystem toCodeSystem(org.hl7.fhir.r4.model.CodeSystem codeSystem) {
+    return CodeSystem.builder()
+        .fullUrl(codeSystem.getUrl())
+        .title(codeSystem.getTitle())
+        .name(codeSystem.getName())
+        .version(CodeSystem.Version.builder().fhirVersion(codeSystem.getVersion()).build())
+        .versionId(codeSystem.getMeta().getVersionId())
+        .oid(parseOidFromIdentifier(codeSystem.getIdentifier()))
+        .isInVsac(true)
+        .lastUpdated(Instant.now())
+        .lastUpdatedUpstream(codeSystem.getMeta().getLastUpdated())
+        .build();
   }
 
   private String parseOidFromIdentifier(List<Identifier> identifiers) {
@@ -104,41 +278,54 @@ public class CodeSystemSyncService {
     return parser.parseResource(Bundle.class, responseString);
   }
 
-  private void markLatestVersion(List<CodeSystem> allCodeSystems) {
-    // Group by fullUrl and find the latest version for each group
-    allCodeSystems.stream()
-        .filter(
-            cs -> Objects.nonNull(cs.getFullUrl()) && Objects.nonNull(cs.getLastUpdatedUpstream()))
-        .collect(
-            groupingBy(
-                CodeSystem::getFullUrl, maxBy(comparing(CodeSystem::getLastUpdatedUpstream))))
-        .values()
-        .forEach(
-            optionalCodeSystem -> {
-              if (optionalCodeSystem.isPresent() && !optionalCodeSystem.get().isLatestVersion()) {
-                CodeSystem latestCodeSystem = optionalCodeSystem.get();
-                latestCodeSystem.setLatestVersion(true);
-                log.info(
-                    "New latest version for CodeSystem with fullUrl: {} and version: {}",
-                    latestCodeSystem.getFullUrl(),
-                    latestCodeSystem.getVersion().getFhirVersion());
-              }
-            });
+  private Bundle retrieveCodeSystemHistoryPage(
+      UmlsUser umlsUser, String codeSystemId, Integer offset, Integer count) {
+    IParser parser = fhirContext.newJsonParser();
+    String responseString =
+        fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            codeSystemId, offset, count, umlsUser.getApiKey());
+    return parser.parseResource(Bundle.class, responseString);
   }
 
-  private void updateOrInsertRetrievedCodeSystems(List<CodeSystem> codeSystemList) {
-    int failedSaveCount = 0;
+  private boolean hasValidIdentity(CodeSystem codeSystem) {
+    return codeSystem.getVersion() != null
+        && StringUtils.isNotBlank(codeSystem.getVersion().getFhirVersion())
+        && !Strings.CI.equals(codeSystem.getVersion().getFhirVersion(), "null")
+        && StringUtils.isNotBlank(codeSystem.getFullUrl())
+        && !Strings.CI.equals(codeSystem.getFullUrl(), "null");
+  }
+
+  private List<CodeSystem> updateOrInsertRetrievedCodeSystems(
+      List<CodeSystem> codeSystemList,
+      Set<String> preservedLatestUrls,
+      List<CodeSystemFailure> failures,
+      List<CodeSystemFailure> skipped) {
+    List<CodeSystem> updatedCodeSystems = new ArrayList<>();
     for (CodeSystem codeSystem : codeSystemList) {
       // Skip any CodeSystem that is missing a FHIR version or fullUrl.
       if (codeSystem.getVersion() == null
           || StringUtils.isBlank(codeSystem.getVersion().getFhirVersion())
           || Strings.CI.equals(codeSystem.getVersion().getFhirVersion(), "null")) {
         log.warn("Skipping CodeSystem with missing FHIR version: {}", codeSystem);
+        skipped.add(
+            new CodeSystemFailure(
+                null,
+                codeSystem.getFullUrl(),
+                fhirVersion(codeSystem),
+                "VALIDATION",
+                "CodeSystem is missing a valid FHIR version"));
         continue;
       }
       if (StringUtils.isBlank(codeSystem.getFullUrl())
           || Strings.CI.equals(codeSystem.getFullUrl(), "null")) {
         log.warn("Skipping CodeSystem with missing fullUrl: {}", codeSystem);
+        skipped.add(
+            new CodeSystemFailure(
+                null,
+                codeSystem.getFullUrl(),
+                fhirVersion(codeSystem),
+                "VALIDATION",
+                "CodeSystem is missing a valid fullUrl"));
         continue;
       }
       try {
@@ -146,22 +333,26 @@ public class CodeSystemSyncService {
             codeSystemRepository.findByFullUrlAndVersionFhirVersion(
                 codeSystem.getFullUrl(), codeSystem.getVersion().getFhirVersion());
         if (existingCodeSystemOptional.isEmpty()) {
-          codeSystemRepository.save(codeSystem);
+          CodeSystem created = codeSystemService.createCodeSystem(codeSystem);
+          updatedCodeSystems.add(created);
           log.info("New CodeSystem inserted: {}", codeSystem);
         } else {
-          codeSystemService.updateCodeSystem(existingCodeSystemOptional.get().getId(), codeSystem);
-          log.info("CodeSystem updated: {}", existingCodeSystemOptional.get());
+          if (preservedLatestUrls.contains(codeSystem.getFullUrl())) {
+            codeSystem.setLatestVersion(existingCodeSystemOptional.get().isLatestVersion());
+          }
+          CodeSystem updated =
+              codeSystemService.updateCodeSystem(
+                  existingCodeSystemOptional.get().getId(), codeSystem);
+          updatedCodeSystems.add(updated);
+          log.info("CodeSystem updated: {}", updated);
         }
-      } catch (DataAccessException e) {
-        failedSaveCount++;
-        log.error(
-            "Database error while updating/inserting CodeSystem {}: {}",
-            codeSystem.getName(),
-            e.getMessage());
+      } catch (RuntimeException e) {
+        failures.add(
+            new CodeSystemFailure(
+                null, codeSystem.getFullUrl(), fhirVersion(codeSystem), "SAVE", e.toString()));
+        log.error("Error while updating/inserting CodeSystem {}", codeSystem.getName(), e);
       }
     }
-    if (failedSaveCount > 0) {
-      throw new IllegalStateException(failedSaveCount + " code system(s) failed to save");
-    }
+    return updatedCodeSystems;
   }
 }

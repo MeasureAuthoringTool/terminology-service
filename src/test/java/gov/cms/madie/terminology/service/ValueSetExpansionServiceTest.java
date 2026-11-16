@@ -596,8 +596,7 @@ class ValueSetExpansionServiceTest {
   @ValueSource(booleans = {true, false})
   void deletesManuallyModifiedValueSetWhenVsacBecomesAvailable(boolean allIgs) {
     MadieValueSet vsac = MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build();
-    MadieValueSet existing =
-        vsac.toBuilder().id("manual-vsac-id").manuallyModified(true).build();
+    MadieValueSet existing = vsac.toBuilder().id("manual-vsac-id").manuallyModified(true).build();
     mockDependencies(allIgs, List.of(vsac));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
             VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))

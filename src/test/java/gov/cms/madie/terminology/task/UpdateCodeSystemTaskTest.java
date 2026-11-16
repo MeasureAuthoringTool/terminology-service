@@ -61,24 +61,38 @@ class UpdateCodeSystemTaskTest {
 
   @Test
   void testStartJobReleasesFlagWhenRecordCannotBeCreated() {
-    when(codeSystemJobExecutionService.start(HARP_ID))
-        .thenThrow(new RuntimeException("Mongo is down"));
+    // given
+    RuntimeException failure = new RuntimeException("Mongo is down");
+    when(codeSystemJobExecutionService.start(HARP_ID)).thenThrow(failure);
 
-    assertThrows(RuntimeException.class, () -> updateCodeSystemTask.startJob(HARP_ID));
+    // when
+    RuntimeException error =
+        assertThrows(RuntimeException.class, () -> updateCodeSystemTask.startJob(HARP_ID));
 
+    // then
+    assertSame(failure, error);
     assertFalse(updateCodeSystemTask.isRunning());
     verifyNoInteractions(codeSystemAsyncWorker);
+    verify(codeSystemJobExecutionService, never()).fail(any(), any());
   }
 
   @Test
   void testStartJobReleasesFlagWhenWorkerCannotBeStarted() {
-    doThrow(new RuntimeException("Executor rejected the task"))
-        .when(codeSystemAsyncWorker)
-        .runJobAsync(any(), any());
+    // given
+    CodeSystemJobExecutionState execution =
+        CodeSystemJobExecutionState.builder().id("job-1").build();
+    when(codeSystemJobExecutionService.start(HARP_ID)).thenReturn(execution);
+    RuntimeException failure = new RuntimeException("Executor rejected the task");
+    doThrow(failure).when(codeSystemAsyncWorker).runJobAsync(any(), any());
 
-    assertThrows(RuntimeException.class, () -> updateCodeSystemTask.startJob(HARP_ID));
+    // when
+    RuntimeException error =
+        assertThrows(RuntimeException.class, () -> updateCodeSystemTask.startJob(HARP_ID));
 
+    // then
+    assertSame(failure, error);
     assertFalse(updateCodeSystemTask.isRunning());
+    verify(codeSystemJobExecutionService).fail(execution, failure);
   }
 
   @Test

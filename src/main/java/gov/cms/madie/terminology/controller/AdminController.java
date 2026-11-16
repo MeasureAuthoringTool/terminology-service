@@ -4,7 +4,7 @@ import gov.cms.madie.terminology.audit.AdminAuditService;
 import gov.cms.madie.terminology.audit.AdminAuditService.Action;
 import gov.cms.madie.terminology.audit.AuditResource;
 import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
-import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
+import gov.cms.madie.terminology.dto.CodeSystemJobAdminStatus;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
@@ -125,7 +125,7 @@ public class AdminController {
 
   @GetMapping("/code-system-job-status")
   @PreAuthorize("hasRole('MADIE-ADMIN')")
-  public ResponseEntity<CodeSystemJobStatus> getCodeSystemJobStatus() {
+  public ResponseEntity<CodeSystemJobAdminStatus> getCodeSystemJobStatus() {
     return codeSystemJobExecutionService
         .getLatestJobStatus()
         .map(ResponseEntity::ok)
