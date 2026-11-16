@@ -1,7 +1,10 @@
 package gov.cms.madie.terminology.service;
 
+import gov.cms.madie.terminology.dto.CodeSystemJobAdminStatus;
 import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
+import gov.cms.madie.terminology.dto.CodeSystemRefreshResult;
 import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.CodeSystemUpdate;
 import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.repositories.CodeSystemJobExecutionRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +35,9 @@ public class CodeSystemJobExecutionService {
                 .status(Status.RUNNING)
                 .triggeredBy(triggeredBy)
                 .startedAt(Instant.now())
+                .failures(List.of())
+                .successfulCodeSystems(List.of())
+                .skippedCodeSystems(List.of())
                 .build());
     log.info(
         "Code system update job [{}] started by [{}]",
@@ -40,12 +46,45 @@ public class CodeSystemJobExecutionService {
     return execution;
   }
 
-  public void complete(CodeSystemJobExecutionState execution) {
-    finish(execution, Status.COMPLETED);
-  }
-
   public void fail(CodeSystemJobExecutionState execution) {
     finish(execution, Status.FAILED);
+  }
+
+  public void fail(CodeSystemJobExecutionState execution, Exception failure) {
+    execution.setFailureMessage(failure.toString());
+    fail(execution);
+  }
+
+  public void finish(CodeSystemJobExecutionState execution, CodeSystemRefreshResult result) {
+    execution.setFailures(result.failures());
+    execution.setSkippedCodeSystems(result.skipped());
+    execution.setSuccessfulCodeSystems(
+        result.updatedCodeSystems().stream()
+            .map(
+                codeSystem ->
+                    new CodeSystemUpdate(
+                        codeSystem.getId(),
+                        codeSystem.getFullUrl(),
+                        codeSystem.getVersion().getFhirVersion()))
+            .toList());
+    execution.setFailureMessage(
+        result.failures().isEmpty()
+            ? null
+            : result.failures().size() + " code system update failure(s)");
+    finish(execution, statusFor(result));
+    log.info(
+        "Code system update job [{}]: {} successful versions, {} failures, {} skipped",
+        execution.getId(),
+        result.updatedCodeSystems().size(),
+        result.failures().size(),
+        result.skipped().size());
+  }
+
+  private static Status statusFor(CodeSystemRefreshResult result) {
+    if (result.failures().isEmpty()) {
+      return Status.COMPLETED;
+    }
+    return result.updatedCodeSystems().isEmpty() ? Status.FAILED : Status.COMPLETED_WITH_ERRORS;
   }
 
   private void finish(CodeSystemJobExecutionState execution, Status status) {
@@ -62,18 +101,21 @@ public class CodeSystemJobExecutionService {
   }
 
   /** RUNNING if any job is running, otherwise the most recently finished job */
-  public Optional<CodeSystemJobStatus> getLatestJobStatus() {
+  public Optional<CodeSystemJobAdminStatus> getLatestJobStatus() {
     if (codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)) {
-      return Optional.of(new CodeSystemJobStatus(Status.RUNNING, null));
+      return Optional.of(CodeSystemJobAdminStatus.running());
     }
     return codeSystemJobExecutionRepository
-        .findFirstByStatusInOrderByCompletedAtDesc(List.of(Status.COMPLETED, Status.FAILED))
-        .map(CodeSystemJobStatus::from);
+        .findFirstByStatusInOrderByCompletedAtDesc(
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS, Status.FAILED))
+        .map(CodeSystemJobAdminStatus::from);
   }
 
+  /** The most recent job that updated code system data, even if some code systems failed */
   public Optional<CodeSystemJobStatus> getLastCompletedJob() {
     return codeSystemJobExecutionRepository
-        .findFirstByStatusOrderByCompletedAtDesc(Status.COMPLETED)
+        .findFirstByStatusInOrderByCompletedAtDesc(
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS))
         .map(CodeSystemJobStatus::from);
   }
 

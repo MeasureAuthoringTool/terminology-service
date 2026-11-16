@@ -7,6 +7,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import gov.cms.madie.terminology.models.CodeSystem;
+import gov.cms.madie.terminology.dto.CodeSystemRefreshResult;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.webclient.FhirTerminologyServiceWebClient;
@@ -54,11 +55,17 @@ class CodeSystemSyncServiceTest {
   @BeforeEach
   public void setUp() throws IOException {
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
+    lenient()
+        .when(codeSystemService.createCodeSystem(any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    lenient()
+        .when(codeSystemService.updateCodeSystem(any(), any(CodeSystem.class)))
+        .thenAnswer(invocation -> invocation.getArgument(1));
   }
 
   private List<CodeSystem> capturedInserts(int times) {
     ArgumentCaptor<CodeSystem> captor = ArgumentCaptor.forClass(CodeSystem.class);
-    verify(codeSystemRepository, times(times)).save(captor.capture());
+    verify(codeSystemService, times(times)).createCodeSystem(captor.capture());
     return captor.getAllValues();
   }
 
@@ -70,7 +77,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void testRemoteRetrieveAllCodeSystems() {
-    // Given
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
@@ -84,10 +91,10 @@ class CodeSystemSyncServiceTest {
     when(codeSystemService.createCodeSystem(any(CodeSystem.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
-    // When
+    // when
     codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
-    // Then
+    // then
     List<CodeSystem> resultList = capturedInserts(2);
     assertTrue(
         resultList.stream()
@@ -109,6 +116,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void testRemoteRetrieveAllCodeSystemsWithNewAndExisting() {
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
 
     var existingCodeSystem =
@@ -137,8 +145,11 @@ class CodeSystemSyncServiceTest {
     when(codeSystemService.createCodeSystem(any(CodeSystem.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
-    List<CodeSystem> codeSystems = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    List<CodeSystem> codeSystems =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
+    // then
     verify(codeSystemService, times(2)).createCodeSystem(any(CodeSystem.class));
     assertFalse(
         codeSystems.stream()
@@ -160,6 +171,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void testRemoteRetrieveAllCodeSystemsWithUpdatedCodeSystem() {
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     org.hl7.fhir.r4.model.CodeSystem csResource =
         (org.hl7.fhir.r4.model.CodeSystem)
@@ -186,9 +198,12 @@ class CodeSystemSyncServiceTest {
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(existingCodeSystem));
 
+    // when
     List<CodeSystem> retrievedCodeSystems =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
+    // then
+    assertEquals(retrievedCodeSystems, capturedUpdates(2));
     assertEquals(2, retrievedCodeSystems.size());
     Optional<CodeSystem> updatedCodeSystem =
         retrievedCodeSystems.stream()
@@ -205,6 +220,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void testRemoteRetrieveAllCodeSystemsPromotesLatest() {
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     org.hl7.fhir.r4.model.CodeSystem csResource =
         (org.hl7.fhir.r4.model.CodeSystem)
@@ -231,9 +247,12 @@ class CodeSystemSyncServiceTest {
     when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(anyString(), anyString()))
         .thenReturn(Optional.of(existingCodeSystem));
 
+    // when
     List<CodeSystem> retrievedCodeSystems =
-        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
+    // then
+    assertEquals(retrievedCodeSystems, capturedUpdates(2));
     assertEquals(2, retrievedCodeSystems.size());
     Optional<CodeSystem> updatedCodeSystem =
         retrievedCodeSystems.stream()
@@ -250,6 +269,7 @@ class CodeSystemSyncServiceTest {
 
   @Test
   void testRemoteRetrieveAllCodeSystemsSkipsNullStringFhirVersion() {
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
@@ -272,20 +292,25 @@ class CodeSystemSyncServiceTest {
             anyString(), anyInt(), anyInt(), anyString()))
         .thenReturn(nullVersionBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
-    assertEquals(1, result.size());
+    // then
+    assertEquals(1, outcome.skipped().size());
+    assertTrue(outcome.failures().isEmpty());
+    assertTrue(outcome.updatedCodeSystems().isEmpty());
     assertEquals(
         "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
-        result.get(0).getFullUrl());
-    assertEquals("null", result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
+        outcome.skipped().get(0).fullUrl());
+    assertEquals("null", outcome.skipped().get(0).version());
+    verifyNoInteractions(codeSystemService);
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
 
   @Test
   void testRemoteRetrieveAllCodeSystemsSkipsBlankFhirVersion() {
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
@@ -309,20 +334,24 @@ class CodeSystemSyncServiceTest {
             anyString(), anyInt(), anyInt(), anyString()))
         .thenReturn(blankVersionBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
-    assertEquals(1, result.size());
+    // then
+    assertEquals(1, outcome.skipped().size());
+    assertTrue(outcome.failures().isEmpty());
     assertEquals(
         "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
-        result.get(0).getFullUrl());
-    assertNull(result.get(0).getVersion().getFhirVersion());
-    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
+        outcome.skipped().get(0).fullUrl());
+    assertNull(outcome.skipped().get(0).version());
+    verifyNoInteractions(codeSystemService);
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
 
   @Test
   void testRemoteRetrieveAllCodeSystemsSkipsNullFullUrl() {
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
@@ -345,17 +374,21 @@ class CodeSystemSyncServiceTest {
             anyString(), anyInt(), anyInt(), anyString()))
         .thenReturn(nullStringUrlBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
-    assertEquals(1, result.size());
-    assertEquals("null", result.get(0).getFullUrl());
-    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
+    // then
+    assertEquals(1, outcome.skipped().size());
+    assertTrue(outcome.failures().isEmpty());
+    assertEquals("null", outcome.skipped().get(0).fullUrl());
+    verifyNoInteractions(codeSystemService);
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
 
   @Test
   void testRemoteRetrieveAllCodeSystemsSkipsBlankFullUrl() {
+    // given
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
     when(mockContext.newJsonParser()).thenReturn(FhirContext.forR4().newJsonParser());
 
@@ -377,11 +410,14 @@ class CodeSystemSyncServiceTest {
             anyString(), anyInt(), anyInt(), anyString()))
         .thenReturn(noUrlBundle);
 
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
-    assertEquals(1, result.size());
-    assertNull(result.get(0).getFullUrl());
-    verify(codeSystemRepository, never()).save(any(CodeSystem.class));
+    // then
+    assertEquals(1, outcome.skipped().size());
+    assertTrue(outcome.failures().isEmpty());
+    assertNull(outcome.skipped().get(0).fullUrl());
+    verifyNoInteractions(codeSystemService);
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(anyString(), anyString());
   }
@@ -449,20 +485,24 @@ class CodeSystemSyncServiceTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    var result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    // when
+    var result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
-    // should collect both code systems from initial + recursive
+    // then
     assertEquals(2, result.size());
-    // calls getCodeSystemsPage(offset,count,apiKey) when retrieving pages
-    verify(fhirTerminologyServiceWebClient, atLeast(1))
-        .getCodeSystemsPage(anyInt(), anyInt(), eq(TEST_API_KEY));
+    assertEquals(result, capturedInserts(2));
+    assertTrue(result.stream().allMatch(CodeSystem::isLatestVersion));
+    verify(fhirTerminologyServiceWebClient).getCodeSystemsPage(50, 50, TEST_API_KEY);
+    verify(fhirTerminologyServiceWebClient)
+        .getCodeSystemHistoryPage("title1v1", 0, 50, TEST_API_KEY);
+    verify(fhirTerminologyServiceWebClient)
+        .getCodeSystemHistoryPage("title2v2", 0, 50, TEST_API_KEY);
   }
 
   @Test
   void retrieveAllCodeSystemsHandlesDataAccessException() {
     // given
     UmlsUser umlsUser = UmlsUser.builder().apiKey(TEST_API_KEY).harpId(TEST_HARP_ID).build();
-    // Mock repository to throw DataAccessException when save is called
     doThrow(new DataAccessException("Simulated DB error") {})
         .when(codeSystemService)
         .createCodeSystem(any());
@@ -470,11 +510,19 @@ class CodeSystemSyncServiceTest {
     when(fhirTerminologyServiceWebClient.getCodeSystemsPage(anyInt(), anyInt(), anyString()))
         .thenReturn(
             "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"CodeSystem\",\"id\":\"cs1\",\"url\":\"http://lonic.org\",\"name\":\"LOINC\",\"version\":\"2.40\",\"title\":\"LOINC\",\"identifier\":[{\"value\":\"urn:oid:2.16.840.1.113883.6.1\"}]}}]}");
-    // Call the method under test
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
-    // Assert that the result is not empty and the error branch was triggered
-    assertFalse(result.isEmpty());
-    assertEquals("LOINC", result.get(0).getName());
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("cs1", 0, 50, TEST_API_KEY))
+        .thenReturn("{\"resourceType\":\"Bundle\",\"type\":\"history\"}");
+
+    // when
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(1, outcome.failures().size());
+    assertEquals("SAVE", outcome.failures().get(0).stage());
+    assertEquals("http://lonic.org", outcome.failures().get(0).fullUrl());
+    assertEquals("2.40", outcome.failures().get(0).version());
+    assertTrue(outcome.failures().get(0).message().contains("Simulated DB error"));
+    assertEquals("LOINC", capturedInserts(1).get(0).getName());
   }
 
   @Test
@@ -750,7 +798,8 @@ class CodeSystemSyncServiceTest {
         .thenReturn(Optional.empty());
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(
@@ -796,7 +845,8 @@ class CodeSystemSyncServiceTest {
         .thenReturn(Optional.empty());
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(
@@ -827,9 +877,12 @@ class CodeSystemSyncServiceTest {
         .thenReturn("{\"resourceType\":\"Bundle\",\"type\":\"history\"}");
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
+    assertEquals("SEARCH", outcome.skipped().get(0).stage());
+    assertTrue(outcome.failures().isEmpty());
+    List<CodeSystem> result = capturedInserts(1);
     assertEquals(1, result.size());
     assertEquals("2", result.get(0).getVersion().getFhirVersion());
     assertTrue(result.get(0).isLatestVersion());
@@ -865,7 +918,8 @@ class CodeSystemSyncServiceTest {
         undatedRevision, newestRevision, version1, olderRevision, version1Correction);
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(
@@ -902,7 +956,8 @@ class CodeSystemSyncServiceTest {
     stubSearchAndHistory(current, historical);
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(2, result.size());
@@ -953,7 +1008,8 @@ class CodeSystemSyncServiceTest {
         .thenReturn(parser.encodeResourceToString(history));
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(2, result.size());
@@ -976,12 +1032,13 @@ class CodeSystemSyncServiceTest {
     stubSearchAndHistory(valid, invalid);
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
-    assertTrue(result.get(0).isLatestVersion());
-    assertFalse(result.get(1).isLatestVersion());
-    verify(codeSystemService).createCodeSystem(result.get(0));
+    assertEquals("VALIDATION", outcome.skipped().get(0).stage());
+    assertTrue(outcome.failures().isEmpty());
+    assertEquals("null", outcome.skipped().get(0).version());
+    assertTrue(capturedInserts(1).get(0).isLatestVersion());
     verifyNoMoreInteractions(codeSystemService);
   }
 
@@ -1048,29 +1105,30 @@ class CodeSystemSyncServiceTest {
     ListAppender<ILoggingEvent> appender = new ListAppender<>();
     appender.start();
     logger.addAppender(appender);
-    List<CodeSystem> result;
+    CodeSystemRefreshResult outcome;
 
     // when
     try {
-      result = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+      outcome = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
     } finally {
       logger.detachAppender(appender);
       appender.stop();
     }
 
     // then
+    assertEquals("VALIDATION", outcome.skipped().get(0).stage());
+    assertTrue(outcome.failures().isEmpty());
     assertTrue(existingLatest.isLatestVersion());
     assertFalse(existingOther.isLatestVersion());
     assertEquals("Updated historical title", existingLatest.getTitle());
     assertEquals("revision-2", existingLatest.getVersionId());
     assertEquals("mapped-2", existingLatest.getVersion().getVsacVersion());
-    CodeSystem newVersion =
-        result.stream()
-            .filter(cs -> "new-history-version".equals(cs.getVersion().getFhirVersion()))
-            .findFirst()
-            .orElseThrow();
-    assertFalse(newVersion.isLatestVersion());
-    verify(codeSystemRepository).save(newVersion);
+    verify(codeSystemRepository)
+        .save(
+            argThat(
+                cs ->
+                    "new-history-version".equals(cs.getVersion().getFhirVersion())
+                        && !cs.isLatestVersion()));
     verify(codeSystemRepository, times(3)).save(any(CodeSystem.class));
     assertTrue(
         appender.list.stream()
@@ -1100,9 +1158,11 @@ class CodeSystemSyncServiceTest {
     CodeSystemSyncService syncWithPersistence = syncWithStoredCodeSystems(url, stored);
 
     // when
-    syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+    CodeSystemRefreshResult outcome = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
+    assertEquals("VALIDATION", outcome.skipped().get(0).stage());
+    assertTrue(outcome.failures().isEmpty());
     assertEquals(
         List.of("2"),
         stored.values().stream()
@@ -1224,7 +1284,8 @@ class CodeSystemSyncServiceTest {
             codeSystemRepository);
 
     // when
-    List<CodeSystem> result = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(2, result.size());
@@ -1302,7 +1363,8 @@ class CodeSystemSyncServiceTest {
             codeSystemRepository);
 
     // when
-    List<CodeSystem> result = syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        syncWithPersistence.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(2, result.size());
@@ -1350,7 +1412,8 @@ class CodeSystemSyncServiceTest {
             });
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(1, result.size());
@@ -1382,10 +1445,12 @@ class CodeSystemSyncServiceTest {
         .thenReturn(parser.encodeResourceToString(history));
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
-    assertTrue(result.isEmpty());
+    assertEquals("logical-id", outcome.failures().get(0).codeSystemId());
+    assertEquals("HISTORY", outcome.failures().get(0).stage());
+    assertTrue(outcome.failures().get(0).message().contains("missing _offset or _count"));
     verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
@@ -1427,21 +1492,12 @@ class CodeSystemSyncServiceTest {
       when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("failed", 50, 50, TEST_API_KEY))
           .thenThrow(new IllegalStateException("VSAC unavailable"));
     }
-    Logger logger = (Logger) LoggerFactory.getLogger(CodeSystemSyncService.class);
-    ListAppender<ILoggingEvent> appender = new ListAppender<>();
-    appender.start();
-    logger.addAppender(appender);
-    List<CodeSystem> result;
-
     // when
-    try {
-      result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
-    } finally {
-      logger.detachAppender(appender);
-      appender.stop();
-    }
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
+    List<CodeSystem> result = capturedInserts(2);
+    assertEquals(result, outcome.updatedCodeSystems());
     assertEquals(
         List.of("http://example.com/before", "http://example.com/after"),
         result.stream().map(CodeSystem::getFullUrl).toList());
@@ -1449,12 +1505,11 @@ class CodeSystemSyncServiceTest {
     verify(codeSystemRepository, never())
         .findByFullUrlAndVersionFhirVersion(eq("http://example.com/failed"), anyString());
     verifyNoMoreInteractions(codeSystemService);
-    assertTrue(
-        appender.list.stream()
-            .anyMatch(
-                event ->
-                    event.getLevel() == Level.WARN
-                        && event.getFormattedMessage().contains("left unchanged: [failed]")));
+    assertEquals(1, outcome.failures().size());
+    assertEquals("failed", outcome.failures().get(0).codeSystemId());
+    assertEquals("http://example.com/failed", outcome.failures().get(0).fullUrl());
+    assertEquals("HISTORY", outcome.failures().get(0).stage());
+    assertEquals("2", outcome.failures().get(0).version());
   }
 
   @ParameterizedTest
@@ -1475,10 +1530,11 @@ class CodeSystemSyncServiceTest {
         .thenThrow(new IllegalStateException("VSAC unavailable"));
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
 
     // then
-    assertTrue(result.isEmpty());
+    assertEquals("failed", outcome.failures().get(0).codeSystemId());
+    assertEquals("HISTORY", outcome.failures().get(0).stage());
     verifyNoInteractions(codeSystemRepository, codeSystemService);
   }
 
@@ -1499,6 +1555,104 @@ class CodeSystemSyncServiceTest {
   }
 
   @Test
+  void refreshAggregatesHistoryAndSaveFailuresAfterProcessingOtherCodeSystems() {
+    // given
+    IParser parser = FhirContext.forR4().newJsonParser();
+    when(mockContext.newJsonParser()).thenReturn(parser);
+    Bundle search = new Bundle();
+    for (String id : List.of("history-failed", "save-failed", "saved")) {
+      var current = buildFhirCodeSystem(id, "2");
+      current.setUrl("http://example.com/" + id);
+      search.addEntry().setResource(current);
+      if (!"history-failed".equals(id)) {
+        when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(id, 0, 50, TEST_API_KEY))
+            .thenReturn("{\"resourceType\":\"Bundle\",\"type\":\"history\"}");
+      }
+    }
+    when(fhirTerminologyServiceWebClient.getCodeSystemsPage(0, 50, TEST_API_KEY))
+        .thenReturn(parser.encodeResourceToString(search));
+    when(fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+            "history-failed", 0, 50, TEST_API_KEY))
+        .thenThrow(new IllegalStateException("VSAC unavailable"));
+    doThrow(new DataAccessException("Mongo write failed") {})
+        .when(codeSystemService)
+        .createCodeSystem(argThat(cs -> "http://example.com/save-failed".equals(cs.getFullUrl())));
+
+    // when
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(
+        List.of("HISTORY", "SAVE"),
+        outcome.failures().stream().map(failure -> failure.stage()).toList());
+    assertEquals(
+        List.of("http://example.com/history-failed", "http://example.com/save-failed"),
+        outcome.failures().stream().map(failure -> failure.fullUrl()).toList());
+    assertEquals(
+        List.of("http://example.com/saved"),
+        outcome.updatedCodeSystems().stream().map(CodeSystem::getFullUrl).toList());
+    verify(codeSystemService)
+        .createCodeSystem(argThat(cs -> "http://example.com/saved".equals(cs.getFullUrl())));
+    verify(codeSystemRepository, never())
+        .findByFullUrlAndVersionFhirVersion(eq("http://example.com/history-failed"), anyString());
+  }
+
+  @Test
+  void refreshReportsLatestVersionCleanupFailure() {
+    // given
+    String url = "http://example.com/system";
+    stubSearchAndHistory(
+        buildFhirCodeSystem("logical-id", null), buildFhirCodeSystem("logical-id", "2"));
+    when(codeSystemRepository.findAllByFullUrl(url))
+        .thenReturn(
+            List.of(
+                storedCodeSystem(url, "1", true, null), storedCodeSystem(url, "2", true, null)));
+    doThrow(new DataAccessException("Cleanup write failed") {})
+        .when(codeSystemRepository)
+        .saveAll(anyList());
+
+    // when
+    CodeSystemRefreshResult outcome = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(
+        List.of("VALIDATION"), outcome.skipped().stream().map(failure -> failure.stage()).toList());
+    assertEquals(
+        List.of("LATEST_VERSION_CLEANUP"),
+        outcome.failures().stream().map(failure -> failure.stage()).toList());
+    assertEquals(url, outcome.failures().get(0).fullUrl());
+    assertTrue(outcome.failures().get(0).message().contains("Cleanup write failed"));
+    assertTrue(outcome.updatedCodeSystems().isEmpty());
+    verify(codeSystemService)
+        .createCodeSystem(argThat(cs -> "2".equals(cs.getVersion().getFhirVersion())));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void refreshReturnsPersistedCodeSystemsRatherThanRetrievedInputs(boolean existing) {
+    // given
+    stubSearchAndHistory(buildFhirCodeSystem("logical-id", "2"));
+    CodeSystem persisted = storedCodeSystem("http://example.com/system", "2", true, Instant.now());
+    if (existing) {
+      when(codeSystemRepository.findByFullUrlAndVersionFhirVersion(
+              "http://example.com/system", "2"))
+          .thenReturn(Optional.of(persisted));
+      when(codeSystemService.updateCodeSystem(eq(persisted.getId()), any(CodeSystem.class)))
+          .thenReturn(persisted);
+    } else {
+      when(codeSystemService.createCodeSystem(any(CodeSystem.class))).thenReturn(persisted);
+    }
+
+    // when
+    CodeSystemRefreshResult result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+
+    // then
+    assertEquals(List.of(persisted), result.updatedCodeSystems());
+    assertSame(persisted, result.updatedCodeSystems().get(0));
+    assertTrue(result.failures().isEmpty());
+  }
+
+  @Test
   void retrieveAllCodeSystemsReturnsCustomOidForHCPCS() {
     // given
     var codeSystem = buildFhirCodeSystem("logical-id", "1");
@@ -1508,7 +1662,8 @@ class CodeSystemSyncServiceTest {
     stubSearchAndHistory(codeSystem);
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(1, result.size());
@@ -1524,7 +1679,8 @@ class CodeSystemSyncServiceTest {
     stubSearchAndHistory(codeSystem);
 
     // when
-    List<CodeSystem> result = codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser);
+    List<CodeSystem> result =
+        codeSystemSyncService.remoteRetrieveAllCodeSystems(umlsUser).updatedCodeSystems();
 
     // then
     assertEquals(1, result.size());

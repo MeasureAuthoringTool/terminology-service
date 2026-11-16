@@ -1,7 +1,12 @@
 package gov.cms.madie.terminology.service;
 
+import gov.cms.madie.terminology.dto.CodeSystemJobAdminStatus;
 import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
+import gov.cms.madie.terminology.dto.CodeSystemRefreshResult;
+import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.CodeSystemJobExecutionState;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.CodeSystemFailure;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.CodeSystemUpdate;
 import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.repositories.CodeSystemJobExecutionRepository;
 import org.junit.jupiter.api.Test;
@@ -48,12 +53,15 @@ class CodeSystemJobExecutionStateServiceTest {
 
   @Test
   void testStartSavesNewRunningRecord() {
+    // given
     when(codeSystemJobExecutionRepository.save(any(CodeSystemJobExecutionState.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
     Instant before = Instant.now();
 
+    // when
     CodeSystemJobExecutionState execution = codeSystemJobExecutionService.start(HARP_ID);
 
+    // then
     ArgumentCaptor<CodeSystemJobExecutionState> captor =
         ArgumentCaptor.forClass(CodeSystemJobExecutionState.class);
     verify(codeSystemJobExecutionRepository).save(captor.capture());
@@ -65,19 +73,44 @@ class CodeSystemJobExecutionStateServiceTest {
     assertFalse(saved.getStartedAt().isBefore(before));
     assertNull(saved.getCompletedAt());
     assertNull(saved.getDurationMs());
+    assertEquals(List.of(), saved.getFailures());
+    assertTrue(saved.getSuccessfulCodeSystems().isEmpty());
+    assertTrue(saved.getSkippedCodeSystems().isEmpty());
     assertSame(saved, execution);
   }
 
   @Test
   void testCompleteUpdatesRecordWithCompletionTimeAndDuration() {
+    // given
     Instant startedAt = Instant.now().minusSeconds(90);
     CodeSystemJobExecutionState execution = runningExecution(startedAt);
+    List<CodeSystemFailure> skipped =
+        List.of(
+            new CodeSystemFailure(
+                null,
+                "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl",
+                null,
+                "VALIDATION",
+                "CodeSystem is missing a valid FHIR version"));
+    CodeSystemRefreshResult result =
+        new CodeSystemRefreshResult(
+            List.of(
+                CodeSystem.builder()
+                    .id("stored-1")
+                    .fullUrl("http://example.com/system")
+                    .version(CodeSystem.Version.builder().fhirVersion("2").build())
+                    .build()),
+            List.of(),
+            skipped);
 
-    codeSystemJobExecutionService.complete(execution);
+    // when
+    codeSystemJobExecutionService.finish(execution, result);
 
+    // then
     verify(codeSystemJobExecutionRepository).save(execution);
     assertEquals("job-1", execution.getId());
     assertEquals(Status.COMPLETED, execution.getStatus());
+    assertEquals(skipped, execution.getSkippedCodeSystems());
     assertEquals(startedAt, execution.getStartedAt());
     assertNotNull(execution.getCompletedAt());
     assertFalse(execution.getCompletedAt().isBefore(startedAt));
@@ -85,21 +118,107 @@ class CodeSystemJobExecutionStateServiceTest {
         Duration.between(startedAt, execution.getCompletedAt()).toMillis(),
         execution.getDurationMs());
     assertTrue(execution.getDurationMs() >= 90_000);
+    assertEquals(
+        List.of(new CodeSystemUpdate("stored-1", "http://example.com/system", "2")),
+        execution.getSuccessfulCodeSystems());
+    assertTrue(execution.getFailures().isEmpty());
+    assertNull(execution.getFailureMessage());
   }
 
   @Test
   void testFailUpdatesRecordWithCompletionTimeAndDuration() {
+    // given
     Instant startedAt = Instant.now().minusSeconds(30);
     CodeSystemJobExecutionState execution = runningExecution(startedAt);
 
+    // when
     codeSystemJobExecutionService.fail(execution);
 
+    // then
     verify(codeSystemJobExecutionRepository).save(execution);
     assertEquals(Status.FAILED, execution.getStatus());
     assertNotNull(execution.getCompletedAt());
     assertEquals(
         Duration.between(startedAt, execution.getCompletedAt()).toMillis(),
         execution.getDurationMs());
+  }
+
+  @Test
+  void finishMarksCompletedWithErrorsWhenSomeCodeSystemsFail() {
+    // given
+    Instant startedAt = Instant.now().minusSeconds(30);
+    CodeSystemJobExecutionState execution = runningExecution(startedAt);
+    List<CodeSystemFailure> failures =
+        List.of(
+            new CodeSystemFailure(
+                "LOINC", "http://loinc.org", "2.83", "HISTORY", "VSAC unavailable"),
+            new CodeSystemFailure(
+                null, "http://snomed.info/sct", "2026", "SAVE", "Mongo write failed"));
+    CodeSystemRefreshResult result =
+        new CodeSystemRefreshResult(
+            List.of(
+                CodeSystem.builder()
+                    .id("stored-1")
+                    .fullUrl("http://example.com/system")
+                    .version(CodeSystem.Version.builder().fhirVersion("2").build())
+                    .build()),
+            failures,
+            List.of());
+
+    // when
+    codeSystemJobExecutionService.finish(execution, result);
+
+    // then
+    verify(codeSystemJobExecutionRepository).save(execution);
+    assertEquals("job-1", execution.getId());
+    assertEquals(HARP_ID, execution.getTriggeredBy());
+    assertEquals(startedAt, execution.getStartedAt());
+    assertEquals(Status.COMPLETED_WITH_ERRORS, execution.getStatus());
+    assertEquals(failures, execution.getFailures());
+    assertEquals(
+        List.of(new CodeSystemUpdate("stored-1", "http://example.com/system", "2")),
+        execution.getSuccessfulCodeSystems());
+    assertTrue(execution.getFailureMessage().contains("2 code system update failure(s)"));
+    assertEquals(
+        Duration.between(startedAt, execution.getCompletedAt()).toMillis(),
+        execution.getDurationMs());
+  }
+
+  @Test
+  void finishMarksFailedWhenCodeSystemsFailAndNoneSucceed() {
+    // given
+    CodeSystemJobExecutionState execution = runningExecution(Instant.now().minusSeconds(30));
+    List<CodeSystemFailure> failures =
+        List.of(
+            new CodeSystemFailure(
+                "LOINC", "http://loinc.org", "2.83", "HISTORY", "VSAC unavailable"));
+    CodeSystemRefreshResult result = new CodeSystemRefreshResult(List.of(), failures, List.of());
+
+    // when
+    codeSystemJobExecutionService.finish(execution, result);
+
+    // then
+    verify(codeSystemJobExecutionRepository).save(execution);
+    assertEquals(Status.FAILED, execution.getStatus());
+    assertEquals(failures, execution.getFailures());
+    assertTrue(execution.getSuccessfulCodeSystems().isEmpty());
+    assertEquals("1 code system update failure(s)", execution.getFailureMessage());
+  }
+
+  @Test
+  void failPersistsJobLevelErrorWithoutInventingCodeSystemFailures() {
+    // given
+    CodeSystemJobExecutionState execution = runningExecution(Instant.now().minusSeconds(30));
+    IllegalStateException error = new IllegalStateException("Search request failed");
+
+    // when
+    codeSystemJobExecutionService.fail(execution, error);
+
+    // then
+    verify(codeSystemJobExecutionRepository).save(execution);
+    assertEquals(Status.FAILED, execution.getStatus());
+    assertEquals(error.toString(), execution.getFailureMessage());
+    assertNotNull(execution.getCompletedAt());
   }
 
   @Test
@@ -159,25 +278,59 @@ class CodeSystemJobExecutionStateServiceTest {
   void testGetLatestJobStatusReturnsRunningWhenAJobIsRunning() {
     when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(true);
 
-    Optional<CodeSystemJobStatus> jobStatus = codeSystemJobExecutionService.getLatestJobStatus();
+    Optional<CodeSystemJobAdminStatus> jobStatus =
+        codeSystemJobExecutionService.getLatestJobStatus();
 
-    assertEquals(new CodeSystemJobStatus(Status.RUNNING, null), jobStatus.orElseThrow());
+    assertEquals(CodeSystemJobAdminStatus.running(), jobStatus.orElseThrow());
   }
 
   @ParameterizedTest
   @EnumSource(
       value = Status.class,
-      names = {"COMPLETED", "FAILED"})
-  void testGetLatestJobStatusReturnsMostRecentlyFinishedJob(Status status) {
+      names = {"COMPLETED", "COMPLETED_WITH_ERRORS", "FAILED"})
+  void testGetLatestJobStatusReturnsMostRecentlyFinishedJobWithCounts(Status status) {
+    // given
     Instant completedAt = Instant.now();
+    CodeSystemFailure problem = new CodeSystemFailure(null, "http://x", null, "SAVE", "error");
+    CodeSystemJobExecutionState execution =
+        finishedExecution(status, completedAt).toBuilder()
+            .successfulCodeSystems(
+                List.of(
+                    new CodeSystemUpdate("1", "http://a", "1"),
+                    new CodeSystemUpdate("2", "http://a", "2")))
+            .failures(List.of(problem))
+            .skippedCodeSystems(List.of(problem, problem, problem))
+            .build();
     when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(false);
     when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(
-            List.of(Status.COMPLETED, Status.FAILED)))
-        .thenReturn(Optional.of(finishedExecution(status, completedAt)));
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS, Status.FAILED)))
+        .thenReturn(Optional.of(execution));
 
-    Optional<CodeSystemJobStatus> jobStatus = codeSystemJobExecutionService.getLatestJobStatus();
+    // when
+    Optional<CodeSystemJobAdminStatus> jobStatus =
+        codeSystemJobExecutionService.getLatestJobStatus();
 
-    assertEquals(new CodeSystemJobStatus(status, completedAt), jobStatus.orElseThrow());
+    // then
+    assertEquals(
+        new CodeSystemJobAdminStatus(status, completedAt, 2, 1, 3), jobStatus.orElseThrow());
+  }
+
+  @Test
+  void testGetLatestJobStatusReturnsNullCountsForJobsWithoutRecordedDetails() {
+    // given
+    Instant completedAt = Instant.now();
+    when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(false);
+    when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(any()))
+        .thenReturn(Optional.of(finishedExecution(Status.COMPLETED, completedAt)));
+
+    // when
+    Optional<CodeSystemJobAdminStatus> jobStatus =
+        codeSystemJobExecutionService.getLatestJobStatus();
+
+    // then
+    assertEquals(
+        new CodeSystemJobAdminStatus(Status.COMPLETED, completedAt, null, null, null),
+        jobStatus.orElseThrow());
   }
 
   @Test
@@ -189,20 +342,28 @@ class CodeSystemJobExecutionStateServiceTest {
     assertTrue(codeSystemJobExecutionService.getLatestJobStatus().isEmpty());
   }
 
-  @Test
-  void testGetLastCompletedJobReturnsMostRecentCompletedJob() {
+  @ParameterizedTest
+  @EnumSource(
+      value = Status.class,
+      names = {"COMPLETED", "COMPLETED_WITH_ERRORS"})
+  void testGetLastCompletedJobIncludesJobsCompletedWithErrors(Status status) {
+    // given
     Instant completedAt = Instant.now();
-    when(codeSystemJobExecutionRepository.findFirstByStatusOrderByCompletedAtDesc(Status.COMPLETED))
-        .thenReturn(Optional.of(finishedExecution(Status.COMPLETED, completedAt)));
+    when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS)))
+        .thenReturn(Optional.of(finishedExecution(status, completedAt)));
 
+    // when
     Optional<CodeSystemJobStatus> jobStatus = codeSystemJobExecutionService.getLastCompletedJob();
 
-    assertEquals(new CodeSystemJobStatus(Status.COMPLETED, completedAt), jobStatus.orElseThrow());
+    // then
+    assertEquals(new CodeSystemJobStatus(status, completedAt), jobStatus.orElseThrow());
   }
 
   @Test
   void testGetLastCompletedJobIsEmptyWhenNoJobHasCompleted() {
-    when(codeSystemJobExecutionRepository.findFirstByStatusOrderByCompletedAtDesc(Status.COMPLETED))
+    when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS)))
         .thenReturn(Optional.empty());
 
     assertTrue(codeSystemJobExecutionService.getLastCompletedJob().isEmpty());

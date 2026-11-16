@@ -5,7 +5,7 @@ import gov.cms.madie.terminology.audit.AdminAuditService;
 import gov.cms.madie.terminology.audit.AdminAuditService.Action;
 import gov.cms.madie.terminology.audit.AuditResource;
 import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
-import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
+import gov.cms.madie.terminology.dto.CodeSystemJobAdminStatus;
 import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
 import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
@@ -333,11 +333,18 @@ class AdminControllerMvcTest {
 
   @Test
   void testGetCodeSystemJobStatusReturnsLatestStatus() throws Exception {
+    // given
     when(codeSystemJobExecutionService.getLatestJobStatus())
         .thenReturn(
             Optional.of(
-                new CodeSystemJobStatus(Status.COMPLETED, Instant.parse("2026-11-09T15:04:05Z"))));
+                new CodeSystemJobAdminStatus(
+                    Status.COMPLETED_WITH_ERRORS,
+                    Instant.parse("2026-11-09T15:04:05Z"),
+                    120,
+                    2,
+                    1)));
 
+    // when
     MvcResult result =
         mockMvc
             .perform(
@@ -346,9 +353,13 @@ class AdminControllerMvcTest {
             .andExpect(status().isOk())
             .andReturn();
 
+    // then
     String content = result.getResponse().getContentAsString();
-    assertThat(content, containsString("\"status\":\"COMPLETED\""));
+    assertThat(content, containsString("\"status\":\"COMPLETED_WITH_ERRORS\""));
     assertThat(content, containsString("\"completedAt\":\"2026-11-09T15:04:05Z\""));
+    assertThat(content, containsString("\"successCount\":120"));
+    assertThat(content, containsString("\"failureCount\":2"));
+    assertThat(content, containsString("\"skippedCount\":1"));
   }
 
   @Test

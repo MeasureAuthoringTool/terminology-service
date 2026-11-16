@@ -16,9 +16,6 @@ public interface CodeSystemJobExecutionRepository
 
   boolean existsByStatus(CodeSystemJobExecutionState.Status status);
 
-  Optional<CodeSystemJobExecutionState> findFirstByStatusOrderByCompletedAtDesc(
-      CodeSystemJobExecutionState.Status status);
-
   Optional<CodeSystemJobExecutionState> findFirstByStatusInOrderByCompletedAtDesc(
       Collection<CodeSystemJobExecutionState.Status> statuses);
 }
