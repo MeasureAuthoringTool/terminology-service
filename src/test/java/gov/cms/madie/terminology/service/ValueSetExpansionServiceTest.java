@@ -65,7 +65,7 @@ class ValueSetExpansionServiceTest {
   private static final String VSAC_URL = "http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3";
   private static final String VSAC_SEARCH =
       "/ValueSet?url=http%3A%2F%2Fcts.nlm.nih.gov%2Ffhir%2FValueSet%2F1.2.3&_summary=count";
-  private static final String SYSTEM_API_KEY = "test-system-key";
+  private static final String SYSTEM_CREDENTIAL = "test-system-key";
   private static final String VSAC_ABSENT =
       "{\"resourceType\":\"Bundle\",\"type\":\"searchset\",\"total\":0}";
   private static final String VSAC_PRESENT =
@@ -105,7 +105,7 @@ class ValueSetExpansionServiceTest {
   void setUp() {
     madieValueSet = MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build();
     realParser = FhirContext.forR4().newJsonParser();
-    ReflectionTestUtils.setField(valueSetExpansionService, "systemVsacApiKey", SYSTEM_API_KEY);
+    ReflectionTestUtils.setField(valueSetExpansionService, "systemVsacApiKey", SYSTEM_CREDENTIAL);
   }
 
   // ---------------------------------------------------------------------------
@@ -554,7 +554,7 @@ class ValueSetExpansionServiceTest {
             .build();
     mockDependencies(allIgs, List.of(vsac, madieValueSet));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(VSAC_PRESENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
     MadieValueSet existing = vsac.toBuilder().id("cached-vsac-id").build();
@@ -571,7 +571,8 @@ class ValueSetExpansionServiceTest {
     verify(vseRepo, never()).save(argThat(vs -> VSAC_URL.equals(vs.getUrl())));
     assertEquals("old VSAC content", vsac.getValueSet());
     verify(fhirTerminologyServiceWebClient)
-        .fetchResourceFromVsac(VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet");
+        .fetchResourceFromVsac(
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet");
     verifyNoMoreInteractions(fhirTerminologyServiceWebClient);
   }
 
@@ -581,7 +582,7 @@ class ValueSetExpansionServiceTest {
     mockDependencies(
         allIgs, List.of(MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build()));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(VSAC_PRESENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
 
@@ -599,7 +600,7 @@ class ValueSetExpansionServiceTest {
     MadieValueSet existing = vsac.toBuilder().id("manual-vsac-id").manuallyModified(true).build();
     mockDependencies(allIgs, List.of(vsac));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(VSAC_PRESENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
     when(vseRepo.findByUrlAndVersion(VSAC_URL, VS_VERSION)).thenReturn(Optional.of(existing));
@@ -609,7 +610,8 @@ class ValueSetExpansionServiceTest {
     var order = inOrder(fhirTerminologyServiceWebClient, vseRepo);
     order
         .verify(fhirTerminologyServiceWebClient)
-        .fetchResourceFromVsac(VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet");
+        .fetchResourceFromVsac(
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet");
     order.verify(vseRepo).findByUrlAndVersion(VSAC_URL, VS_VERSION);
     order.verify(vseRepo).deleteById("manual-vsac-id");
     verifyNoMoreInteractions(vseRepo);
@@ -623,7 +625,7 @@ class ValueSetExpansionServiceTest {
     MadieValueSet vsac = MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build();
     mockDependencies(allIgs, List.of(vsac));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(VSAC_ABSENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
     String txJson = MOCK_VALUE_SET_JSON.replace(VS_URL, VSAC_URL);
@@ -635,7 +637,8 @@ class ValueSetExpansionServiceTest {
     var order = inOrder(fhirTerminologyServiceWebClient, txTerminologyServiceWebClient, vseRepo);
     order
         .verify(fhirTerminologyServiceWebClient)
-        .fetchResourceFromVsac(VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet");
+        .fetchResourceFromVsac(
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet");
     order.verify(txTerminologyServiceWebClient).getValueSetExpansion(VSAC_URL, VS_VERSION);
     ArgumentCaptor<MadieValueSet> captor = ArgumentCaptor.forClass(MadieValueSet.class);
     verify(vseRepo).save(captor.capture());
@@ -658,7 +661,7 @@ class ValueSetExpansionServiceTest {
         MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).valueSet("stale content").build();
     mockDependencies(allIgs, List.of(vsac));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(VSAC_ABSENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
     when(txTerminologyServiceWebClient.getValueSetExpansion(VSAC_URL, VS_VERSION))
@@ -670,7 +673,8 @@ class ValueSetExpansionServiceTest {
 
     verifyNoInteractions(vseRepo);
     verify(fhirTerminologyServiceWebClient)
-        .fetchResourceFromVsac(VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet");
+        .fetchResourceFromVsac(
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet");
     verifyNoMoreInteractions(fhirTerminologyServiceWebClient);
   }
 
@@ -682,7 +686,7 @@ class ValueSetExpansionServiceTest {
     MadieValueSet vsac = MadieValueSet.builder().url(VSAC_URL).version(version).build();
     mockDependencies(true, List.of(vsac));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(VSAC_PRESENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
     MadieValueSet existing = vsac.toBuilder().id("unversioned-vsac-id").build();
@@ -695,7 +699,7 @@ class ValueSetExpansionServiceTest {
     verify(vseRepo).deleteById("unversioned-vsac-id");
     verifyNoMoreInteractions(vseRepo);
     verify(fhirTerminologyServiceWebClient)
-        .fetchResourceFromVsac(VSAC_SEARCH, SYSTEM_API_KEY, "ValueSet");
+        .fetchResourceFromVsac(VSAC_SEARCH, SYSTEM_CREDENTIAL, "ValueSet");
   }
 
   /** Unusable VSAC responses are not evidence of absence. */
@@ -713,7 +717,7 @@ class ValueSetExpansionServiceTest {
     MadieValueSet vsac = MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build();
     mockDependencies(true, List.of(vsac, madieValueSet));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(response);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
@@ -734,7 +738,7 @@ class ValueSetExpansionServiceTest {
     MadieValueSet vsac = MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build();
     mockDependencies(true, List.of(vsac, madieValueSet));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenThrow(
             WebClientResponseException.create(status, "VSAC unavailable", null, new byte[0], null));
     when(fhirContext.newJsonParser()).thenReturn(realParser);
@@ -755,7 +759,7 @@ class ValueSetExpansionServiceTest {
     MadieValueSet vsac = MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build();
     mockDependencies(true, List.of(vsac, madieValueSet));
     when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
-            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_API_KEY, "ValueSet"))
+            VSAC_SEARCH + "&version=" + VS_VERSION, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenThrow(
             new WebClientRequestException(
                 new IOException("connection failed"),
@@ -831,14 +835,15 @@ class ValueSetExpansionServiceTest {
     String version = "v1+draft&release=2";
     mockDependencies(true, List.of(MadieValueSet.builder().url(VSAC_URL).version(version).build()));
     String search = VSAC_SEARCH + "&version=v1%2Bdraft%26release%3D2";
-    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(search, SYSTEM_API_KEY, "ValueSet"))
+    when(fhirTerminologyServiceWebClient.fetchResourceFromVsac(
+            search, SYSTEM_CREDENTIAL, "ValueSet"))
         .thenReturn(VSAC_PRESENT);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
 
     refreshDependencies(true);
 
     verify(fhirTerminologyServiceWebClient)
-        .fetchResourceFromVsac(search, SYSTEM_API_KEY, "ValueSet");
+        .fetchResourceFromVsac(search, SYSTEM_CREDENTIAL, "ValueSet");
     verifyNoInteractions(txTerminologyServiceWebClient);
     verify(vseRepo).findByUrlAndVersion(VSAC_URL, version);
     verifyNoMoreInteractions(vseRepo);
@@ -874,7 +879,7 @@ class ValueSetExpansionServiceTest {
               txTerminologyServiceWebClient,
               context,
               client);
-      ReflectionTestUtils.setField(service, "systemVsacApiKey", SYSTEM_API_KEY);
+      ReflectionTestUtils.setField(service, "systemVsacApiKey", SYSTEM_CREDENTIAL);
       mockDependencies(
           true, List.of(MadieValueSet.builder().url(VSAC_URL).version(VS_VERSION).build()));
       if (total == 0) {
@@ -891,7 +896,7 @@ class ValueSetExpansionServiceTest {
       assertEquals(
           "Basic "
               + Base64.getEncoder()
-                  .encodeToString(("apikey:" + SYSTEM_API_KEY).getBytes(StandardCharsets.UTF_8)),
+                  .encodeToString(("apikey:" + SYSTEM_CREDENTIAL).getBytes(StandardCharsets.UTF_8)),
           request.getHeader("Authorization"));
       assertEquals(1, server.getRequestCount());
       if (total == 0) {
