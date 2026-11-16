@@ -25,7 +25,7 @@ public class CodeSystemJobExecutionState {
   private Long durationMs;
   private List<CodeSystemFailure> failures;
   private List<CodeSystemUpdate> successfulCodeSystems;
-  // Invalid upstream entries (e.g. missing version); recorded but never change the status
+  // Invalid upstream entries (e.g. missing version), kept separate from operational failures
   private List<CodeSystemFailure> skippedCodeSystems;
   private String failureMessage;
 
@@ -37,7 +37,7 @@ public class CodeSystemJobExecutionState {
   public enum Status {
     RUNNING,
     COMPLETED,
-    COMPLETED_WITH_ERRORS,
+    COMPLETED_WITH_FAILURES,
     FAILED
   }
 }

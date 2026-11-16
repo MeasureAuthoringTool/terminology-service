@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -79,8 +80,9 @@ class CodeSystemJobExecutionStateServiceTest {
     assertSame(saved, execution);
   }
 
-  @Test
-  void testCompleteUpdatesRecordWithCompletionTimeAndDuration() {
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void finishIncludesSkippedEntriesInStatusAndPreservesCompletionDetails(boolean hasSkipped) {
     // given
     Instant startedAt = Instant.now().minusSeconds(90);
     CodeSystemJobExecutionState execution = runningExecution(startedAt);
@@ -101,7 +103,7 @@ class CodeSystemJobExecutionStateServiceTest {
                     .version(CodeSystem.Version.builder().fhirVersion("2").build())
                     .build()),
             List.of(),
-            skipped);
+            hasSkipped ? skipped : List.of());
 
     // when
     codeSystemJobExecutionService.finish(execution, result);
@@ -109,8 +111,9 @@ class CodeSystemJobExecutionStateServiceTest {
     // then
     verify(codeSystemJobExecutionRepository).save(execution);
     assertEquals("job-1", execution.getId());
-    assertEquals(Status.COMPLETED, execution.getStatus());
-    assertEquals(skipped, execution.getSkippedCodeSystems());
+    assertEquals(
+        hasSkipped ? Status.COMPLETED_WITH_FAILURES : Status.COMPLETED, execution.getStatus());
+    assertEquals(hasSkipped ? skipped : List.of(), execution.getSkippedCodeSystems());
     assertEquals(startedAt, execution.getStartedAt());
     assertNotNull(execution.getCompletedAt());
     assertFalse(execution.getCompletedAt().isBefore(startedAt));
@@ -122,7 +125,9 @@ class CodeSystemJobExecutionStateServiceTest {
         List.of(new CodeSystemUpdate("stored-1", "http://example.com/system", "2")),
         execution.getSuccessfulCodeSystems());
     assertTrue(execution.getFailures().isEmpty());
-    assertNull(execution.getFailureMessage());
+    assertEquals(
+        hasSkipped ? "0 code system update failure(s), 1 skipped code system entry/entries" : null,
+        execution.getFailureMessage());
   }
 
   @Test
@@ -144,7 +149,7 @@ class CodeSystemJobExecutionStateServiceTest {
   }
 
   @Test
-  void finishMarksCompletedWithErrorsWhenSomeCodeSystemsFail() {
+  void finishMarksCompletedWithFailuresWhenSomeCodeSystemsFail() {
     // given
     Instant startedAt = Instant.now().minusSeconds(30);
     CodeSystemJobExecutionState execution = runningExecution(startedAt);
@@ -173,7 +178,7 @@ class CodeSystemJobExecutionStateServiceTest {
     assertEquals("job-1", execution.getId());
     assertEquals(HARP_ID, execution.getTriggeredBy());
     assertEquals(startedAt, execution.getStartedAt());
-    assertEquals(Status.COMPLETED_WITH_ERRORS, execution.getStatus());
+    assertEquals(Status.COMPLETED_WITH_FAILURES, execution.getStatus());
     assertEquals(failures, execution.getFailures());
     assertEquals(
         List.of(new CodeSystemUpdate("stored-1", "http://example.com/system", "2")),
@@ -203,6 +208,34 @@ class CodeSystemJobExecutionStateServiceTest {
     assertEquals(failures, execution.getFailures());
     assertTrue(execution.getSuccessfulCodeSystems().isEmpty());
     assertEquals("1 code system update failure(s)", execution.getFailureMessage());
+  }
+
+  @Test
+  void finishMarksFailedWhenAllCodeSystemsAreSkipped() {
+    // given
+    CodeSystemJobExecutionState execution = runningExecution(Instant.now().minusSeconds(30));
+    List<CodeSystemFailure> skipped =
+        List.of(
+            new CodeSystemFailure(
+                null, "http://example.com/system", null, "VALIDATION", "Missing FHIR version"));
+    CodeSystemRefreshResult result = new CodeSystemRefreshResult(List.of(), List.of(), skipped);
+
+    // when
+    codeSystemJobExecutionService.finish(execution, result);
+
+    // then
+    verify(codeSystemJobExecutionRepository).save(execution);
+    assertEquals(Status.FAILED, execution.getStatus());
+    assertEquals(skipped, execution.getSkippedCodeSystems());
+    assertTrue(execution.getFailures().isEmpty());
+    assertTrue(execution.getSuccessfulCodeSystems().isEmpty());
+    assertEquals(
+        "0 code system update failure(s), 1 skipped code system entry/entries",
+        execution.getFailureMessage());
+    assertNotNull(execution.getCompletedAt());
+    assertEquals(
+        Duration.between(execution.getStartedAt(), execution.getCompletedAt()).toMillis(),
+        execution.getDurationMs());
   }
 
   @Test
@@ -287,7 +320,7 @@ class CodeSystemJobExecutionStateServiceTest {
   @ParameterizedTest
   @EnumSource(
       value = Status.class,
-      names = {"COMPLETED", "COMPLETED_WITH_ERRORS", "FAILED"})
+      names = {"COMPLETED", "COMPLETED_WITH_FAILURES", "FAILED"})
   void testGetLatestJobStatusReturnsMostRecentlyFinishedJobWithCounts(Status status) {
     // given
     Instant completedAt = Instant.now();
@@ -303,7 +336,7 @@ class CodeSystemJobExecutionStateServiceTest {
             .build();
     when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(false);
     when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(
-            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS, Status.FAILED)))
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_FAILURES, Status.FAILED)))
         .thenReturn(Optional.of(execution));
 
     // when
@@ -345,12 +378,12 @@ class CodeSystemJobExecutionStateServiceTest {
   @ParameterizedTest
   @EnumSource(
       value = Status.class,
-      names = {"COMPLETED", "COMPLETED_WITH_ERRORS"})
-  void testGetLastCompletedJobIncludesJobsCompletedWithErrors(Status status) {
+      names = {"COMPLETED", "COMPLETED_WITH_FAILURES"})
+  void testGetLastCompletedJobIncludesJobsCompletedWithFailures(Status status) {
     // given
     Instant completedAt = Instant.now();
     when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(
-            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS)))
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_FAILURES)))
         .thenReturn(Optional.of(finishedExecution(status, completedAt)));
 
     // when
@@ -362,10 +395,15 @@ class CodeSystemJobExecutionStateServiceTest {
 
   @Test
   void testGetLastCompletedJobIsEmptyWhenNoJobHasCompleted() {
+    // given
     when(codeSystemJobExecutionRepository.findFirstByStatusInOrderByCompletedAtDesc(
-            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS)))
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_FAILURES)))
         .thenReturn(Optional.empty());
 
-    assertTrue(codeSystemJobExecutionService.getLastCompletedJob().isEmpty());
+    // when
+    Optional<CodeSystemJobStatus> jobStatus = codeSystemJobExecutionService.getLastCompletedJob();
+
+    // then
+    assertTrue(jobStatus.isEmpty());
   }
 }

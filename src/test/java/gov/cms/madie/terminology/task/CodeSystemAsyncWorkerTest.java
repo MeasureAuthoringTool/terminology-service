@@ -193,7 +193,7 @@ class CodeSystemAsyncWorkerTest {
     assertTrue(secondStarted);
     assertFalse(task.isRunning());
     assertEquals(
-        List.of(Status.RUNNING, Status.COMPLETED_WITH_ERRORS, Status.RUNNING, Status.COMPLETED),
+        List.of(Status.RUNNING, Status.COMPLETED_WITH_FAILURES, Status.RUNNING, Status.COMPLETED),
         saved.stream().map(CodeSystemJobExecutionState::getStatus).toList());
     assertEquals(saved.get(0).getId(), saved.get(1).getId());
     assertEquals(saved.get(2).getId(), saved.get(3).getId());

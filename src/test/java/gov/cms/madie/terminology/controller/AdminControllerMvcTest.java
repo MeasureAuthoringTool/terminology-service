@@ -338,7 +338,7 @@ class AdminControllerMvcTest {
         .thenReturn(
             Optional.of(
                 new CodeSystemJobAdminStatus(
-                    Status.COMPLETED_WITH_ERRORS,
+                    Status.COMPLETED_WITH_FAILURES,
                     Instant.parse("2026-11-09T15:04:05Z"),
                     120,
                     2,
@@ -355,7 +355,7 @@ class AdminControllerMvcTest {
 
     // then
     String content = result.getResponse().getContentAsString();
-    assertThat(content, containsString("\"status\":\"COMPLETED_WITH_ERRORS\""));
+    assertThat(content, containsString("\"status\":\"COMPLETED_WITH_FAILURES\""));
     assertThat(content, containsString("\"completedAt\":\"2026-11-09T15:04:05Z\""));
     assertThat(content, containsString("\"successCount\":120"));
     assertThat(content, containsString("\"failureCount\":2"));

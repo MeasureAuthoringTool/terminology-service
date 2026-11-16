@@ -68,9 +68,13 @@ public class CodeSystemJobExecutionService {
                         codeSystem.getVersion().getFhirVersion()))
             .toList());
     execution.setFailureMessage(
-        result.failures().isEmpty()
+        result.failures().isEmpty() && result.skipped().isEmpty()
             ? null
-            : result.failures().size() + " code system update failure(s)");
+            : result.failures().size()
+                + " code system update failure(s)"
+                + (result.skipped().isEmpty()
+                    ? ""
+                    : ", " + result.skipped().size() + " skipped code system entry/entries"));
     finish(execution, statusFor(result));
     log.info(
         "Code system update job [{}]: {} successful versions, {} failures, {} skipped",
@@ -81,10 +85,10 @@ public class CodeSystemJobExecutionService {
   }
 
   private static Status statusFor(CodeSystemRefreshResult result) {
-    if (result.failures().isEmpty()) {
+    if (result.failures().isEmpty() && result.skipped().isEmpty()) {
       return Status.COMPLETED;
     }
-    return result.updatedCodeSystems().isEmpty() ? Status.FAILED : Status.COMPLETED_WITH_ERRORS;
+    return result.updatedCodeSystems().isEmpty() ? Status.FAILED : Status.COMPLETED_WITH_FAILURES;
   }
 
   private void finish(CodeSystemJobExecutionState execution, Status status) {
@@ -107,7 +111,7 @@ public class CodeSystemJobExecutionService {
     }
     return codeSystemJobExecutionRepository
         .findFirstByStatusInOrderByCompletedAtDesc(
-            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS, Status.FAILED))
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_FAILURES, Status.FAILED))
         .map(CodeSystemJobAdminStatus::from);
   }
 
@@ -115,7 +119,7 @@ public class CodeSystemJobExecutionService {
   public Optional<CodeSystemJobStatus> getLastCompletedJob() {
     return codeSystemJobExecutionRepository
         .findFirstByStatusInOrderByCompletedAtDesc(
-            List.of(Status.COMPLETED, Status.COMPLETED_WITH_ERRORS))
+            List.of(Status.COMPLETED, Status.COMPLETED_WITH_FAILURES))
         .map(CodeSystemJobStatus::from);
   }
 
