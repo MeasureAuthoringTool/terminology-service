@@ -104,9 +104,13 @@ public class CodeSystemJobExecutionService {
         execution.getDurationMs());
   }
 
+  public boolean isJobRunning() {
+    return codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING);
+  }
+
   /** RUNNING if any job is running, otherwise the most recently finished job */
   public Optional<CodeSystemJobAdminStatus> getLatestJobStatus() {
-    if (codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)) {
+    if (isJobRunning()) {
       return Optional.of(CodeSystemJobAdminStatus.running());
     }
     return codeSystemJobExecutionRepository
