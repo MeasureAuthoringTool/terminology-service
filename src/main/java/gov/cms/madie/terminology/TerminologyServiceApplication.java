@@ -29,7 +29,7 @@ public class TerminologyServiceApplication {
   public CacheManager cacheManager() {
     CaffeineCacheManager cacheManager = new CaffeineCacheManager("manifest-list");
     cacheManager.setCaffeine(
-        Caffeine.newBuilder().maximumSize(500).expireAfterWrite(24, TimeUnit.HOURS));
+        Caffeine.newBuilder().maximumSize(500).expireAfterWrite(24, TimeUnit.HOURS).recordStats());
     return cacheManager;
   }
 

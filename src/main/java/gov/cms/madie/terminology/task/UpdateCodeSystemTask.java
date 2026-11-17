@@ -26,6 +26,7 @@ public class UpdateCodeSystemTask {
       return false;
     }
 
+    CodeSystemJobExecutionState execution = null;
     try {
       if (codeSystemJobExecutionService.isJobRunning()) {
         log.warn("Code system update already running according to the database.");
@@ -33,11 +34,14 @@ public class UpdateCodeSystemTask {
         return false;
       }
 
-      CodeSystemJobExecutionState execution = codeSystemJobExecutionService.start(triggeredBy);
+      execution = codeSystemJobExecutionService.start(triggeredBy);
       codeSystemAsyncWorker.runJobAsync(running, execution);
     } catch (RuntimeException e) {
       // Release the flag, or every later run would be rejected
       running.set(false);
+      if (execution != null) {
+        codeSystemJobExecutionService.fail(execution, e);
+      }
       throw e;
     }
 

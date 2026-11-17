@@ -252,6 +252,46 @@ class FhirTerminologyServiceWebClientTest {
   }
 
   @Test
+  void getCodeSystemHistoryPageUsesLogicalId() throws InterruptedException {
+    // given
+    mockBackEnd.enqueue(
+        new MockResponse()
+            .setResponseCode(200)
+            .setBody(MOCK_RESPONSE_STRING)
+            .addHeader("Content-Type", "application/fhir+json"));
+
+    // when
+    String actualResponse =
+        fhirTerminologyServiceWebClient.getCodeSystemHistoryPage("logical-id", 0, 50, MOCK_API_KEY);
+
+    // then
+    assertEquals(MOCK_RESPONSE_STRING, actualResponse);
+    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
+    assertEquals(
+        "/codeSystemUrn/logical-id/_history?_offset=0&_count=50", recordedRequest.getPath());
+  }
+
+  @Test
+  void getCodeSystemHistoryPageReturnsException() throws InterruptedException {
+    // given
+    mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
+
+    // when
+    ValueSetExpansionException error =
+        assertThrows(
+            ValueSetExpansionException.class,
+            () ->
+                fhirTerminologyServiceWebClient.getCodeSystemHistoryPage(
+                    "logical-id", 0, 50, MOCK_API_KEY));
+
+    // then
+    assertNotNull(error);
+    RecordedRequest recordedRequest = mockBackEnd.takeRequest();
+    assertEquals(
+        "/codeSystemUrn/logical-id/_history?_offset=0&_count=50", recordedRequest.getPath());
+  }
+
+  @Test
   void testGetCodeResource() throws InterruptedException {
     String codeName = "1963-8";
     CodeSystem codeSystem =

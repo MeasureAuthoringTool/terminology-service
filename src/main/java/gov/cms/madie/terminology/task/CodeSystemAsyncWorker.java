@@ -30,13 +30,17 @@ public class CodeSystemAsyncWorker {
       UmlsUser user = new UmlsUser();
       user.setApiKey(apiKey);
 
-      codeSystemSyncService.remoteRetrieveAllCodeSystems(user);
-      codeSystemJobExecutionService.complete(execution);
+      var result = codeSystemSyncService.remoteRetrieveAllCodeSystems(user);
+      codeSystemJobExecutionService.finish(execution, result);
 
-      log.info("Code system update completed.");
+      log.info(
+          "Code system update finished: {} successful versions, {} failures, {} skipped.",
+          result.updatedCodeSystems().size(),
+          result.failures().size(),
+          result.skipped().size());
     } catch (Exception ex) {
       log.error("Error during code system update", ex);
-      codeSystemJobExecutionService.fail(execution);
+      codeSystemJobExecutionService.fail(execution, ex);
     } finally {
       running.set(false);
     }
