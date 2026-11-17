@@ -3,11 +3,14 @@ package gov.cms.madie.terminology.controller;
 import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.models.measure.ManifestExpansion;
 import gov.cms.madie.terminology.dto.Code;
+import gov.cms.madie.terminology.dto.CodeSystemJobStatus;
 import gov.cms.madie.terminology.dto.QdmValueSet;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import gov.cms.madie.terminology.exceptions.VsacUnauthorizedException;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.models.UmlsUser;
 import gov.cms.madie.terminology.service.FhirTerminologyService;
+import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import gov.cms.madie.terminology.service.CodeSystemService;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.service.VsacService;
@@ -29,8 +32,10 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -55,6 +60,7 @@ class VsacFhirTerminologyControllerMvcTest {
 
   @MockitoBean private FhirTerminologyService fhirTerminologyService;
   @MockitoBean private CodeSystemService codeSystemService;
+  @MockitoBean private CodeSystemJobExecutionService codeSystemJobExecutionService;
 
   @MockitoBean private FhirContext fhirContext;
 
@@ -304,5 +310,36 @@ class VsacFhirTerminologyControllerMvcTest {
     assertThat(result.getResponse().getStatus(), is(equalTo(200)));
     assertThat(result.getResponse().getContentAsString(), containsString(code.getName()));
     assertThat(result.getResponse().getContentAsString(), containsString(code.getDisplay()));
+  }
+
+  @Test
+  void testGetCodeSystemsLastUpdatedAvailableToNonAdminUsers() throws Exception {
+    when(codeSystemJobExecutionService.getLastCompletedJob())
+        .thenReturn(
+            Optional.of(
+                new CodeSystemJobStatus(Status.COMPLETED, Instant.parse("2026-11-09T15:04:05Z"))));
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/terminology/code-system-job/last-updated")
+                    .with(user(TEST_USR)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String content = result.getResponse().getContentAsString();
+    assertThat(content, containsString("\"status\":\"COMPLETED\""));
+    assertThat(content, containsString("\"completedAt\":\"2026-11-09T15:04:05Z\""));
+  }
+
+  @Test
+  void testGetCodeSystemsLastUpdatedReturnsNoContentWhenNoJobHasCompleted() throws Exception {
+    when(codeSystemJobExecutionService.getLastCompletedJob()).thenReturn(Optional.empty());
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/terminology/code-system-job/last-updated")
+                .with(user(TEST_USR)))
+        .andExpect(status().isNoContent());
   }
 }

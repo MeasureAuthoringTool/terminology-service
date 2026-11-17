@@ -5,17 +5,17 @@ import gov.cms.madie.terminology.audit.AdminAuditService;
 import gov.cms.madie.terminology.audit.AdminAuditService.Action;
 import gov.cms.madie.terminology.audit.AuditResource;
 import gov.cms.madie.terminology.audit.AuditResource.ResourceType;
+import gov.cms.madie.terminology.dto.CodeSystemJobAdminStatus;
+import gov.cms.madie.terminology.models.CodeSystemJobExecutionState.Status;
 import gov.cms.madie.terminology.service.CodeSystemExportService;
+import gov.cms.madie.terminology.service.CodeSystemJobExecutionService;
 import tools.jackson.databind.ObjectMapper;
 import gov.cms.madie.terminology.clients.UserServiceClient;
 import gov.cms.madie.terminology.config.SecurityConfig;
-import gov.cms.madie.terminology.models.UmlsUser;
-import gov.cms.madie.terminology.service.VsacService;
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.service.CodeSystemService;
-import gov.cms.madie.terminology.service.CodeSystemSyncService;
 import gov.cms.madie.terminology.task.UpdateCodeSystemTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,10 +32,11 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Date;
-import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -52,13 +53,12 @@ class AdminControllerMvcTest {
   private static final String TEST_USR = "FAKE";
 
   @MockitoBean private CodeSystemService codeSystemService;
-  @MockitoBean private CodeSystemSyncService codeSystemSyncService;
-  @MockitoBean private VsacService vsacService;
   @MockitoBean private FhirContext fhirContext;
   @MockitoBean private UpdateCodeSystemTask updateCodeSystemTask;
   @MockitoBean private UserServiceClient userServiceClient;
   @MockitoBean private CodeSystemExportService codeSystemExportService;
   @MockitoBean private AdminAuditService adminAuditService;
+  @MockitoBean private CodeSystemJobExecutionService codeSystemJobExecutionService;
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
 
@@ -81,32 +81,19 @@ class AdminControllerMvcTest {
   }
 
   @Test
-  void testRetrieveAndUpdateCodeSystemsSuccessfully() throws Exception {
-    UmlsUser umlsUser = UmlsUser.builder().apiKey("te$tKey").harpId(TEST_USR).build();
-    when(vsacService.verifyUmlsAccess(anyString())).thenReturn(umlsUser);
-    when(codeSystemSyncService.remoteRetrieveAllCodeSystems(any(UmlsUser.class)))
-        .thenReturn(List.of(codeSystem));
+  void removedSynchronousRefreshEndpointIsNotAvailable() throws Exception {
+    // given
+    var request =
+        MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
+            .with(user(TEST_USR).roles("MADIE-ADMIN"))
+            .with(csrf());
 
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
-                .with(user(TEST_USR).roles("MADIE-ADMIN"))
-                .with(csrf()))
-        .andExpect(status().isOk());
+    // when
+    var result = mockMvc.perform(request);
 
-    verify(codeSystemSyncService, times(1)).remoteRetrieveAllCodeSystems(any(UmlsUser.class));
-  }
-
-  @Test
-  void testRetrieveAndUpdateCodeSystemsForbiddenWithoutAdminRole() throws Exception {
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.post("/terminology/admin/update-code-systems")
-                .with(user(TEST_USR))
-                .with(csrf()))
-        .andExpect(status().isForbidden());
-
-    verify(codeSystemSyncService, never()).remoteRetrieveAllCodeSystems(any());
+    // then
+    result.andExpect(status().isNotFound());
+    verifyNoInteractions(codeSystemService, updateCodeSystemTask, adminAuditService);
   }
 
   @Test
@@ -312,7 +299,7 @@ class AdminControllerMvcTest {
 
   @Test
   void testTriggerCodeSystemRefreshAuditsWhenJobStarts() throws Exception {
-    when(updateCodeSystemTask.startJob()).thenReturn(true);
+    when(updateCodeSystemTask.startJob(TEST_USR)).thenReturn(true);
 
     mockMvc
         .perform(
@@ -340,7 +327,60 @@ class AdminControllerMvcTest {
                 .with(csrf()))
         .andExpect(status().isForbidden());
 
-    verify(updateCodeSystemTask, never()).startJob();
+    verify(updateCodeSystemTask, never()).startJob(any());
     verifyNoInteractions(adminAuditService);
+  }
+
+  @Test
+  void testGetCodeSystemJobStatusReturnsLatestStatus() throws Exception {
+    // given
+    when(codeSystemJobExecutionService.getLatestJobStatus())
+        .thenReturn(
+            Optional.of(
+                new CodeSystemJobAdminStatus(
+                    Status.COMPLETED_WITH_FAILURES,
+                    Instant.parse("2026-11-09T15:04:05Z"),
+                    120,
+                    2,
+                    1)));
+
+    // when
+    MvcResult result =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/terminology/admin/code-system-job-status")
+                    .with(user(TEST_USR).roles("MADIE-ADMIN")))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    // then
+    String content = result.getResponse().getContentAsString();
+    assertThat(content, containsString("\"status\":\"COMPLETED_WITH_FAILURES\""));
+    assertThat(content, containsString("\"completedAt\":\"2026-11-09T15:04:05Z\""));
+    assertThat(content, containsString("\"successCount\":120"));
+    assertThat(content, containsString("\"failureCount\":2"));
+    assertThat(content, containsString("\"skippedCount\":1"));
+  }
+
+  @Test
+  void testGetCodeSystemJobStatusReturnsNoContentWhenNoJobHasRun() throws Exception {
+    when(codeSystemJobExecutionService.getLatestJobStatus()).thenReturn(Optional.empty());
+
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/terminology/admin/code-system-job-status")
+                .with(user(TEST_USR).roles("MADIE-ADMIN")))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  void testGetCodeSystemJobStatusForbiddenWithoutAdminRole() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/terminology/admin/code-system-job-status")
+                .with(user(TEST_USR)))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(codeSystemJobExecutionService);
   }
 }
