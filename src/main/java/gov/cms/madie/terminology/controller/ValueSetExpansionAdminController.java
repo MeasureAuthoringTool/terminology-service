@@ -161,6 +161,7 @@ public class ValueSetExpansionAdminController {
       case "version" -> "version";
       case "lastUpdated" -> "lastUpdated";
       case "manuallyModified" -> "manuallyModified";
+      case "unavailable" -> "unavailable";
       default -> "lastUpdated";
     };
   }
