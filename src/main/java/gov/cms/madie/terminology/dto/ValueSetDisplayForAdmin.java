@@ -22,6 +22,8 @@ public class ValueSetDisplayForAdmin {
   private Instant lastUpdated;
   private boolean manuallyModified;
 
+  private boolean unavailable;
+
   @NotBlank(message = "Value set expansion JSON is required")
   private String valueSet;
 }

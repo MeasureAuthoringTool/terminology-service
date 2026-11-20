@@ -11,6 +11,7 @@ import gov.cms.madie.terminology.exceptions.ValueSetExpansionException;
 import gov.cms.madie.terminology.exceptions.ValueSetNotFoundException;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
+import gov.cms.madie.terminology.models.ValueSetError;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -910,6 +912,132 @@ class ValueSetExpansionServiceTest {
   }
 
   /** Supplies the same dependency list to either public refresh entry point. */
+  @ParameterizedTest
+  @CsvSource({
+    "too-costly,TOO_COSTLY",
+    "business-rule,BUSINESS_RULE",
+    "not-supported,NOT_SUPPORTED",
+    "code-invalid,CODE_INVALID",
+    "not-found,NOT_FOUND"
+  })
+  void maps422OperationOutcomeIssueCodesToUnavailableErrors(
+      String issueCode, ValueSetError expected) {
+    String outcome =
+        "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"code\":\"" + issueCode + "\"}]}";
+    mockDependencies(true, List.of(madieValueSet));
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ValueSetExpansionException(
+                "unprocessable",
+                HttpStatusCode.valueOf(422),
+                "Unprocessable Entity",
+                outcome,
+                "",
+                VS_URL));
+
+    valueSetExpansionService.updateValueSetDependencies().join();
+
+    verify(vseRepo)
+        .save(
+            argThat(
+                vs ->
+                    vs.isUnavailable()
+                        && vs.getError() == expected
+                        && "{ \"resourceType\": \"ValueSet\" }".equals(vs.getValueSet())
+                        && vs.getLastUpdated() != null));
+  }
+
+  @Test
+  void resourceNotFoundWithNotFoundOutcomeMarksValueSetUnavailable() {
+    String outcome = "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"code\":\"not-found\"}]}";
+    mockDependencies(true, List.of(madieValueSet));
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ResourceNotFoundException(
+                "not found", HttpStatusCode.valueOf(404), "Not Found", outcome, VS_URL));
+
+    valueSetExpansionService.updateValueSetDependencies().join();
+
+    verify(vseRepo)
+        .save(
+            argThat(
+                vs ->
+                    vs.isUnavailable()
+                        && vs.getError() == ValueSetError.NOT_FOUND
+                        && vs.getLastUpdated() != null));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"unknown", "invalid-json", "blank"})
+  void unrecognizedOrBlankOperationOutcomeDoesNotSaveUnavailableRecord(String bodyKind) {
+    String body =
+        switch (bodyKind) {
+          case "unknown" ->
+              "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"code\":\"informational\"}]}";
+          case "invalid-json" -> "not-json";
+          default -> "";
+        };
+    mockDependencies(true, List.of(madieValueSet));
+    if (!body.isBlank()) {
+      when(fhirContext.newJsonParser()).thenReturn(realParser);
+    }
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenThrow(
+            new ValueSetExpansionException(
+                "unprocessable",
+                HttpStatusCode.valueOf(422),
+                "Unprocessable Entity",
+                body,
+                "",
+                VS_URL));
+
+    valueSetExpansionService.updateValueSetDependencies().join();
+
+    verify(vseRepo, never()).save(any(MadieValueSet.class));
+  }
+
+  @Test
+  void successfulExpansionClearsUnavailableStateAndErrorWhenUpdatingExistingRecord() {
+    MadieValueSet existing =
+        madieValueSet.toBuilder()
+            .valueSet("old payload")
+            .unavailable(true)
+            .error(ValueSetError.TOO_COSTLY)
+            .lastUpdated(Instant.EPOCH)
+            .build();
+    mockDependencies(true, List.of(madieValueSet));
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.of(existing));
+
+    valueSetExpansionService.updateValueSetDependencies().join();
+
+    verify(vseRepo)
+        .save(
+            argThat(
+                vs ->
+                    !vs.isUnavailable()
+                        && vs.getError() == null
+                        && !vs.getLastUpdated().equals(Instant.EPOCH)
+                        && vs.getValueSet().contains("resourceType")));
+  }
+
+  @Test
+  void getValueSetsIncludesUnavailableStateInAdminDto() {
+    MadieValueSet valueSet =
+        madieValueSet.toBuilder().unavailable(true).error(ValueSetError.NOT_FOUND).build();
+    PageRequest pageable = PageRequest.of(0, 10);
+    when(vseRepo.findAll(pageable)).thenReturn(new PageImpl<>(List.of(valueSet)));
+
+    ValueSetDisplayForAdmin result =
+        valueSetExpansionService.getValueSets(pageable, null).getContent().get(0);
+
+    assertTrue(result.isUnavailable());
+  }
+
   private void mockDependencies(boolean allIgs, List<MadieValueSet> dependencies) {
     if (allIgs) {
       when(implementationGuideManager.getValueSetDependencies()).thenReturn(dependencies);

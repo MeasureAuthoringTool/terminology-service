@@ -6,6 +6,7 @@ import gov.cms.madie.terminology.dto.ValueSetDisplayForAdmin;
 import gov.cms.madie.terminology.exceptions.*;
 import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.models.MadieValueSet;
+import gov.cms.madie.terminology.models.ValueSetError;
 import gov.cms.madie.terminology.repositories.CodeSystemRepository;
 import gov.cms.madie.terminology.repositories.ValueSetExpansionRepository;
 import gov.cms.madie.terminology.util.ImplementationGuideManager;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Limit;
@@ -133,6 +135,9 @@ public class ValueSetExpansionService {
         savedValueSetCount++;
       } else if (!existingValueSet.get().isManuallyModified()) {
         existingValueSet.get().setValueSet(madieValueSet.getValueSet());
+        existingValueSet.get().setUnavailable(madieValueSet.isUnavailable());
+        existingValueSet.get().setError(madieValueSet.getError());
+        existingValueSet.get().setLastUpdated(madieValueSet.getLastUpdated());
         vseRepo.save(existingValueSet.get());
         savedValueSetCount++;
       }
@@ -148,6 +153,7 @@ public class ValueSetExpansionService {
         .version(valueSet.getVersion())
         .lastUpdated(valueSet.getLastUpdated())
         .manuallyModified(valueSet.isManuallyModified())
+        .unavailable(valueSet.isUnavailable())
         .valueSet(valueSet.getValueSet())
         .build();
   }
@@ -182,6 +188,8 @@ public class ValueSetExpansionService {
               madieValueSet.toBuilder()
                   .valueSet(fhirContext.newJsonParser().encodeResourceToString(valueSet))
                   .lastUpdated(Instant.now())
+                  .unavailable(false)
+                  .error(null)
                   .build());
         } else {
           log.warn(
@@ -191,6 +199,31 @@ public class ValueSetExpansionService {
           failedExpansions++;
         }
       } catch (ValueSetExpansionException e) {
+        if (e.getStatusCode()
+            .isSameCodeAs(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY)) {
+          ValueSetError error = getValueSetError(e.getBody());
+          if (error != null) {
+            expandedValueSets.add(
+                madieValueSet.toBuilder()
+                    .valueSet("{ \"resourceType\": \"ValueSet\" }")
+                    .unavailable(true)
+                    .error(error)
+                    .lastUpdated(Instant.now())
+                    .build());
+          }
+        }
+        failedExpansions++;
+      } catch (ResourceNotFoundException e) {
+        ValueSetError error = getValueSetError(e.getBody());
+        if (error != null) {
+          expandedValueSets.add(
+              madieValueSet.toBuilder()
+                  .valueSet("{ \"resourceType\": \"ValueSet\" }")
+                  .unavailable(true)
+                  .error(error)
+                  .lastUpdated(Instant.now())
+                  .build());
+        }
         failedExpansions++;
       }
     }
@@ -270,18 +303,10 @@ public class ValueSetExpansionService {
         "Attempting to expand ValueSet {} version {} using TxFHIR service.",
         madieValueSet.getUrl(),
         madieValueSet.getVersion());
-    try {
-      String txFhirResult =
-          txTerminologyServiceWebClient.getValueSetExpansion(
-              madieValueSet.getUrl(), madieValueSet.getVersion());
-      return parseExpansionResponse(txFhirResult);
-    } catch (ResourceNotFoundException e) {
-      log.debug(
-          "Value Set not found in TxFHIR, ValueSet {} version {}",
-          madieValueSet.getUrl(),
-          madieValueSet.getVersion());
-    }
-    return Optional.empty();
+    String txFhirResult =
+        txTerminologyServiceWebClient.getValueSetExpansion(
+            madieValueSet.getUrl(), madieValueSet.getVersion());
+    return parseExpansionResponse(txFhirResult);
   }
 
   public MadieValueSet upsertValueSet(MadieValueSet valueSet) {
@@ -405,6 +430,30 @@ public class ValueSetExpansionService {
     vseRepo.deleteById(id);
     log.info("Successfully deleted value set with id: [{}]", id);
     return existing;
+  }
+
+  private ValueSetError getValueSetError(String body) {
+    if (StringUtils.isBlank(body)) {
+      return null;
+    }
+    try {
+      OperationOutcome outcome =
+          fhirContext.newJsonParser().parseResource(OperationOutcome.class, body);
+      if (outcome.getIssue().isEmpty()) {
+        return null;
+      }
+      return switch (outcome.getIssueFirstRep().getCode()) {
+        case TOOCOSTLY -> ValueSetError.TOO_COSTLY;
+        case BUSINESSRULE -> ValueSetError.BUSINESS_RULE;
+        case NOTSUPPORTED -> ValueSetError.NOT_SUPPORTED;
+        case CODEINVALID -> ValueSetError.CODE_INVALID;
+        case NOTFOUND -> ValueSetError.NOT_FOUND;
+        default -> null;
+      };
+    } catch (Exception e) {
+      log.warn("Unable to parse TXFHIR OperationOutcome issue code", e);
+      return null;
+    }
   }
 
   private Optional<ValueSet> parseExpansionResponse(String rawResponse) {

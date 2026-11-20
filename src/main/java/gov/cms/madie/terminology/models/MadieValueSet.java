@@ -65,4 +65,7 @@ public class MadieValueSet {
   // FHIR ValueSet
   @NotBlank(message = "Value set expansion is required")
   private String valueSet;
+
+  private boolean unavailable; // true when the value set is unavailable in both TxFHIR
+  private ValueSetError error;
 }
