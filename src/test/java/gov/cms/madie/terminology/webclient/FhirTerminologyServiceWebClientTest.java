@@ -192,8 +192,8 @@ class FhirTerminologyServiceWebClientTest {
     assertThat(
         recordedRequest.getBody().readUtf8(),
         containsString(
-            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id&activeOnly=false"
-                + "&manifest=https://cts.nlm.nih.gov/fhir/Library/test-manifest-456"));
+            "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/test-vs-id"
+                + "&manifest=https://cts.nlm.nih.gov/fhir/Library/test-manifest-456\""));
   }
 
   @Test
