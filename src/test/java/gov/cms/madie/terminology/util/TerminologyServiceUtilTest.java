@@ -196,11 +196,8 @@ public class TerminologyServiceUtilTest {
             params, profile, includeDraft, activeOnly, manifestExpansion));
   }
 
-  /* branch coverage for buildValueSetExpansionUri(), line 133:
-   * if (StringUtils.isNotBlank(activeOnly)) {
-   */
   @Test
-  void buildValueSetExpansionUriDoesNotSetActiveOnlyWhenActiveOnlyIsBlankOrNull() {
+  void buildValueSetExpansionUriSendsIncludeDraftAloneWhenActiveOnlyIsBlankOrNull() {
     ValueSetsSearchCriteria.ValueSetParams params =
         ValueSetsSearchCriteria.ValueSetParams.builder()
             .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5")
@@ -216,10 +213,10 @@ public class TerminologyServiceUtilTest {
     URI uriNull =
         TerminologyServiceUtil.buildValueSetExpansionUri(
             params, profile, includeDraft, activeOnlyNull, manifestExpansion);
-    String uriStrBlank = uriBlank.toString();
-    String uriStrNull = uriNull.toString();
-    assertFalse(uriStrBlank.contains("activeOnly="), "ACTUAL URI: " + uriStrBlank);
-    assertFalse(uriStrNull.contains("activeOnly="), "ACTUAL URI: " + uriStrNull);
+    String expected =
+        "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5&includeDraft=true";
+    assertEquals(expected, uriBlank.toString());
+    assertEquals(expected, uriNull.toString());
   }
 
   @Test
@@ -240,7 +237,7 @@ public class TerminologyServiceUtilTest {
   }
 
   @Test
-  void buildValueSetExpansionUriWhenManifestExpansionIsNotNull() {
+  void buildValueSetExpansionUriKeepsPagingWhenManifestTakesPrecedence() {
     ValueSetsSearchCriteria.ValueSetParams params =
         ValueSetsSearchCriteria.ValueSetParams.builder()
             .url("http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5")
@@ -257,12 +254,12 @@ public class TerminologyServiceUtilTest {
             params, profile, includeDraft, activeOnly, manifestExpansion);
     assertEquals(
         "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/1.2.3.4.5&includeDraft=true"
-            + "&activeOnly=true&manifest=test-manifest&offset=0&count=1000",
+            + "&manifest=test-manifest&offset=0&count=1000",
         uri.toString());
   }
 
   @Test
-  void buildValueSetExpansionUriSendsIncludeDraftActiveOnlyAndManifestForUrl() {
+  void buildValueSetExpansionUriSendsIncludeDraftAndManifestButOmitsActiveOnly() {
     ValueSetsSearchCriteria.ValueSetParams params =
         ValueSetsSearchCriteria.ValueSetParams.builder()
             .url("http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1110.68")
@@ -276,7 +273,7 @@ public class TerminologyServiceUtilTest {
             params, null, "true", "true", manifestExpansion);
     assertEquals(
         "/ValueSet/$expand?url=http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1110.68"
-            + "&includeDraft=true&activeOnly=true"
+            + "&includeDraft=true"
             + "&manifest=http://cts.nlm.nih.gov/fhir/Library/ecqm-update-2026-05-14",
         uri.toString());
   }

@@ -68,6 +68,7 @@ public class VsacService {
     return vsacToFhirValueSetMapper.convertToFHIRValueSet(vsacValueSetResponse);
   }
 
+  // Todo Rohit This method is not used anywhere. We can remove it if not needed.
   public List<RetrieveMultipleValueSetsResponse> getValueSets(
       ValueSetsSearchCriteria searchCriteria, UmlsUser umlsUser) {
     List<ValueSetsSearchCriteria.ValueSetParams> valueSetParams =
