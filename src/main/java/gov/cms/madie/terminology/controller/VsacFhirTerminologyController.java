@@ -93,6 +93,8 @@ public class VsacFhirTerminologyController {
     return ResponseEntity.ok().body(result);
   }
 
+  // Todo Rohit This API is calling VSAC SVS to identify code status
+  // Uses vsacService.getCodeStatus(code, apiKey);
   @GetMapping(path = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Code> getCode(
       @RequestParam() String code,
@@ -111,6 +113,8 @@ public class VsacFhirTerminologyController {
         .body(fhirTerminologyService.retrieveCode(code, codeSystem, version, user.getApiKey()));
   }
 
+  // Todo Rohit This API is calling VSAC SVS to identify code status
+  // Uses vsacService.getCodeStatus(code, apiKey);
   @PostMapping(path = "/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<Code>> getCodesAndCodeSystems(
       @RequestBody() List<Map<String, String>> codeList, Principal principal) {

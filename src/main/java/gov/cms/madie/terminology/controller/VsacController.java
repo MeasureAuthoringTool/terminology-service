@@ -34,6 +34,7 @@ public class VsacController {
   private final VsacService vsacService;
   private final FhirContext fhirContext;
 
+  // Todo Rohit this API is calling VSAC SVS to fetch valueSet
   @GetMapping(path = "/valueset", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<String> getValueSet(
       Principal principal,
@@ -63,6 +64,9 @@ public class VsacController {
     return fhirContext.newJsonParser().encodeResourceToString(fhirValueSet);
   }
 
+  // Todo This API is used to validated codes in CQL.
+  //    It utilizes CodeSystem VSES data to identify versions
+  //  It is calling VSAC SVS to identify code status
   @PutMapping(path = "/validations/codes", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<CqlCode>> validateCodes(
       Principal principal,
