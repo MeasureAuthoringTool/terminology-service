@@ -137,9 +137,10 @@ public class TerminologyServiceUtil {
   }
 
   /**
-   * Builds a relative URI for the VSAC $expand operation, e.g.
-   * /ValueSet/$expand?url={url}&includeDraft=true&activeOnly=true&manifest={manifest}. A
-   * valueSetVersion is never sent.
+   * Builds a relative URI for the VSAC {@code $expand} operation using the ValueSet URL. {@code
+   * includeDraft} is optional and independent of {@code manifest} and {@code activeOnly}. A
+   * nonblank manifest URL takes precedence over {@code activeOnly}; they are never sent together.
+   * Neither {@code valueSetVersion} nor {@code profile} is sent.
    */
   public static URI buildValueSetExpansionUri(
       ValueSetsSearchCriteria.ValueSetParams valueSetParams,
@@ -155,11 +156,11 @@ public class TerminologyServiceUtil {
     if (StringUtils.isNotBlank(includeDraft)) {
       queryParams.put("includeDraft", includeDraft);
     }
-    if (StringUtils.isNotBlank(activeOnly)) {
-      queryParams.put("activeOnly", activeOnly);
-    }
+
     if (manifestExpansion != null && StringUtils.isNotBlank(manifestExpansion.getFullUrl())) {
       queryParams.put("manifest", manifestExpansion.getFullUrl());
+    } else if (StringUtils.isNotBlank(activeOnly)) {
+      queryParams.put("activeOnly", activeOnly);
     }
     if (valueSetParams.getOffset() != null && valueSetParams.getOffset() >= 0) {
       queryParams.put("offset", String.valueOf(valueSetParams.getOffset()));
