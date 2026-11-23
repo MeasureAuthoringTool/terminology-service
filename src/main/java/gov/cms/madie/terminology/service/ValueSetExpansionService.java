@@ -154,6 +154,7 @@ public class ValueSetExpansionService {
         .lastUpdated(valueSet.getLastUpdated())
         .manuallyModified(valueSet.isManuallyModified())
         .unavailable(valueSet.isUnavailable())
+        .error(valueSet.getError())
         .valueSet(valueSet.getValueSet())
         .build();
   }
