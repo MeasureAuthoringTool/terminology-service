@@ -1036,6 +1036,7 @@ class ValueSetExpansionServiceTest {
         valueSetExpansionService.getValueSets(pageable, null).getContent().get(0);
 
     assertTrue(result.isUnavailable());
+    assertEquals(ValueSetError.NOT_FOUND, result.getError());
   }
 
   private void mockDependencies(boolean allIgs, List<MadieValueSet> dependencies) {
