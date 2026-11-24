@@ -307,6 +307,14 @@ class CodeSystemJobExecutionStateServiceTest {
     assertDoesNotThrow(() -> codeSystemJobExecutionService.failInterruptedJobs());
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testIsJobRunningReflectsRunningRecordInDatabase(boolean running) {
+    when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(running);
+
+    assertEquals(running, codeSystemJobExecutionService.isJobRunning());
+  }
+
   @Test
   void testGetLatestJobStatusReturnsRunningWhenAJobIsRunning() {
     when(codeSystemJobExecutionRepository.existsByStatus(Status.RUNNING)).thenReturn(true);

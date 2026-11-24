@@ -203,9 +203,7 @@ class AdminControllerTest {
     ResponseEntity<String> response = adminController.triggerCodeSystemRefresh(principal);
 
     assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-    assertEquals(
-        "Update Code System is already running. We have NOT started the job again",
-        response.getBody());
+    assertEquals("Code System update Job already running.", response.getBody());
 
     verify(updateCodeSystemTask, times(1)).startJob(TEST_USER);
     verifyNoInteractions(adminAuditService);
