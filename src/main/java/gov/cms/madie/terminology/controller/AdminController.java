@@ -40,6 +40,8 @@ public class AdminController {
       DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
   private static final String UPDATE_CODE_SYSTEMS_AUDIT_DESCRIPTION =
       "Update Code Systems: started job to refresh all code systems from VSAC";
+  private static final String CODE_SYSTEM_JOB_ALREADY_RUNNING =
+      "Code System update Job already running.";
 
   private final UpdateCodeSystemTask updateCodeSystemTask;
   private final CodeSystemService codeSystemService;
@@ -119,8 +121,7 @@ public class AdminController {
       return ResponseEntity.ok("Code system refresh has been started");
     }
 
-    return ResponseEntity.status(HttpStatus.CONFLICT)
-        .body("Update Code System is already running. We have NOT started the job again");
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(CODE_SYSTEM_JOB_ALREADY_RUNNING);
   }
 
   @GetMapping("/code-system-job-status")
