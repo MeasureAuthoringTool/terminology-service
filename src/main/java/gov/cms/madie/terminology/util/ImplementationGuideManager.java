@@ -185,10 +185,6 @@ public class ImplementationGuideManager {
         StructureDefinition structureDefinition =
             ctx.newJsonParser().parseResource(StructureDefinition.class, sdStream);
         log.debug("    - {} ({})", structureDefinition.getName(), structureDefinition.getUrl());
-        if ("http://terminology.hl7.org/CodeSystem/payment-adjustment-reason"
-            .equals(structureDefinition.getUrl())) {
-          log.warn("Unable to load structure definition: {}", sdFile);
-        }
 
         // Check each Element for ValueSet bindings
         for (ElementDefinition element : structureDefinition.getSnapshot().getElement()) {
