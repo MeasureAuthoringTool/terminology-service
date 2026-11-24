@@ -3,7 +3,6 @@ package gov.cms.madie.terminology.util;
 import gov.cms.madie.cql_elm_translator.utils.ImplementationGuideLoader;
 import gov.cms.madie.terminology.models.MadieValueSet;
 import org.cqframework.fhir.npm.NpmPackageManager;
-import org.hl7.fhir.r4.model.StructureDefinition;
 import org.hl7.fhir.r5.model.ImplementationGuide;
 import org.hl7.fhir.r5.model.ImplementationGuide.ImplementationGuideDependsOnComponent;
 import org.hl7.fhir.utilities.npm.NpmPackage;
@@ -126,7 +125,7 @@ class ImplementationGuideManagerTest {
 
   @Test
   void collectValueSetDependenciesReturnsEmptyMapWhenIgIsNull() {
-    Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>> result =
+    Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
         manager.collectValueSetDependencies(null);
 
     assertNotNull(result);
@@ -138,7 +137,7 @@ class ImplementationGuideManagerTest {
     ImplementationGuide ig = new ImplementationGuide();
     ig.setName("no-deps-ig");
 
-    Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>> result =
+    Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
         manager.collectValueSetDependencies(ig);
 
     assertNotNull(result);
@@ -167,19 +166,14 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>>
-          result = manager.collectValueSetDependencies(ig);
+      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
+          manager.collectValueSetDependencies(ig);
 
       assertNotNull(result);
       assertEquals(1, result.size());
       assertTrue(result.containsKey(ig));
 
-      Set<MadieValueSet> valueSets =
-          result.get(ig).get(mockPackage).entrySet().stream()
-              .filter(e -> "USCorePatientProfile".equalsIgnoreCase(e.getKey().getName()))
-              .findFirst()
-              .map(Map.Entry::getValue)
-              .orElse(null);
+      Set<MadieValueSet> valueSets = result.get(ig).get(mockPackage);
       assertNotNull(valueSets);
       assertThat(valueSets.size(), is(equalTo(2)));
 
@@ -222,15 +216,10 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>>
-          result = manager.collectValueSetDependencies(ig);
+      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
+          manager.collectValueSetDependencies(ig);
 
-      Set<MadieValueSet> valueSets =
-          result.get(ig).get(mockPackage).entrySet().stream()
-              .filter(e -> "USCoreOrganizationProfile".equalsIgnoreCase(e.getKey().getName()))
-              .findFirst()
-              .map(Map.Entry::getValue)
-              .orElse(null);
+      Set<MadieValueSet> valueSets = result.get(ig).get(mockPackage);
       assertNotNull(valueSets);
       assertTrue(valueSets.isEmpty(), "No bindings should produce an empty set");
     }
@@ -254,8 +243,8 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>>
-          result = manager.collectValueSetDependencies(ig);
+      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
+          manager.collectValueSetDependencies(ig);
 
       assertNotNull(result);
       assertTrue(result.containsKey(ig));
@@ -292,8 +281,8 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>>
-          result = manager.collectValueSetDependencies(ig);
+      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
+          manager.collectValueSetDependencies(ig);
 
       assertThat(result.size(), is(equalTo(1)));
       assertTrue(result.containsKey(ig));
@@ -342,8 +331,8 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenThrow(new IOException("Simulated network failure"));
 
-      Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>>
-          result = manager.collectValueSetDependencies(ig);
+      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
+          manager.collectValueSetDependencies(ig);
 
       assertNotNull(result);
       assertTrue(result.isEmpty());
@@ -356,7 +345,7 @@ class ImplementationGuideManagerTest {
 
   @Test
   void getImplementationGuidesReturnsEmptyListWhenNothingLoaded() {
-    List<String> result = manager.getImplementationGuides();
+    List<String> result = manager.getImplementationGuideNames();
 
     assertNotNull(result);
     assertTrue(result.isEmpty());
@@ -382,7 +371,7 @@ class ImplementationGuideManagerTest {
       manager.collectValueSetDependencies(ig);
     }
 
-    List<String> result = manager.getImplementationGuides();
+    List<String> result = manager.getImplementationGuideNames();
 
     assertTrue(result.contains("hl7.fhir.us.core v6.1.0"));
   }

@@ -54,7 +54,7 @@ public class ValueSetExpansionService {
 
   public List<String> getImplementationGuides() {
     try {
-      return implementationGuideManager.getImplementationGuides();
+      return implementationGuideManager.getImplementationGuideNames();
     } catch (Exception e) {
       log.error("Unable to retrieve loaded implementation guides.", e);
     }
@@ -109,6 +109,11 @@ public class ValueSetExpansionService {
 
   @Async
   public CompletableFuture<Integer> updateValueSetDependencies() {
+    //    List<ImplementationGuide> implementationGuides =
+    // implementationGuideManager.getImplementationGuides();
+    //    for (ImplementationGuide ig : implementationGuides) {
+    //      implementationGuideManager.collectValueSetDependencies(ig);
+    //    }
     List<MadieValueSet> madieValueSets = implementationGuideManager.getValueSetDependencies();
     log.info("Found {} Value Set dependencies.", madieValueSets.size());
 

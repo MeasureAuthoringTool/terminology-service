@@ -26,8 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ImplementationGuideManager {
 
   @Getter
-  private final ConcurrentHashMap<
-          ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>>
+  private final ConcurrentHashMap<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>>
       igHierarchicalValueSets = new ConcurrentHashMap<>();
 
   private final FhirContext ctx = FhirContext.forR4Cached();
@@ -43,6 +42,14 @@ public class ImplementationGuideManager {
     LOADED,
     ERROR_FAILED
   }
+
+  //  public List<ImplementationGuide> getImplementationGuides() {
+  //    return ImplementationGuideLoader.load("classpath*:igs/*.json");
+  //  }
+  //
+  //  public void clearIgHierarchicalValueSets() {
+  //    igHierarchicalValueSets.clear();
+  //  }
 
   private void loadImplementationGuides() {
     log.info("Implementation guide manager::loading implementation guide packages.");
@@ -65,7 +72,7 @@ public class ImplementationGuideManager {
     return igLoadingState;
   }
 
-  public List<String> getImplementationGuides() {
+  public List<String> getImplementationGuideNames() {
     List<String> igNames =
         new ArrayList<>(
             igHierarchicalValueSets.keySet().stream()
@@ -91,14 +98,13 @@ public class ImplementationGuideManager {
             .findFirst();
     if (implementationGuide.isPresent()) {
       return igHierarchicalValueSets.get(implementationGuide.get()).values().stream()
-          .flatMap(structureDefMap -> structureDefMap.values().stream())
           .flatMap(Set::stream)
           .distinct()
           .toList();
     }
 
     // Next, check if igName/version are in any of the packages of the madie Igs
-    Optional<Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>> packageMapOpt =
+    Optional<Map<NpmPackage, Set<MadieValueSet>>> packageMapOpt =
         igHierarchicalValueSets.values().stream()
             .filter(
                 pkgMap ->
@@ -108,14 +114,12 @@ public class ImplementationGuideManager {
             .findFirst();
 
     if (packageMapOpt.isPresent()) {
-      Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>> packageMap =
-          packageMapOpt.get();
+      Map<NpmPackage, Set<MadieValueSet>> packageMap = packageMapOpt.get();
       return packageMap.entrySet().stream()
           .filter(
               entry ->
                   igName.equals(entry.getKey().name()) && version.equals(entry.getKey().version()))
-          .flatMap(entry -> entry.getValue().values().stream())
-          .flatMap(Set::stream)
+          .flatMap(entry -> entry.getValue().stream())
           .distinct()
           .toList();
     }
@@ -133,14 +137,13 @@ public class ImplementationGuideManager {
     }
     return igHierarchicalValueSets.values().stream()
         .flatMap(pkgMap -> pkgMap.values().stream())
-        .flatMap(structureDefMap -> structureDefMap.values().stream())
         .flatMap(Set::stream)
         .distinct()
         .toList();
   }
 
-  public Map<ImplementationGuide, Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>>>
-      collectValueSetDependencies(ImplementationGuide ig) {
+  public Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> collectValueSetDependencies(
+      ImplementationGuide ig) {
     if (ig == null || !ig.hasDependsOn()) {
       return new HashMap<>();
     }
@@ -151,8 +154,7 @@ public class ImplementationGuideManager {
       igHierarchicalValueSets.put(ig, new HashMap<>());
     }
 
-    Map<NpmPackage, Map<StructureDefinition, Set<MadieValueSet>>> packageMap =
-        igHierarchicalValueSets.get(ig);
+    Map<NpmPackage, Set<MadieValueSet>> packageMap = igHierarchicalValueSets.get(ig);
 
     try {
       List<NpmPackage> igPackages = getIgNpmPackages(ig);
@@ -171,33 +173,33 @@ public class ImplementationGuideManager {
     return igHierarchicalValueSets;
   }
 
-  private Map<StructureDefinition, Set<MadieValueSet>> getBindingValueSets(NpmPackage igPkg)
-      throws IOException {
+  private Set<MadieValueSet> getBindingValueSets(NpmPackage igPkg) throws IOException {
     List<String> structureDefFiles = getStructureDefinitionFilesForIg(igPkg);
     if (structureDefFiles.isEmpty()) {
-      return new HashMap<>();
+      return new HashSet<>();
     }
-    Map<StructureDefinition, Set<MadieValueSet>> sdValueSets = new HashMap<>();
+    Set<MadieValueSet> packageValueSets = new HashSet<>();
     for (String sdFile : structureDefFiles) {
       try (InputStream sdStream = igPkg.load("package", sdFile)) {
-        Set<MadieValueSet> valueSetDependencies = new HashSet<>();
-
         // Parse the StructureDefinition from JSON
         StructureDefinition structureDefinition =
             ctx.newJsonParser().parseResource(StructureDefinition.class, sdStream);
         log.debug("    - {} ({})", structureDefinition.getName(), structureDefinition.getUrl());
+        if ("http://terminology.hl7.org/CodeSystem/payment-adjustment-reason"
+            .equals(structureDefinition.getUrl())) {
+          log.warn("Unable to load structure definition: {}", sdFile);
+        }
 
         // Check each Element for ValueSet bindings
         for (ElementDefinition element : structureDefinition.getSnapshot().getElement()) {
           if (element.hasBinding() && element.getBinding().hasValueSet()) {
             MadieValueSet madieValueSet = buildMadieValueSet(element);
-            valueSetDependencies.add(madieValueSet);
+            packageValueSets.add(madieValueSet);
           }
         }
-        sdValueSets.put(structureDefinition, valueSetDependencies);
       }
     }
-    return sdValueSets;
+    return packageValueSets;
   }
 
   private @NonNull MadieValueSet buildMadieValueSet(@NonNull ElementDefinition element) {

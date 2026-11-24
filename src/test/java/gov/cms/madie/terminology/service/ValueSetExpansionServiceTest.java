@@ -116,7 +116,7 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void getImplementationGuidesReturnsList() {
-    when(implementationGuideManager.getImplementationGuides())
+    when(implementationGuideManager.getImplementationGuideNames())
         .thenReturn(List.of("hl7.fhir.us.core v6.1.0", "hl7.fhir.us.qicore v6.0.0"));
 
     List<String> result = valueSetExpansionService.getImplementationGuides();
@@ -124,12 +124,12 @@ class ValueSetExpansionServiceTest {
     assertThat(result.size(), is(equalTo(2)));
     assertTrue(result.contains("hl7.fhir.us.core v6.1.0"));
     assertTrue(result.contains("hl7.fhir.us.qicore v6.0.0"));
-    verify(implementationGuideManager, times(1)).getImplementationGuides();
+    verify(implementationGuideManager, times(1)).getImplementationGuideNames();
   }
 
   @Test
   void getImplementationGuidesReturnsEmptyListWhenManagerThrows() {
-    when(implementationGuideManager.getImplementationGuides())
+    when(implementationGuideManager.getImplementationGuideNames())
         .thenThrow(new RuntimeException("IG load failure"));
 
     List<String> result = valueSetExpansionService.getImplementationGuides();
@@ -140,7 +140,8 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void getImplementationGuidesReturnsEmptyListWhenNoneLoaded() {
-    when(implementationGuideManager.getImplementationGuides()).thenReturn(Collections.emptyList());
+    when(implementationGuideManager.getImplementationGuideNames())
+        .thenReturn(Collections.emptyList());
 
     List<String> result = valueSetExpansionService.getImplementationGuides();
 
