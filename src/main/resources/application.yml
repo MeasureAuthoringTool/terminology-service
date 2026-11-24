@@ -49,6 +49,10 @@ client:
   valueset_endpoint: /svs/RetrieveMultipleValueSets?id={oid}&profile={profile}&includeDraft={includeDraft}
   default_profile: ${DEFAULT_VSAC_PROFILE:Most Recent Code System Versions in VSAC}
   fhir-terminology-service:
+    pool:
+      max-connections: ${VSAC_MAX_CONNECTIONS:50}
+      pending-acquire-max-count: ${VSAC_PENDING_ACQUIRE_MAX_COUNT:100}
+      pending-acquire-timeout: ${VSAC_PENDING_ACQUIRE_TIMEOUT:45s}
     base-url: ${FHIR_TERMINOLOGY_BASE_URL:https://cts.nlm.nih.gov/fhir}
     manifests-urn: /Library?_sort=-effective
     code-system-urn: /CodeSystem

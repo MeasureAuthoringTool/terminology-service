@@ -10,14 +10,22 @@ import gov.cms.madie.terminology.models.CodeSystem;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okhttp3.mockwebserver.Dispatcher;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.convert.ApplicationConversionService;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -79,12 +87,127 @@ class FhirTerminologyServiceWebClientTest {
             MOCK_CODE_LOOKUP,
             DEFAULT_PROFILE,
             searchValueSetEndpoint,
+            50,
+            100,
+            Duration.ofSeconds(45),
             fhirContext);
   }
 
   @AfterAll
   static void tearDown() throws IOException {
     mockBackEnd.shutdown();
+  }
+
+  @AfterEach
+  void disposeClient() {
+    fhirTerminologyServiceWebClient.dispose();
+  }
+
+  @Test
+  void springBindsPoolSettingsAndRejectsAnUnboundedQueue() {
+    var runner =
+        new ApplicationContextRunner()
+            .withInitializer(
+                context ->
+                    context
+                        .getBeanFactory()
+                        .setConversionService(ApplicationConversionService.getSharedInstance()))
+            .withBean(FhirContext.class, () -> fhirContext)
+            .withUserConfiguration(FhirTerminologyServiceWebClient.class)
+            .withPropertyValues(
+                "client.fhir-terminology-service.base-url=http://localhost/fhir",
+                "client.fhir-terminology-service.manifests-urn=/manifest",
+                "client.fhir-terminology-service.code-system-urn=/CodeSystem",
+                "client.fhir-terminology-service.code-lookups=/CodeSystem/$lookup",
+                "client.default_profile=test",
+                "client.search_value_set_endpoint=http://localhost/fhir/ValueSet");
+    runner.run(context -> assertNull(context.getStartupFailure()));
+    runner
+        .withPropertyValues(
+            "client.fhir-terminology-service.pool.max-connections=75",
+            "client.fhir-terminology-service.pool.pending-acquire-max-count=150",
+            "client.fhir-terminology-service.pool.pending-acquire-timeout=10s")
+        .run(context -> assertNull(context.getStartupFailure()));
+    runner
+        .withPropertyValues("client.fhir-terminology-service.pool.pending-acquire-max-count=-1")
+        .run(context -> assertNotNull(context.getStartupFailure()));
+    runner
+        .withPropertyValues("client.fhir-terminology-service.pool.max-connections=0")
+        .run(context -> assertNotNull(context.getStartupFailure()));
+    runner
+        .withPropertyValues("client.fhir-terminology-service.pool.pending-acquire-timeout=0s")
+        .run(context -> assertNotNull(context.getStartupFailure()));
+  }
+
+  @Test
+  void configuredPoolAllowsConcurrencyAndBoundsWaiting() throws Exception {
+    CountDownLatch activeRequests = new CountDownLatch(3);
+    CountDownLatch releaseResponses = new CountDownLatch(1);
+    var executor = Executors.newFixedThreadPool(5);
+    try (MockWebServer server = new MockWebServer()) {
+      server.setDispatcher(
+          new Dispatcher() {
+            @Override
+            public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
+              activeRequests.countDown();
+              if (!releaseResponses.await(10, TimeUnit.SECONDS)) {
+                return new MockResponse().setResponseCode(504);
+              }
+              return new MockResponse().setBody(MOCK_RESPONSE_STRING);
+            }
+          });
+      server.start();
+      var client =
+          new FhirTerminologyServiceWebClient(
+              server.url("/").toString(),
+              "/manifest",
+              "",
+              "",
+              DEFAULT_PROFILE,
+              "",
+              3,
+              1,
+              Duration.ofSeconds(2),
+              fhirContext);
+      try {
+        var first = executor.submit(() -> client.getManifestBundle(MOCK_API_KEY));
+        var second = executor.submit(() -> client.getManifestBundle(MOCK_API_KEY));
+        var third = executor.submit(() -> client.getManifestBundle(MOCK_API_KEY));
+        assertTrue(activeRequests.await(5, TimeUnit.SECONDS));
+
+        CountDownLatch startWaiting = new CountDownLatch(1);
+        java.util.concurrent.Callable<String> waitingRequest =
+            () -> {
+              assertTrue(startWaiting.await(5, TimeUnit.SECONDS));
+              return assertThrows(
+                      WebClientRequestException.class, () -> client.getManifestBundle(MOCK_API_KEY))
+                  .getMessage();
+            };
+        var fourth = executor.submit(waitingRequest);
+        var fifth = executor.submit(waitingRequest);
+        startWaiting.countDown();
+        List<String> failures =
+            List.of(fourth.get(5, TimeUnit.SECONDS), fifth.get(5, TimeUnit.SECONDS));
+        assertTrue(failures.stream().anyMatch(message -> message.contains("maximum size of 1")));
+        var timeout =
+            assertThrows(
+                WebClientRequestException.class, () -> client.getManifestBundle(MOCK_API_KEY));
+        assertTrue(timeout.getMessage().contains("2000ms"));
+        assertEquals(3, server.getRequestCount());
+
+        releaseResponses.countDown();
+        assertEquals(MOCK_RESPONSE_STRING, first.get(5, TimeUnit.SECONDS));
+        assertEquals(MOCK_RESPONSE_STRING, second.get(5, TimeUnit.SECONDS));
+        assertEquals(MOCK_RESPONSE_STRING, third.get(5, TimeUnit.SECONDS));
+      } finally {
+        releaseResponses.countDown();
+        client.dispose();
+      }
+    } finally {
+      releaseResponses.countDown();
+      executor.shutdownNow();
+      assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+    }
   }
 
   @Test
@@ -117,6 +240,9 @@ class FhirTerminologyServiceWebClientTest {
             MOCK_CODE_LOOKUP,
             DEFAULT_PROFILE,
             searchValueSetEndpoint,
+            50,
+            100,
+            Duration.ofSeconds(45),
             fhirContext);
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     assertThrows(
@@ -242,6 +368,9 @@ class FhirTerminologyServiceWebClientTest {
             MOCK_CODE_LOOKUP,
             DEFAULT_PROFILE,
             searchValueSetEndpoint,
+            50,
+            100,
+            Duration.ofSeconds(45),
             fhirContext);
     mockBackEnd.enqueue(new MockResponse().setResponseCode(HttpStatus.UNAUTHORIZED.value()));
     assertThrows(
