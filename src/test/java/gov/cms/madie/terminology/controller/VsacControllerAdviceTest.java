@@ -9,10 +9,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -45,6 +50,25 @@ class VsacControllerAdviceTest {
     webRequest = mock(WebRequest.class);
     when(webRequest.getContextPath()).thenReturn("/test");
     advice = new VsacControllerAdvice(errorAttributes, fhirContext);
+  }
+
+  @Test
+  void handleWebClientRequestException() {
+    WebClientRequestException ex =
+        new WebClientRequestException(
+            new IllegalStateException("Internal pool details"),
+            HttpMethod.POST,
+            URI.create("https://example.org/fhir"),
+            new HttpHeaders());
+    var resp = advice.handleWebClientRequestException(ex, webRequest);
+    assertEquals(HttpStatus.SERVICE_UNAVAILABLE, resp.getStatusCode());
+    assertEquals(MediaType.APPLICATION_JSON, resp.getHeaders().getContentType());
+    assertEquals(503, resp.getBody().get("status"));
+    assertEquals("Service Unavailable", resp.getBody().get("error"));
+    assertEquals(
+        "Unable to contact terminology service. Please try again later.",
+        resp.getBody().get("message"));
+    assertFalse(resp.getBody().toString().contains("Internal pool details"));
   }
 
   @Test
