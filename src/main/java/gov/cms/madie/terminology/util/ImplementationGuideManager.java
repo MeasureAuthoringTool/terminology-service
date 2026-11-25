@@ -43,14 +43,6 @@ public class ImplementationGuideManager {
     ERROR_FAILED
   }
 
-  //  public List<ImplementationGuide> getImplementationGuides() {
-  //    return ImplementationGuideLoader.load("classpath*:igs/*.json");
-  //  }
-  //
-  //  public void clearIgHierarchicalValueSets() {
-  //    igHierarchicalValueSets.clear();
-  //  }
-
   private void loadImplementationGuides() {
     log.info("Implementation guide manager::loading implementation guide packages.");
     Instant now = Instant.now();
