@@ -1,5 +1,6 @@
 package gov.cms.madie.terminology.dto;
 
+import gov.cms.madie.terminology.models.ValueSetError;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,6 +24,7 @@ public class ValueSetDisplayForAdmin {
   private boolean manuallyModified;
 
   private boolean unavailable;
+  private ValueSetError error;
 
   @NotBlank(message = "Value set expansion JSON is required")
   private String valueSet;
