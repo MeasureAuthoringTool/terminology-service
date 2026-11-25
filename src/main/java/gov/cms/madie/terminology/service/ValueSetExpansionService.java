@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 public class ValueSetExpansionService {
 
   private static final String VSAC_URL_PREFIX = "http://cts.nlm.nih.gov/fhir/";
+  private static final long BYTES_PER_MB = 1024L * 1024L;
 
   private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;
@@ -54,7 +55,7 @@ public class ValueSetExpansionService {
 
   public List<String> getImplementationGuides() {
     try {
-      return implementationGuideManager.getImplementationGuides();
+      return implementationGuideManager.getImplementationGuideNames();
     } catch (Exception e) {
       log.error("Unable to retrieve loaded implementation guides.", e);
     }
@@ -109,6 +110,8 @@ public class ValueSetExpansionService {
 
   @Async
   public CompletableFuture<Integer> updateValueSetDependencies() {
+    long memoryBeforeBytes = getUsedMemoryBytes();
+    log.info("Memory usage before refresh job starts: used={} MB", bytesToMb(memoryBeforeBytes));
     List<MadieValueSet> madieValueSets = implementationGuideManager.getValueSetDependencies();
     log.info("Found {} Value Set dependencies.", madieValueSets.size());
 
@@ -118,10 +121,24 @@ public class ValueSetExpansionService {
     log.info("{} Value Set expansions retrieved.", expandedValueSets.size());
 
     int savedValueSetCount = saveValueSetExpansions(expandedValueSets);
+    long memoryAfterBytes = getUsedMemoryBytes();
+    log.info(
+      "Memory usage after refresh job completes: used={} MB (delta={} MB)",
+      bytesToMb(memoryAfterBytes),
+      bytesToMb(memoryAfterBytes - memoryBeforeBytes));
     log.info(
         "Update of all Value set expansions completed in {} milliseconds.",
         Duration.between(now, Instant.now()).toMillis());
     return CompletableFuture.completedFuture(savedValueSetCount);
+  }
+
+  private long getUsedMemoryBytes() {
+    Runtime runtime = Runtime.getRuntime();
+    return runtime.totalMemory() - runtime.freeMemory();
+  }
+
+  private long bytesToMb(long bytes) {
+    return bytes / BYTES_PER_MB;
   }
 
   private int saveValueSetExpansions(List<MadieValueSet> madieValueSets) {
