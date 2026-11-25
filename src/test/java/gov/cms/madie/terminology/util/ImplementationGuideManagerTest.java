@@ -124,21 +124,19 @@ class ImplementationGuideManagerTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void collectValueSetDependenciesReturnsEmptyMapWhenIgIsNull() {
-    Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
-        manager.collectValueSetDependencies(null);
+  void collectValueSetDependenciesReturnsEmptySetWhenIgIsNull() {
+    Set<MadieValueSet> result = manager.collectValueSetDependencies(null);
 
     assertNotNull(result);
     assertTrue(result.isEmpty());
   }
 
   @Test
-  void collectValueSetDependenciesReturnsEmptyMapWhenIgHasNoDependencies() {
+  void collectValueSetDependenciesReturnsEmptySetWhenIgHasNoDependencies() {
     ImplementationGuide ig = new ImplementationGuide();
     ig.setName("no-deps-ig");
 
-    Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
-        manager.collectValueSetDependencies(ig);
+    Set<MadieValueSet> result = manager.collectValueSetDependencies(ig);
 
     assertNotNull(result);
     assertTrue(result.isEmpty());
@@ -150,8 +148,6 @@ class ImplementationGuideManagerTest {
     ImplementationGuide ig = buildTestIg("hl7.fhir.us.core", "6.1.0");
 
     NpmPackage mockPackage = mock(NpmPackage.class);
-    when(mockPackage.name()).thenReturn("hl7.fhir.us.core");
-    when(mockPackage.version()).thenReturn("6.1.0");
     when(mockPackage.listResources("StructureDefinition"))
         .thenReturn(List.of("StructureDefinition-us-core-patient.json"));
     when(mockPackage.load("package", "StructureDefinition-us-core-patient.json"))
@@ -166,14 +162,8 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
-          manager.collectValueSetDependencies(ig);
+      Set<MadieValueSet> valueSets = manager.collectValueSetDependencies(ig);
 
-      assertNotNull(result);
-      assertEquals(1, result.size());
-      assertTrue(result.containsKey(ig));
-
-      Set<MadieValueSet> valueSets = result.get(ig).get(mockPackage);
       assertNotNull(valueSets);
       assertThat(valueSets.size(), is(equalTo(2)));
 
@@ -200,8 +190,6 @@ class ImplementationGuideManagerTest {
     ImplementationGuide ig = buildTestIg("hl7.fhir.us.core", "6.1.0");
 
     NpmPackage mockPackage = mock(NpmPackage.class);
-    when(mockPackage.name()).thenReturn("hl7.fhir.us.core");
-    when(mockPackage.version()).thenReturn("6.1.0");
     when(mockPackage.listResources("StructureDefinition"))
         .thenReturn(List.of("StructureDefinition-us-core-organization.json"));
     when(mockPackage.load("package", "StructureDefinition-us-core-organization.json"))
@@ -216,10 +204,8 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
-          manager.collectValueSetDependencies(ig);
+      Set<MadieValueSet> valueSets = manager.collectValueSetDependencies(ig);
 
-      Set<MadieValueSet> valueSets = result.get(ig).get(mockPackage);
       assertNotNull(valueSets);
       assertTrue(valueSets.isEmpty(), "No bindings should produce an empty set");
     }
@@ -230,8 +216,6 @@ class ImplementationGuideManagerTest {
     ImplementationGuide ig = buildTestIg("empty-ig", "1.0.0");
 
     NpmPackage mockPackage = mock(NpmPackage.class);
-    when(mockPackage.name()).thenReturn("empty-ig");
-    when(mockPackage.version()).thenReturn("1.0.0");
     when(mockPackage.listResources("StructureDefinition")).thenReturn(Collections.emptyList());
 
     NpmPackageManager mockPm = mock(NpmPackageManager.class);
@@ -243,30 +227,24 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
-          manager.collectValueSetDependencies(ig);
+      Set<MadieValueSet> result = manager.collectValueSetDependencies(ig);
 
       assertNotNull(result);
-      assertTrue(result.containsKey(ig));
-      assertTrue(result.get(ig).get(mockPackage).isEmpty());
+      assertTrue(result.isEmpty());
     }
   }
 
   @Test
-  void collectValueSetDependenciesHandlesMultiplePackages() throws IOException {
+  void collectValueSetDependenciesMergesBindingsFromMultiplePackages() throws IOException {
     ImplementationGuide ig = buildTestIg("composite-ig", "1.0.0");
 
     NpmPackage pkg1 = mock(NpmPackage.class);
-    when(pkg1.name()).thenReturn("hl7.fhir.us.core");
-    when(pkg1.version()).thenReturn("6.1.0");
     when(pkg1.listResources("StructureDefinition"))
         .thenReturn(List.of("StructureDefinition-us-core-patient.json"));
     when(pkg1.load("package", "StructureDefinition-us-core-patient.json"))
         .thenReturn(toInputStream(STRUCTURE_DEF_WITH_BINDING));
 
     NpmPackage pkg2 = mock(NpmPackage.class);
-    when(pkg2.name()).thenReturn("hl7.fhir.us.qicore");
-    when(pkg2.version()).thenReturn("5.0.0");
     when(pkg2.listResources("StructureDefinition"))
         .thenReturn(List.of("StructureDefinition-us-core-organization.json"));
     when(pkg2.load("package", "StructureDefinition-us-core-organization.json"))
@@ -281,28 +259,23 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
-          manager.collectValueSetDependencies(ig);
+      Set<MadieValueSet> result = manager.collectValueSetDependencies(ig);
 
-      assertThat(result.size(), is(equalTo(1)));
-      assertTrue(result.containsKey(ig));
-      assertThat(result.get(ig).size(), is(equalTo(2)));
-      assertTrue(result.get(ig).containsKey(pkg1));
-      assertTrue(result.get(ig).containsKey(pkg2));
+      assertThat(result.size(), is(equalTo(2)));
+      verify(pkg1, times(1)).listResources("StructureDefinition");
+      verify(pkg2, times(1)).listResources("StructureDefinition");
     }
   }
 
   @Test
-  void collectValueSetDependenciesSkipsAlreadyParsedIg() throws IOException {
+  void collectValueSetDependenciesDoesNotRetainPackagesBetweenCalls() throws IOException {
     ImplementationGuide ig = buildTestIg("hl7.fhir.us.core", "6.1.0");
 
     NpmPackage mockPackage = mock(NpmPackage.class);
-    when(mockPackage.name()).thenReturn("hl7.fhir.us.core");
-    when(mockPackage.version()).thenReturn("6.1.0");
     when(mockPackage.listResources("StructureDefinition"))
         .thenReturn(List.of("StructureDefinition-us-core-patient.json"));
     when(mockPackage.load("package", "StructureDefinition-us-core-patient.json"))
-        .thenReturn(toInputStream(STRUCTURE_DEF_WITH_BINDING));
+        .thenAnswer(invocation -> toInputStream(STRUCTURE_DEF_WITH_BINDING));
 
     NpmPackageManager mockPm = mock(NpmPackageManager.class);
     when(mockPm.getNpmList()).thenReturn(List.of(mockPackage));
@@ -313,16 +286,19 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      manager.collectValueSetDependencies(ig);
-      manager.collectValueSetDependencies(ig); // second call — same IG
+      Set<MadieValueSet> first = manager.collectValueSetDependencies(ig);
+      Set<MadieValueSet> second = manager.collectValueSetDependencies(ig);
 
-      // listResources should only be called once; second call exits early due to cache
-      verify(mockPackage, times(1)).listResources("StructureDefinition");
+      // Nothing is cached: each call reloads the IG packages from the package cache
+      assertEquals(first, second);
+      verify(mockPackage, times(2)).listResources("StructureDefinition");
+      loader.verify(
+          () -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig)), times(2));
     }
   }
 
   @Test
-  void collectValueSetDependenciesLogsAndReturnsEmptyMapOnIOException() {
+  void collectValueSetDependenciesLogsAndReturnsEmptySetOnIOException() {
     ImplementationGuide ig = buildTestIg("failing-ig", "1.0.0");
 
     try (MockedStatic<ImplementationGuideLoader> loader =
@@ -331,8 +307,7 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenThrow(new IOException("Simulated network failure"));
 
-      Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> result =
-          manager.collectValueSetDependencies(ig);
+      Set<MadieValueSet> result = manager.collectValueSetDependencies(ig);
 
       assertNotNull(result);
       assertTrue(result.isEmpty());
@@ -340,40 +315,58 @@ class ImplementationGuideManagerTest {
   }
 
   // ---------------------------------------------------------------------------
-  // getImplementationGuides()
+  // getImplementationGuides() / getImplementationGuideNames()
   // ---------------------------------------------------------------------------
 
   @Test
-  void getImplementationGuidesReturnsEmptyListWhenNothingLoaded() {
-    List<String> result = manager.getImplementationGuideNames();
-
-    assertNotNull(result);
-    assertTrue(result.isEmpty());
-  }
-
-  @Test
-  void getImplementationGuidesIncludesTopLevelIgAndPackageNames() throws IOException {
-    ImplementationGuide ig = buildTestIg("hl7.fhir.us.core", "6.1.0");
-
-    NpmPackage mockPackage = mock(NpmPackage.class);
-    when(mockPackage.name()).thenReturn("hl7.fhir.us.core");
-    when(mockPackage.version()).thenReturn("6.1.0");
-    when(mockPackage.listResources("StructureDefinition")).thenReturn(Collections.emptyList());
-
-    NpmPackageManager mockPm = mock(NpmPackageManager.class);
-    when(mockPm.getNpmList()).thenReturn(List.of(mockPackage));
+  void getImplementationGuidesReturnsCatalogFromClasspath() {
+    ImplementationGuide ig1 = buildTestIg("madie.ig.one", "1.0.0");
+    ImplementationGuide ig2 = buildTestIg("madie.ig.two", "2.0.0");
 
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      loader
-          .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
-          .thenReturn(mockPm);
-      manager.collectValueSetDependencies(ig);
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig1, ig2));
+
+      List<ImplementationGuide> result = manager.getImplementationGuides();
+      manager.getImplementationGuides(); // catalog is loaded only once
+
+      assertThat(result.size(), is(equalTo(2)));
+      assertTrue(result.containsAll(List.of(ig1, ig2)));
+      loader.verify(() -> ImplementationGuideLoader.load(anyString()), times(1));
+      loader.verify(() -> ImplementationGuideLoader.buildPackageManager(any(), any()), never());
     }
+  }
 
-    List<String> result = manager.getImplementationGuideNames();
+  @Test
+  void getImplementationGuideNamesReturnsEmptyListWhenCatalogEmpty() {
+    try (MockedStatic<ImplementationGuideLoader> loader =
+        mockStatic(ImplementationGuideLoader.class)) {
+      loader
+          .when(() -> ImplementationGuideLoader.load(anyString()))
+          .thenReturn(Collections.emptyList());
 
-    assertTrue(result.contains("hl7.fhir.us.core v6.1.0"));
+      List<String> result = manager.getImplementationGuideNames();
+
+      assertNotNull(result);
+      assertTrue(result.isEmpty());
+    }
+  }
+
+  @Test
+  void getImplementationGuideNamesIncludesIgsAndDirectDependenciesWithoutLoadingPackages() {
+    ImplementationGuide ig = buildTestIg("madie.ig.one", "1.0.0");
+    ig.getDependsOnFirstRep().setVersion("6.1.0");
+
+    try (MockedStatic<ImplementationGuideLoader> loader =
+        mockStatic(ImplementationGuideLoader.class)) {
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
+
+      List<String> result = manager.getImplementationGuideNames();
+
+      assertTrue(result.contains("madie.ig.one v1.0.0"));
+      assertTrue(result.contains("hl7.fhir.us.core v6.1.0"));
+      loader.verify(() -> ImplementationGuideLoader.buildPackageManager(any(), any()), never());
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -402,8 +395,7 @@ class ImplementationGuideManagerTest {
           .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
           .thenReturn(mockPm);
 
-      // IGs are NOT_LOADED — calling getValueSetDependencies should trigger
-      // loadImplementationGuides
+      // Catalog not loaded yet — calling getValueSetDependencies should trigger it
       List<MadieValueSet> result = manager.getValueSetDependencies("hl7.fhir.us.core", "6.1.0");
 
       assertFalse(result.isEmpty());
@@ -483,25 +475,92 @@ class ImplementationGuideManagerTest {
   void getValueSetDependenciesByNameAndVersionReturnsEmptyListWhenNotFound() throws IOException {
     ImplementationGuide ig = buildTestIg("hl7.fhir.us.core", "6.1.0");
 
-    NpmPackage mockPackage = mock(NpmPackage.class);
-    when(mockPackage.name()).thenReturn("hl7.fhir.us.core");
-    when(mockPackage.version()).thenReturn("6.1.0");
-    when(mockPackage.listResources("StructureDefinition")).thenReturn(Collections.emptyList());
-
-    NpmPackageManager mockPm = mock(NpmPackageManager.class);
-    when(mockPm.getNpmList()).thenReturn(List.of(mockPackage));
-
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
       loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
-      loader
-          .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), any()))
-          .thenReturn(mockPm);
 
       List<MadieValueSet> result = manager.getValueSetDependencies("unknown.ig", "9.9.9");
 
       assertNotNull(result);
       assertTrue(result.isEmpty());
+    }
+  }
+
+  @Test
+  void getValueSetDependenciesByNameAndVersionLoadsOnlyRequestedIg() throws IOException {
+    ImplementationGuide ig1 = buildTestIg("hl7.fhir.us.core", "6.1.0");
+    ImplementationGuide ig2 = buildTestIg("hl7.fhir.us.qicore", "5.0.0");
+
+    NpmPackage pkg1 = mock(NpmPackage.class);
+    when(pkg1.name()).thenReturn("hl7.fhir.us.core");
+    when(pkg1.version()).thenReturn("6.1.0");
+    when(pkg1.listResources("StructureDefinition"))
+        .thenReturn(List.of("StructureDefinition-us-core-patient.json"));
+    when(pkg1.load("package", "StructureDefinition-us-core-patient.json"))
+        .thenReturn(toInputStream(STRUCTURE_DEF_WITH_BINDING));
+
+    NpmPackageManager pm1 = mock(NpmPackageManager.class);
+    when(pm1.getNpmList()).thenReturn(List.of(pkg1));
+
+    try (MockedStatic<ImplementationGuideLoader> loader =
+        mockStatic(ImplementationGuideLoader.class)) {
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig1, ig2));
+      loader
+          .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig1)))
+          .thenReturn(pm1);
+
+      List<MadieValueSet> result = manager.getValueSetDependencies("hl7.fhir.us.core", "6.1.0");
+
+      assertFalse(result.isEmpty());
+      loader.verify(
+          () -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig1)), times(1));
+      loader.verify(
+          () -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig2)), never());
+    }
+  }
+
+  @Test
+  void getValueSetDependenciesByPackageNameLoadsOnlyIgThatDeclaresDependency() throws IOException {
+    ImplementationGuide ig1 = buildTestIg("madie.ig.one", "1.0.0");
+    ImplementationGuide ig2 = buildTestIg("madie.ig.two", "1.0.0");
+
+    // Keep ig1 unrelated so only ig2 is a package candidate.
+    ig1.getDependsOnFirstRep().setPackageId("hl7.fhir.us.carin-bb");
+    ig1.getDependsOnFirstRep().setVersion("2.1.0");
+
+    // Make ig2 depend on the requested package so the lookup can resolve lazily.
+    ig2.getDependsOnFirstRep().setPackageId("hl7.fhir.us.core");
+    ig2.getDependsOnFirstRep().setVersion("6.1.0");
+
+    NpmPackage pkg2 = mock(NpmPackage.class);
+    when(pkg2.name()).thenReturn("hl7.fhir.us.core");
+    when(pkg2.version()).thenReturn("6.1.0");
+    when(pkg2.listResources("StructureDefinition"))
+        .thenReturn(List.of("StructureDefinition-us-core-patient.json"));
+    when(pkg2.load("package", "StructureDefinition-us-core-patient.json"))
+        .thenReturn(toInputStream(STRUCTURE_DEF_WITH_BINDING));
+
+    NpmPackageManager pm1 = mock(NpmPackageManager.class);
+    NpmPackageManager pm2 = mock(NpmPackageManager.class);
+    when(pm2.getNpmList()).thenReturn(List.of(pkg2));
+
+    try (MockedStatic<ImplementationGuideLoader> loader =
+        mockStatic(ImplementationGuideLoader.class)) {
+      loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig1, ig2));
+      loader
+          .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig1)))
+          .thenReturn(pm1);
+      loader
+          .when(() -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig2)))
+          .thenReturn(pm2);
+
+      List<MadieValueSet> result = manager.getValueSetDependencies("hl7.fhir.us.core", "6.1.0");
+
+      assertFalse(result.isEmpty());
+      loader.verify(
+          () -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig2)), times(1));
+      loader.verify(
+          () -> ImplementationGuideLoader.buildPackageManager(isNull(), eq(ig1)), never());
     }
   }
 
@@ -635,14 +694,14 @@ class ImplementationGuideManagerTest {
   }
 
   // ---------------------------------------------------------------------------
-  // IgLoadingState — ERROR_FAILED path
+  // Package load failure
   // ---------------------------------------------------------------------------
 
   @Test
   void getValueSetDependenciesReturnsEmptyListWhenIgLoadFails() {
     try (MockedStatic<ImplementationGuideLoader> loader =
         mockStatic(ImplementationGuideLoader.class)) {
-      // load() succeeds but buildPackageManager throws, leaving state in ERROR-ish state
+      // load() succeeds but buildPackageManager throws
       ImplementationGuide ig = buildTestIg("failing-ig", "1.0.0");
       loader.when(() -> ImplementationGuideLoader.load(anyString())).thenReturn(List.of(ig));
       loader
@@ -652,6 +711,7 @@ class ImplementationGuideManagerTest {
       // Should not throw; returns empty list because no IGs were successfully loaded
       List<MadieValueSet> result = manager.getValueSetDependencies();
       assertNotNull(result);
+      assertTrue(result.isEmpty());
     }
   }
 }

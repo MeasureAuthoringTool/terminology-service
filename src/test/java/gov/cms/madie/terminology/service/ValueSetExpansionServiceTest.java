@@ -22,6 +22,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r5.model.ImplementationGuide;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -364,7 +366,7 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void updateValueSetDependenciesExpandsAndSavesNewValueSet() {
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
@@ -380,7 +382,7 @@ class ValueSetExpansionServiceTest {
   void updateValueSetDependenciesOverwritesExistingWhenNotManuallyModified() {
     MadieValueSet existing =
         MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet("{}").build();
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
@@ -400,7 +402,7 @@ class ValueSetExpansionServiceTest {
             .valueSet("{}")
             .manuallyModified(true)
             .build();
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
@@ -415,7 +417,7 @@ class ValueSetExpansionServiceTest {
   void updateValueSetDependenciesUpdatesExistingValueSetWhenExpansionIsNull() {
     MadieValueSet existing =
         MadieValueSet.builder().url(VS_URL).version(VS_VERSION).valueSet(null).build();
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
@@ -430,7 +432,7 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void updateValueSetDependenciesDoesNotSaveWhenExpansionFails() {
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION)).thenReturn(null);
 
     valueSetExpansionService.updateValueSetDependencies();
@@ -440,7 +442,7 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void updateValueSetDependenciesDoesNotSaveWhenNoValueSetsFound() {
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(Collections.emptyList());
+    mockDependencies(true, Collections.emptyList());
 
     valueSetExpansionService.updateValueSetDependencies();
 
@@ -460,8 +462,7 @@ class ValueSetExpansionServiceTest {
             .valueSet("{}")
             .manuallyModified(true)
             .build();
-    when(implementationGuideManager.getValueSetDependencies())
-        .thenReturn(List.of(madieValueSet, manuallyModifiedDependency));
+    mockDependencies(true, List.of(madieValueSet, manuallyModifiedDependency));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
     when(txTerminologyServiceWebClient.getValueSetExpansion(manuallyModifiedUrl, VS_VERSION))
@@ -482,7 +483,7 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void updateValueSetDependenciesHandlesVsacValueSetExpansionException() {
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenThrow(
             new ValueSetExpansionException(
@@ -501,7 +502,7 @@ class ValueSetExpansionServiceTest {
             .version("20220101")
             .build();
 
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(vs1, vs2));
+    mockDependencies(true, List.of(vs1, vs2));
     // vs1 expands successfully
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
@@ -522,7 +523,7 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void updateValueSetDependenciesSetsLastUpdatedOnSuccessfulExpansion() {
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
         .thenReturn(MOCK_VALUE_SET_JSON);
     when(fhirContext.newJsonParser()).thenReturn(realParser);
@@ -537,13 +538,83 @@ class ValueSetExpansionServiceTest {
 
   @Test
   void updateValueSetDependenciesDoesNotSetLastUpdatedWhenExpansionFails() {
-    when(implementationGuideManager.getValueSetDependencies()).thenReturn(List.of(madieValueSet));
+    mockDependencies(true, List.of(madieValueSet));
     when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION)).thenReturn(null);
 
     valueSetExpansionService.updateValueSetDependencies();
 
     assertNull(madieValueSet.getLastUpdated());
     verify(vseRepo, never()).save(any());
+  }
+
+  @Test
+  void updateValueSetDependenciesProcessesEachIgSeparatelyAndExpandsSharedValueSetOnce() {
+    ImplementationGuide ig1 = new ImplementationGuide();
+    ig1.setName("ig-one");
+    ig1.setVersion("1.0.0");
+    ImplementationGuide ig2 = new ImplementationGuide();
+    ig2.setName("ig-two");
+    ig2.setVersion("2.0.0");
+    String otherUrl = "http://hl7.org/fhir/ValueSet/other-vs";
+    MadieValueSet shared = MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build();
+    MadieValueSet other = MadieValueSet.builder().url(otherUrl).version(VS_VERSION).build();
+
+    when(implementationGuideManager.getImplementationGuides()).thenReturn(List.of(ig1, ig2));
+    when(implementationGuideManager.collectValueSetDependencies(ig1))
+        .thenReturn(new LinkedHashSet<>(List.of(shared)));
+    when(implementationGuideManager.collectValueSetDependencies(ig2))
+        .thenReturn(
+            new LinkedHashSet<>(
+                List.of(MadieValueSet.builder().url(VS_URL).version(VS_VERSION).build(), other)));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(anyString(), eq(VS_VERSION)))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(anyString(), eq(VS_VERSION))).thenReturn(Optional.empty());
+
+    int saved = valueSetExpansionService.updateValueSetDependencies().join();
+
+    assertEquals(2, saved);
+    var order = inOrder(implementationGuideManager);
+    order.verify(implementationGuideManager).collectValueSetDependencies(ig1);
+    order.verify(implementationGuideManager).collectValueSetDependencies(ig2);
+    verify(txTerminologyServiceWebClient, times(1)).getValueSetExpansion(VS_URL, VS_VERSION);
+    verify(txTerminologyServiceWebClient, times(1)).getValueSetExpansion(otherUrl, VS_VERSION);
+    verify(implementationGuideManager, never()).getValueSetDependencies();
+  }
+
+  @Test
+  void updateValueSetDependenciesContinuesWhenOneIgFails() {
+    ImplementationGuide failing = new ImplementationGuide();
+    failing.setName("failing-ig");
+    failing.setVersion("1.0.0");
+    ImplementationGuide ok = new ImplementationGuide();
+    ok.setName("ok-ig");
+    ok.setVersion("1.0.0");
+
+    when(implementationGuideManager.getImplementationGuides()).thenReturn(List.of(failing, ok));
+    when(implementationGuideManager.collectValueSetDependencies(failing))
+        .thenThrow(new RuntimeException("boom"));
+    when(implementationGuideManager.collectValueSetDependencies(ok))
+        .thenReturn(new LinkedHashSet<>(List.of(madieValueSet)));
+    when(txTerminologyServiceWebClient.getValueSetExpansion(VS_URL, VS_VERSION))
+        .thenReturn(MOCK_VALUE_SET_JSON);
+    when(fhirContext.newJsonParser()).thenReturn(realParser);
+    when(vseRepo.findByUrlAndVersion(VS_URL, VS_VERSION)).thenReturn(Optional.empty());
+
+    int saved = valueSetExpansionService.updateValueSetDependencies().join();
+
+    assertEquals(1, saved);
+    verify(vseRepo, times(1)).save(argThat(vs -> VS_URL.equals(vs.getUrl())));
+  }
+
+  @Test
+  void updateValueSetDependenciesReturnsZeroWhenNoIgsAvailable() {
+    when(implementationGuideManager.getImplementationGuides()).thenReturn(List.of());
+
+    int saved = valueSetExpansionService.updateValueSetDependencies().join();
+
+    assertEquals(0, saved);
+    verifyNoInteractions(vseRepo, txTerminologyServiceWebClient);
   }
 
   @ParameterizedTest
@@ -1041,7 +1112,12 @@ class ValueSetExpansionServiceTest {
 
   private void mockDependencies(boolean allIgs, List<MadieValueSet> dependencies) {
     if (allIgs) {
-      when(implementationGuideManager.getValueSetDependencies()).thenReturn(dependencies);
+      ImplementationGuide ig = new ImplementationGuide();
+      ig.setName(IG_NAME);
+      ig.setVersion(IG_VERSION);
+      when(implementationGuideManager.getImplementationGuides()).thenReturn(List.of(ig));
+      when(implementationGuideManager.collectValueSetDependencies(ig))
+          .thenReturn(new LinkedHashSet<>(dependencies));
     } else {
       when(implementationGuideManager.getValueSetDependencies(IG_NAME, IG_VERSION))
           .thenReturn(dependencies);

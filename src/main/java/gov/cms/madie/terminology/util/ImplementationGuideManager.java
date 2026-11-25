@@ -3,7 +3,6 @@ package gov.cms.madie.terminology.util;
 import ca.uhn.fhir.context.FhirContext;
 import gov.cms.madie.cql_elm_translator.utils.ImplementationGuideLoader;
 import gov.cms.madie.terminology.models.MadieValueSet;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.cqframework.fhir.npm.NpmPackageManager;
 import org.hl7.fhir.r4.model.ElementDefinition;
@@ -21,107 +20,69 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Provides access to the MADiE implementation guide catalog and resolves ValueSet bindings for
+ * given IG.
+ *
+ * <p>NPM packages are loaded on demand for one IG and are never retained, so package content (which
+ * can be very large) can be garbage collected as soon as the IG has been processed.
+ */
 @Slf4j
 @Component
 public class ImplementationGuideManager {
 
-  @Getter
-  private final ConcurrentHashMap<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>>
-      igHierarchicalValueSets = new ConcurrentHashMap<>();
+  /** Lightweight catalog of IGs, keyed by "name|version". Holds no package content. */
+  private final ConcurrentHashMap<String, ImplementationGuide> availableImplementationGuides =
+      new ConcurrentHashMap<>();
 
   private final FhirContext ctx = FhirContext.forR4Cached();
 
   @Value("${madie.fhir-cache}")
   private String fhirCachePath;
 
-  private IgLoadingState igLoadingState = IgLoadingState.NOT_LOADED;
-
-  public enum IgLoadingState {
-    NOT_LOADED,
-    LOADING,
-    LOADED,
-    ERROR_FAILED
+  /** Returns a snapshot of all IGs in the catalog. */
+  public List<ImplementationGuide> getImplementationGuides() {
+    ensureIGCatalogLoaded();
+    return new ArrayList<>(availableImplementationGuides.values());
   }
 
-  //  public List<ImplementationGuide> getImplementationGuides() {
-  //    return ImplementationGuideLoader.load("classpath*:igs/*.json");
-  //  }
-  //
-  //  public void clearIgHierarchicalValueSets() {
-  //    igHierarchicalValueSets.clear();
-  //  }
-
-  private void loadImplementationGuides() {
-    log.info("Implementation guide manager::loading implementation guide packages.");
-    Instant now = Instant.now();
-    igLoadingState = IgLoadingState.LOADING;
-    List<ImplementationGuide> madieIgs = ImplementationGuideLoader.load("classpath*:igs/*.json");
-    for (ImplementationGuide madieIg : madieIgs) {
-      collectValueSetDependencies(madieIg);
-    }
-    igLoadingState = IgLoadingState.LOADED;
-    log.info(
-        "Implementation guide manager::IG loading complete in {} milliseconds.",
-        Duration.between(now, Instant.now()).toMillis());
-  }
-
-  private IgLoadingState igsLoading() {
-    if (igLoadingState == IgLoadingState.NOT_LOADED) {
-      loadImplementationGuides();
-    }
-    return igLoadingState;
-  }
-
+  /**
+   * Returns the names of the IGs and their direct dependencies, derived from the catalog without
+   * loading any packages.
+   */
   public List<String> getImplementationGuideNames() {
-    List<String> igNames =
-        new ArrayList<>(
-            igHierarchicalValueSets.keySet().stream()
-                .map(ig -> ig.getName() + " v" + ig.getVersion())
-                .toList());
-    igNames.addAll(
-        igHierarchicalValueSets.values().stream()
-            .flatMap(pkgMap -> pkgMap.keySet().stream())
-            .map(pkg -> pkg.name() + " v" + pkg.version())
-            .toList());
-    return igNames;
+    Set<String> igNames = new LinkedHashSet<>();
+    for (ImplementationGuide ig : getImplementationGuides()) {
+      igNames.add(ig.getName() + " v" + ig.getVersion());
+      ig.getDependsOn().stream()
+          .filter(ImplementationGuide.ImplementationGuideDependsOnComponent::hasPackageId)
+          .forEach(dep -> igNames.add(dep.getPackageId() + " v" + dep.getVersion()));
+    }
+    return new ArrayList<>(igNames);
   }
 
+  /**
+   * Returns the ValueSet dependencies for the given MADiE IG, or for the given package when it is a
+   * direct dependency of one of the MADiE IGs. Only one IG's packages are loaded at a time.
+   */
   public List<MadieValueSet> getValueSetDependencies(String igName, String version) {
-    if (igsLoading() != IgLoadingState.LOADED) {
-      return Collections.emptyList();
+    Optional<ImplementationGuide> madieIg = findImplementationGuide(igName, version);
+    if (madieIg.isPresent()) {
+      return new ArrayList<>(collectValueSetDependencies(madieIg.get()));
     }
 
-    // First, check if igName/version are madie Igs
-    Optional<ImplementationGuide> implementationGuide =
-        igHierarchicalValueSets.keySet().stream()
-            .filter(ig -> igName.equals(ig.getName()) && version.equals(ig.getVersion()))
-            .findFirst();
-    if (implementationGuide.isPresent()) {
-      return igHierarchicalValueSets.get(implementationGuide.get()).values().stream()
-          .flatMap(Set::stream)
-          .distinct()
-          .toList();
-    }
-
-    // Next, check if igName/version are in any of the packages of the madie Igs
-    Optional<Map<NpmPackage, Set<MadieValueSet>>> packageMapOpt =
-        igHierarchicalValueSets.values().stream()
+    List<ImplementationGuide> implementationGuides =
+        getImplementationGuides().stream()
             .filter(
-                pkgMap ->
-                    pkgMap.keySet().stream()
-                        .anyMatch(
-                            pkg -> igName.equals(pkg.name()) && version.equals(pkg.version())))
-            .findFirst();
+                ig -> ig.getDependsOn().stream().anyMatch(dep -> igName.equals(dep.getPackageId())))
+            .toList();
 
-    if (packageMapOpt.isPresent()) {
-      Map<NpmPackage, Set<MadieValueSet>> packageMap = packageMapOpt.get();
-      return packageMap.entrySet().stream()
-          .filter(
-              entry ->
-                  igName.equals(entry.getKey().name()) && version.equals(entry.getKey().version()))
-          .flatMap(entry -> entry.getValue().stream())
-          .distinct()
-          .toList();
+    for (ImplementationGuide implementationGuide : implementationGuides) {
+      Optional<Set<MadieValueSet>> packageValueSets =
+          collectPackageValueSets(implementationGuide, igName, version);
+      if (packageValueSets.isPresent()) {
+        return new ArrayList<>(packageValueSets.get());
+      }
     }
 
     log.info(
@@ -131,54 +92,71 @@ public class ImplementationGuideManager {
     return Collections.emptyList();
   }
 
+  /**
+   * Returns the distinct ValueSet dependencies across all MADiE IGs. IGs are processed one at a
+   * time; only the lightweight {@link MadieValueSet} references are accumulated.
+   */
   public List<MadieValueSet> getValueSetDependencies() {
-    if (igsLoading() != IgLoadingState.LOADED) {
-      return Collections.emptyList();
+    Set<MadieValueSet> valueSets = new LinkedHashSet<>();
+    for (ImplementationGuide ig : getImplementationGuides()) {
+      valueSets.addAll(collectValueSetDependencies(ig));
     }
-    return igHierarchicalValueSets.values().stream()
-        .flatMap(pkgMap -> pkgMap.values().stream())
-        .flatMap(Set::stream)
-        .distinct()
-        .toList();
+    return new ArrayList<>(valueSets);
   }
 
-  public Map<ImplementationGuide, Map<NpmPackage, Set<MadieValueSet>>> collectValueSetDependencies(
-      ImplementationGuide ig) {
+  /**
+   * Loads the packages for a single IG, extracts the ValueSet bindings from every package and
+   * returns them. No package content is retained after this method returns.
+   */
+  public Set<MadieValueSet> collectValueSetDependencies(ImplementationGuide ig) {
     if (ig == null || !ig.hasDependsOn()) {
-      return new HashMap<>();
+      return new LinkedHashSet<>();
     }
-    if (igHierarchicalValueSets.containsKey(ig)) {
-      log.info("MADiE IG already parsed: {} v{}", ig.getName(), ig.getVersion());
-      return igHierarchicalValueSets;
-    } else {
-      igHierarchicalValueSets.put(ig, new HashMap<>());
-    }
-
-    Map<NpmPackage, Set<MadieValueSet>> packageMap = igHierarchicalValueSets.get(ig);
-
+    log.info("Collecting ValueSet dependencies for IG {} v{}", ig.getName(), ig.getVersion());
+    Instant start = Instant.now();
+    Set<MadieValueSet> valueSets = new LinkedHashSet<>();
     try {
-      List<NpmPackage> igPackages = getIgNpmPackages(ig);
-      for (NpmPackage igPkg : igPackages) {
-        if (packageMap.containsKey(igPkg)) {
-          log.info("IG already parsed: {} v{}", igPkg.name(), igPkg.version());
-          continue;
-        }
-        packageMap.put(igPkg, getBindingValueSets(igPkg));
+      for (NpmPackage igPkg : getIgNpmPackages(ig)) {
+        valueSets.addAll(getBindingValueSets(igPkg));
       }
     } catch (IOException e) {
       log.error("Unable to load packages for IG: {}", ig.getName(), e);
-      return new HashMap<>();
+      return new LinkedHashSet<>();
     }
-    igHierarchicalValueSets.put(ig, packageMap);
-    return igHierarchicalValueSets;
+    log.info(
+        "Collected {} ValueSet dependencies for IG {} v{} in {} milliseconds.",
+        valueSets.size(),
+        ig.getName(),
+        ig.getVersion(),
+        Duration.between(start, Instant.now()).toMillis());
+    return valueSets;
+  }
+
+  public Optional<ImplementationGuide> findImplementationGuide(String igName, String version) {
+    ensureIGCatalogLoaded();
+    return Optional.ofNullable(availableImplementationGuides.get(buildIgKey(igName, version)));
+  }
+
+  private Optional<Set<MadieValueSet>> collectPackageValueSets(
+      ImplementationGuide ig, String pkgName, String pkgVersion) {
+    try {
+      for (NpmPackage igPkg : getIgNpmPackages(ig)) {
+        if (pkgName.equals(igPkg.name()) && pkgVersion.equals(igPkg.version())) {
+          return Optional.of(getBindingValueSets(igPkg));
+        }
+      }
+    } catch (IOException e) {
+      log.error("Unable to load packages for IG: {}", ig.getName(), e);
+    }
+    return Optional.empty();
   }
 
   private Set<MadieValueSet> getBindingValueSets(NpmPackage igPkg) throws IOException {
     List<String> structureDefFiles = getStructureDefinitionFilesForIg(igPkg);
     if (structureDefFiles.isEmpty()) {
-      return new HashSet<>();
+      return new LinkedHashSet<>();
     }
-    Set<MadieValueSet> packageValueSets = new HashSet<>();
+    Set<MadieValueSet> packageValueSets = new LinkedHashSet<>();
     for (String sdFile : structureDefFiles) {
       try (InputStream sdStream = igPkg.load("package", sdFile)) {
         // Parse the StructureDefinition from JSON
@@ -189,8 +167,7 @@ public class ImplementationGuideManager {
         // Check each Element for ValueSet bindings
         for (ElementDefinition element : structureDefinition.getSnapshot().getElement()) {
           if (element.hasBinding() && element.getBinding().hasValueSet()) {
-            MadieValueSet madieValueSet = buildMadieValueSet(element);
-            packageValueSets.add(madieValueSet);
+            packageValueSets.add(buildMadieValueSet(element));
           }
         }
       }
@@ -230,7 +207,21 @@ public class ImplementationGuideManager {
         ImplementationGuideLoader.buildPackageManager(fhirCachePath, ig);
     // Access the downloaded NpmPackages
     List<NpmPackage> igPackages = packageManager.getNpmList().stream().distinct().toList();
-    log.info("Loaded {} packages", igPackages.size());
+    log.info("Loaded {} packages for IG {} v{}", igPackages.size(), ig.getName(), ig.getVersion());
     return igPackages;
+  }
+
+  private synchronized void ensureIGCatalogLoaded() {
+    if (!availableImplementationGuides.isEmpty()) {
+      return;
+    }
+
+    List<ImplementationGuide> madieIgs = ImplementationGuideLoader.load("classpath*:igs/*.json");
+    madieIgs.forEach(
+        ig -> availableImplementationGuides.put(buildIgKey(ig.getName(), ig.getVersion()), ig));
+  }
+
+  private String buildIgKey(String igName, String version) {
+    return igName + "|" + version;
   }
 }
