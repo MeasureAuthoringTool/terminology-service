@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
 import gov.cms.madie.terminology.exceptions.CodeSystemNotFoundException;
 import gov.cms.madie.terminology.exceptions.DuplicateCodeSystemException;
@@ -40,6 +41,17 @@ public class VsacControllerAdvice {
 
   private final ErrorAttributes errorAttributes;
   private final FhirContext fhirContext;
+
+  @ExceptionHandler(WebClientRequestException.class)
+  public ResponseEntity<Map<String, Object>> handleWebClientRequestException(
+      WebClientRequestException ex, WebRequest request) {
+    log.error("Outbound terminology request failed", ex);
+    Map<String, Object> attributes = getErrorAttributes(request, HttpStatus.SERVICE_UNAVAILABLE);
+    attributes.put("message", "Unable to contact terminology service. Please try again later.");
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(attributes);
+  }
 
   @ExceptionHandler(WebClientResponseException.class)
   public ResponseEntity<Map<String, Object>> handleWebClientResponseException(

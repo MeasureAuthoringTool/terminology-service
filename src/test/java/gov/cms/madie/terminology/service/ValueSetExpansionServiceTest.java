@@ -944,6 +944,9 @@ class ValueSetExpansionServiceTest {
               "",
               "",
               server.url("/fhir/ValueSet").toString(),
+              50,
+              100,
+              java.time.Duration.ofSeconds(45),
               context);
       ValueSetExpansionService service =
           new ValueSetExpansionService(
