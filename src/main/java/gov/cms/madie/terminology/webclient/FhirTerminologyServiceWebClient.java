@@ -9,6 +9,7 @@ import gov.cms.madie.terminology.models.CodeSystem;
 import gov.cms.madie.terminology.util.TerminologyServiceUtil;
 import gov.cms.madie.terminology.dto.ValueSetsSearchCriteria;
 import io.netty.channel.ChannelOption;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.Bundle;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -41,6 +43,7 @@ import java.util.stream.Collectors;
 public class FhirTerminologyServiceWebClient {
 
   private final WebClient fhirTerminologyWebClient;
+  private final ConnectionProvider connectionProvider;
   private final String manifestPath;
   private final String codeSystemPath;
   private final String codeLookupsUrl;
@@ -55,15 +58,34 @@ public class FhirTerminologyServiceWebClient {
       @Value("${client.fhir-terminology-service.code-lookups}") String codeLookupsUrl,
       @Value("${client.default_profile}") String defaultProfile,
       @Value("${client.search_value_set_endpoint}") String searchValueSetEndpoint,
+      @Value("${client.fhir-terminology-service.pool.max-connections:50}") int maxConnections,
+      @Value("${client.fhir-terminology-service.pool.pending-acquire-max-count:100}")
+          int pendingAcquireMaxCount,
+      @Value("${client.fhir-terminology-service.pool.pending-acquire-timeout:45s}")
+          Duration pendingAcquireTimeout,
       FhirContext fhirContext) {
+    Assert.isTrue(maxConnections > 0, "VSAC max-connections must be positive");
+    Assert.isTrue(pendingAcquireMaxCount > 0, "VSAC pending-acquire-max-count must be positive");
+    Assert.isTrue(
+        pendingAcquireTimeout != null
+            && !pendingAcquireTimeout.isNegative()
+            && !pendingAcquireTimeout.isZero(),
+        "VSAC pending-acquire-timeout must be positive");
     this.fhirContext = fhirContext;
     DefaultUriBuilderFactory uriBuilderFactory =
         new DefaultUriBuilderFactory(fhirTerminologyServiceBaseUrl);
     uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
-    ConnectionProvider provider =
-        ConnectionProvider.builder("custom").maxIdleTime(Duration.ofSeconds(300)).build();
+    connectionProvider =
+        ConnectionProvider.builder("custom")
+            .maxConnections(maxConnections)
+            .pendingAcquireMaxCount(pendingAcquireMaxCount)
+            .pendingAcquireTimeout(pendingAcquireTimeout)
+            .maxIdleTime(Duration.ofSeconds(300))
+            .build();
     HttpClient client =
-        HttpClient.create(provider).followRedirect(true).option(ChannelOption.SO_KEEPALIVE, true);
+        HttpClient.create(connectionProvider)
+            .followRedirect(true)
+            .option(ChannelOption.SO_KEEPALIVE, true);
     fhirTerminologyWebClient =
         WebClient.builder()
             .uriBuilderFactory(uriBuilderFactory)
@@ -77,6 +99,11 @@ public class FhirTerminologyServiceWebClient {
     this.codeLookupsUrl = codeLookupsUrl;
     this.defaultProfile = defaultProfile;
     this.searchValueSetEndpoint = searchValueSetEndpoint;
+  }
+
+  @PreDestroy
+  public void dispose() {
+    connectionProvider.dispose();
   }
 
   public String getManifestBundle(String apiKey) {
