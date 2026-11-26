@@ -232,7 +232,7 @@ public class ValueSetExpansionService {
           && shouldSkipVsacValueSet(madieValueSet)) {
         continue;
       }
-      ExpansionResult result = expandValueSet(madieValueSet);
+      ExpansionResult result = expandValueSetWithTxFhir(madieValueSet);
       if (!result.successful()) {
         failedExpansions++;
       }
@@ -250,7 +250,7 @@ public class ValueSetExpansionService {
   /** Result of a single expansion attempt: the value set to persist (if any) and success flag. */
   private record ExpansionResult(MadieValueSet valueSet, boolean successful) {}
 
-  private ExpansionResult expandValueSet(MadieValueSet madieValueSet) {
+  private ExpansionResult expandValueSetWithTxFhir(MadieValueSet madieValueSet) {
     try {
       ValueSet valueSet = fetchExpansionFromTxFhir(madieValueSet).orElse(null);
       if (valueSet != null) {
