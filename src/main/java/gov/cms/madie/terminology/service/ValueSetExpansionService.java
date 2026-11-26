@@ -43,7 +43,6 @@ import java.util.stream.Collectors;
 public class ValueSetExpansionService {
 
   private static final String VSAC_URL_PREFIX = "http://cts.nlm.nih.gov/fhir/";
-  private static final long BYTES_PER_MB = 1024L * 1024L;
 
   private final ImplementationGuideManager implementationGuideManager;
   private final ValueSetExpansionRepository vseRepo;
@@ -112,14 +111,11 @@ public class ValueSetExpansionService {
   @Async
   public CompletableFuture<Integer> updateValueSetDependencies() {
     if (!refreshInProgress.compareAndSet(false, true)) {
-      log.warn("Value Set dependency refresh already in progress; skipping this request.");
+      log.warn("Value Set refresh already in progress; skipping this request.");
       return CompletableFuture.completedFuture(0);
     }
     try {
-      long memoryBeforeBytes = getUsedMemoryBytes();
-      log.info("Memory before dependency refresh: used={} MB", bytesToMb(memoryBeforeBytes));
       Instant now = Instant.now();
-
       Set<String> processedKeys = new HashSet<>();
       int totalSaved = 0;
       for (ImplementationGuide ig : implementationGuideManager.getImplementationGuides()) {
@@ -130,12 +126,6 @@ public class ValueSetExpansionService {
           "Update of all Value set expansions completed in {} milliseconds. Saved {} value sets.",
           Duration.between(now, Instant.now()).toMillis(),
           totalSaved);
-
-      long memoryAfterBytes = getUsedMemoryBytes();
-      log.info(
-          "Memory after dependency refresh: used={} MB (delta={} MB)",
-          bytesToMb(memoryAfterBytes),
-          bytesToMb(memoryAfterBytes - memoryBeforeBytes));
 
       return CompletableFuture.completedFuture(totalSaved);
     } finally {
@@ -158,12 +148,11 @@ public class ValueSetExpansionService {
 
       int saved = expandAndSaveValueSets(dependencies);
       log.info(
-          "IG {} v{}: saved {} Value Set expansions in {} milliseconds (memory used={} MB).",
+          "IG {} v{}: saved {} Value Set expansions in {} milliseconds.",
           ig.getName(),
           ig.getVersion(),
           saved,
-          Duration.between(start, Instant.now()).toMillis(),
-          bytesToMb(getUsedMemoryBytes()));
+          Duration.between(start, Instant.now()).toMillis());
       return saved;
     } catch (Exception e) {
       log.error(
@@ -177,15 +166,6 @@ public class ValueSetExpansionService {
 
   private String buildValueSetKey(MadieValueSet vs) {
     return vs.getUrl() + "|" + StringUtils.defaultString(vs.getVersion());
-  }
-
-  private long getUsedMemoryBytes() {
-    Runtime runtime = Runtime.getRuntime();
-    return runtime.totalMemory() - runtime.freeMemory();
-  }
-
-  private long bytesToMb(long bytes) {
-    return bytes / BYTES_PER_MB;
   }
 
   /**
