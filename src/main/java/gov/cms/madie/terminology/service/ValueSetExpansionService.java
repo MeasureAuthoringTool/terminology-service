@@ -19,6 +19,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r5.model.ImplementationGuide;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /** VSES */
@@ -52,9 +54,11 @@ public class ValueSetExpansionService {
   @Value("${code-system-refresh-task.terminology-key}")
   String systemVsacApiKey;
 
+  private final AtomicBoolean refreshInProgress = new AtomicBoolean(false);
+
   public List<String> getImplementationGuides() {
     try {
-      return implementationGuideManager.getImplementationGuides();
+      return implementationGuideManager.getImplementationGuideNames();
     } catch (Exception e) {
       log.error("Unable to retrieve loaded implementation guides.", e);
     }
@@ -90,60 +94,102 @@ public class ValueSetExpansionService {
         version);
 
     Instant now = Instant.now();
-    List<MadieValueSet> expandedValueSets = expandValueSets(madieValueSets);
-
-    log.info(
-        "{} Value Set expansions retrieved for IG {}, version {}.",
-        expandedValueSets.size(),
-        igName,
-        version);
-
-    saveValueSetExpansions(expandedValueSets);
+    int savedValueSetCount = expandAndSaveValueSets(madieValueSets);
     log.info(
         "Update of {} Value Set expansions completed for IG {}, version {} in {} milliseconds.",
-        expandedValueSets.size(),
+        savedValueSetCount,
         igName,
         version,
         Duration.between(now, Instant.now()).toMillis());
   }
 
+  /**
+   * Refreshes the ValueSet expansions for every MADiE IG, one IG at a time. Each IG's packages are
+   * loaded, its bindings are expanded and persisted, and then its data is released before the next
+   * IG is processed. ValueSets shared between IGs are only expanded once per refresh.
+   */
   @Async
   public CompletableFuture<Integer> updateValueSetDependencies() {
-    List<MadieValueSet> madieValueSets = implementationGuideManager.getValueSetDependencies();
-    log.info("Found {} Value Set dependencies.", madieValueSets.size());
+    if (!refreshInProgress.compareAndSet(false, true)) {
+      log.warn("Value Set refresh already in progress; skipping this request.");
+      return CompletableFuture.completedFuture(0);
+    }
+    try {
+      Instant now = Instant.now();
+      Set<String> processedKeys = new HashSet<>();
+      int totalSaved = 0;
+      for (ImplementationGuide ig : implementationGuideManager.getImplementationGuides()) {
+        totalSaved += updateValueSetDependenciesForIg(ig, processedKeys);
+      }
 
-    Instant now = Instant.now();
-    List<MadieValueSet> expandedValueSets = expandValueSets(madieValueSets);
+      log.info(
+          "Update of all Value set expansions completed in {} milliseconds. Saved {} value sets.",
+          Duration.between(now, Instant.now()).toMillis(),
+          totalSaved);
 
-    log.info("{} Value Set expansions retrieved.", expandedValueSets.size());
-
-    int savedValueSetCount = saveValueSetExpansions(expandedValueSets);
-    log.info(
-        "Update of all Value set expansions completed in {} milliseconds.",
-        Duration.between(now, Instant.now()).toMillis());
-    return CompletableFuture.completedFuture(savedValueSetCount);
+      return CompletableFuture.completedFuture(totalSaved);
+    } finally {
+      refreshInProgress.set(false);
+    }
   }
 
-  private int saveValueSetExpansions(List<MadieValueSet> madieValueSets) {
-    int savedValueSetCount = 0;
-    for (MadieValueSet madieValueSet : madieValueSets) {
-      Optional<MadieValueSet> existingValueSet =
-          vseRepo.findByUrlAndVersion(madieValueSet.getUrl(), madieValueSet.getVersion());
+  private int updateValueSetDependenciesForIg(ImplementationGuide ig, Set<String> processedKeys) {
+    try {
+      Instant start = Instant.now();
+      Set<MadieValueSet> dependencies = implementationGuideManager.collectValueSetDependencies(ig);
+      int found = dependencies.size();
+      dependencies.removeIf(vs -> !processedKeys.add(buildValueSetKey(vs)));
+      log.info(
+          "IG {} v{}: found {} Value Set dependencies, {} not yet processed in this refresh.",
+          ig.getName(),
+          ig.getVersion(),
+          found,
+          dependencies.size());
 
-      if (existingValueSet.isEmpty()) {
-        vseRepo.save(madieValueSet);
-        savedValueSetCount++;
-      } else if (!existingValueSet.get().isManuallyModified()) {
-        existingValueSet.get().setValueSet(madieValueSet.getValueSet());
-        existingValueSet.get().setUnavailable(madieValueSet.isUnavailable());
-        existingValueSet.get().setError(madieValueSet.getError());
-        existingValueSet.get().setLastUpdated(madieValueSet.getLastUpdated());
-        vseRepo.save(existingValueSet.get());
-        savedValueSetCount++;
-      }
+      int saved = expandAndSaveValueSets(dependencies);
+      log.info(
+          "IG {} v{}: saved {} Value Set expansions in {} milliseconds.",
+          ig.getName(),
+          ig.getVersion(),
+          saved,
+          Duration.between(start, Instant.now()).toMillis());
+      return saved;
+    } catch (Exception e) {
+      log.error(
+          "Failed to update Value Set dependencies for IG {} v{}.",
+          ig.getName(),
+          ig.getVersion(),
+          e);
+      return 0;
     }
-    log.info("Saved {} value set expansions.", savedValueSetCount);
-    return savedValueSetCount;
+  }
+
+  private String buildValueSetKey(MadieValueSet vs) {
+    return vs.getUrl() + "|" + StringUtils.defaultString(vs.getVersion());
+  }
+
+  /**
+   * Persists a single expanded value set. Returns {@code true} when the record was saved, {@code
+   * false} when an existing manually modified record was left untouched.
+   */
+  private boolean saveValueSetExpansion(MadieValueSet madieValueSet) {
+    Optional<MadieValueSet> existingValueSet =
+        vseRepo.findByUrlAndVersion(madieValueSet.getUrl(), madieValueSet.getVersion());
+
+    if (existingValueSet.isEmpty()) {
+      vseRepo.save(madieValueSet);
+      return true;
+    }
+    MadieValueSet existing = existingValueSet.get();
+    if (existing.isManuallyModified()) {
+      return false;
+    }
+    existing.setValueSet(madieValueSet.getValueSet());
+    existing.setUnavailable(madieValueSet.isUnavailable());
+    existing.setError(madieValueSet.getError());
+    existing.setLastUpdated(madieValueSet.getLastUpdated());
+    vseRepo.save(existing);
+    return true;
   }
 
   private ValueSetDisplayForAdmin convertToDisplayDto(MadieValueSet valueSet) {
@@ -171,9 +217,14 @@ public class ValueSetExpansionService {
     return page.map(this::convertToDisplayDto);
   }
 
-  /** Removes VSAC-owned VSES records and returns only fresh TX.FHIR expansions. */
-  private List<MadieValueSet> expandValueSets(List<MadieValueSet> madieValueSets) {
-    List<MadieValueSet> expandedValueSets = new ArrayList<>();
+  /**
+   * Expands each value set and persists it immediately, so expansion payloads are not accumulated
+   * in memory. VSAC-owned VSES records are removed and only fresh TX.FHIR expansions are saved.
+   *
+   * @return the number of value sets saved
+   */
+  private int expandAndSaveValueSets(Collection<MadieValueSet> madieValueSets) {
+    int savedValueSetCount = 0;
     int failedExpansions = 0;
     log.debug("Expanding {} value sets.", madieValueSets.size());
     for (MadieValueSet madieValueSet : madieValueSets) {
@@ -181,56 +232,64 @@ public class ValueSetExpansionService {
           && shouldSkipVsacValueSet(madieValueSet)) {
         continue;
       }
-      try {
-        ValueSet valueSet = fetchExpansionFromTxFhir(madieValueSet).orElse(null);
-        if (valueSet != null) {
-          expandedValueSets.add(
-              madieValueSet.toBuilder()
-                  .valueSet(fhirContext.newJsonParser().encodeResourceToString(valueSet))
-                  .lastUpdated(Instant.now())
-                  .unavailable(false)
-                  .error(null)
-                  .build());
-        } else {
-          log.warn(
-              "Failed to expand ValueSet {} version {}.",
-              madieValueSet.getUrl(),
-              madieValueSet.getVersion());
-          failedExpansions++;
-        }
-      } catch (ValueSetExpansionException e) {
-        if (e.getStatusCode()
-            .isSameCodeAs(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY)) {
-          ValueSetError error = getValueSetError(e.getBody());
-          if (error != null) {
-            expandedValueSets.add(
-                madieValueSet.toBuilder()
-                    .valueSet("{ \"resourceType\": \"ValueSet\" }")
-                    .unavailable(true)
-                    .error(error)
-                    .lastUpdated(Instant.now())
-                    .build());
-          }
-        }
+      ExpansionResult result = expandValueSet(madieValueSet);
+      if (!result.successful()) {
         failedExpansions++;
-      } catch (ResourceNotFoundException e) {
-        ValueSetError error = getValueSetError(e.getBody());
-        if (error != null) {
-          expandedValueSets.add(
-              madieValueSet.toBuilder()
-                  .valueSet("{ \"resourceType\": \"ValueSet\" }")
-                  .unavailable(true)
-                  .error(error)
-                  .lastUpdated(Instant.now())
-                  .build());
-        }
-        failedExpansions++;
+      }
+      if (result.valueSet() != null && saveValueSetExpansion(result.valueSet())) {
+        savedValueSetCount++;
       }
     }
     if (failedExpansions > 0) {
       log.warn("{} expansions could not be retrieved", failedExpansions);
     }
-    return expandedValueSets;
+    log.info("Saved {} value set expansions.", savedValueSetCount);
+    return savedValueSetCount;
+  }
+
+  /** Result of a single expansion attempt: the value set to persist (if any) and success flag. */
+  private record ExpansionResult(MadieValueSet valueSet, boolean successful) {}
+
+  private ExpansionResult expandValueSet(MadieValueSet madieValueSet) {
+    try {
+      ValueSet valueSet = fetchExpansionFromTxFhir(madieValueSet).orElse(null);
+      if (valueSet != null) {
+        return new ExpansionResult(
+            madieValueSet.toBuilder()
+                .valueSet(fhirContext.newJsonParser().encodeResourceToString(valueSet))
+                .lastUpdated(Instant.now())
+                .unavailable(false)
+                .error(null)
+                .build(),
+            true);
+      }
+      log.warn(
+          "Failed to expand ValueSet {} version {}.",
+          madieValueSet.getUrl(),
+          madieValueSet.getVersion());
+      return new ExpansionResult(null, false);
+    } catch (ValueSetExpansionException e) {
+      if (e.getStatusCode()
+          .isSameCodeAs(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY)) {
+        return new ExpansionResult(buildUnavailableValueSet(madieValueSet, e.getBody()), false);
+      }
+      return new ExpansionResult(null, false);
+    } catch (ResourceNotFoundException e) {
+      return new ExpansionResult(buildUnavailableValueSet(madieValueSet, e.getBody()), false);
+    }
+  }
+
+  private MadieValueSet buildUnavailableValueSet(MadieValueSet madieValueSet, String body) {
+    ValueSetError error = getValueSetError(body);
+    if (error == null) {
+      return null;
+    }
+    return madieValueSet.toBuilder()
+        .valueSet("{ \"resourceType\": \"ValueSet\" }")
+        .unavailable(true)
+        .error(error)
+        .lastUpdated(Instant.now())
+        .build();
   }
 
   /**
